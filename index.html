@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Commander Tier List</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root {
+  --bg: #0C0B0F;
+  --bg-card: #16151A;
+  --bg-hover: #1C1B22;
+  --bg-surface: #1F1E25;
+  --border: #2A2930;
+  --border-hover: #3A394A;
+  --text: #E8E6EF;
+  --text-secondary: #9896A3;
+  --text-muted: #5E5C6B;
+  --accent: #A78BFA;
+  --accent-dim: #7C5FC7;
+  --tier-s: #E24B4A;
+  --tier-s-bg: #2A1414;
+  --tier-s-text: #F5A5A4;
+  --tier-a: #EF9F27;
+  --tier-a-bg: #2A2010;
+  --tier-a-text: #F5D08A;
+  --tier-b: #1D9E75;
+  --tier-b-bg: #0D2A1F;
+  --tier-b-text: #7EDDBC;
+  --tier-c: #378ADD;
+  --tier-c-bg: #0D1E2A;
+  --tier-c-text: #8FC5F0;
+  --tier-d: #888780;
+  --tier-d-bg: #1A1A18;
+  --tier-d-text: #B5B4AD;
+  --player-joost: #A78BFA;
+  --player-joost-bg: #1E1835;
+  --player-willem: #34D399;
+  --player-willem-bg: #0D2A1F;
+  --player-josh: #FBBF24;
+  --player-josh-bg: #2A2010;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --transition: 0.2s ease;
+}
+html { font-family: 'DM Sans', -apple-system, sans-serif; background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; }
+body { min-height: 100vh; background: var(--bg); }
+button { font-family: inherit; cursor: pointer; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-secondary); border-radius: var(--radius-sm); transition: all var(--transition); }
+button:hover { background: var(--bg-hover); color: var(--text); border-color: var(--border-hover); }
+button.active { background: var(--bg-surface); color: var(--text); border-color: var(--accent-dim); }
+input, textarea, select { font-family: inherit; background: var(--bg-card); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 12px; font-size: 14px; transition: border-color var(--transition); outline: none; }
+input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
+
+.app { max-width: 760px; margin: 0 auto; padding: 24px 20px 80px; }
+
+/* Header */
+.header { margin-bottom: 24px; position: relative; }
+.header h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 4px; }
+.header h1 span { color: var(--accent); }
+.header p { font-size: 14px; color: var(--text-secondary); }
+.header-glow { position: absolute; top: -60px; left: -40px; width: 200px; height: 200px; background: radial-gradient(circle, rgba(167,139,250,0.08) 0%, transparent 70%); pointer-events: none; }
+
+/* Pod Stats */
+.pod-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 24px; }
+.pod-stat { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; transition: border-color var(--transition); }
+.pod-stat:hover { border-color: var(--border-hover); }
+.pod-stat-name { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+.pod-stat-value { font-size: 26px; font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+.pod-stat-sub { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+
+/* Controls */
+.controls { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 20px; align-items: center; }
+.control-group { display: flex; gap: 2px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 2px; }
+.control-group button { border: none; background: transparent; padding: 5px 12px; font-size: 12px; border-radius: 4px; }
+.control-group button.active { background: var(--bg-surface); color: var(--text); }
+.control-group button:hover:not(.active) { background: var(--bg-hover); }
+.spacer { flex: 1; }
+
+/* Tier bar */
+.tier-bar { display: flex; gap: 2px; margin-bottom: 24px; border-radius: var(--radius-sm); overflow: hidden; }
+.tier-bar-seg { flex: 1; text-align: center; padding: 7px 0; font-size: 12px; font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+
+/* Tier sections */
+.tier-section { margin-bottom: 24px; }
+.tier-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; padding-left: 2px; }
+.tier-badge { width: 26px; height: 26px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+.tier-label { font-size: 13px; font-weight: 500; }
+.tier-count { font-size: 12px; color: var(--text-muted); }
+
+/* Deck cards */
+.deck-list { display: flex; flex-direction: column; gap: 6px; }
+.deck-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 18px;
+  cursor: pointer;
+  transition: all var(--transition);
+  border-left: 3px solid var(--tier-color);
+  animation: fadeIn 0.3s ease both;
+}
+.deck-card:hover { border-color: var(--border-hover); background: var(--bg-hover); }
+.deck-top { display: flex; justify-content: space-between; align-items: flex-start; }
+.deck-info { flex: 1; min-width: 0; }
+.deck-name-row { display: flex; align-items: center; gap: 10px; margin-bottom: 5px; }
+.deck-tier-mini { width: 26px; height: 26px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; font-family: 'JetBrains Mono', monospace; flex-shrink: 0; }
+.deck-commander { font-size: 15px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.deck-meta { display: flex; gap: 8px; align-items: center; margin-left: 36px; flex-wrap: wrap; }
+.deck-player { padding: 1px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+.deck-colors { font-size: 12px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; letter-spacing: 1px; }
+.deck-score { text-align: right; flex-shrink: 0; margin-left: 16px; }
+.deck-score-value { font-size: 24px; font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+.deck-score-label { font-size: 11px; color: var(--text-muted); }
+
+/* Expanded area */
+.deck-expanded { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+.stat-row { display: flex; align-items: center; gap: 10px; font-size: 13px; margin-bottom: 8px; }
+.stat-label { width: 95px; color: var(--text-secondary); flex-shrink: 0; }
+.stat-track { flex: 1; height: 5px; background: var(--bg); border-radius: 3px; overflow: hidden; }
+.stat-fill { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
+.stat-value { width: 30px; text-align: right; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 500; }
+.deck-notes { font-size: 13px; color: var(--text-secondary); margin-top: 14px; line-height: 1.65; font-style: italic; border-left: 2px solid var(--border); padding-left: 12px; }
+.deck-actions { display: flex; gap: 8px; margin-top: 14px; }
+.deck-actions button { font-size: 12px; padding: 5px 14px; }
+.btn-danger { color: var(--tier-s) !important; }
+.btn-danger:hover { background: var(--tier-s-bg) !important; border-color: var(--tier-s) !important; }
+
+/* Empty state */
+.empty { text-align: center; padding: 48px 20px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); }
+.empty h3 { font-size: 16px; font-weight: 500; margin-bottom: 8px; }
+.empty button { margin-top: 12px; padding: 8px 20px; font-size: 13px; }
+
+/* Footer */
+.footer { margin-top: 32px; display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; }
+.footer-info { flex: 1; min-width: 240px; padding: 18px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+.footer-info strong { color: var(--text); font-weight: 500; }
+.footer button { font-size: 11px; padding: 8px 14px; }
+
+/* Modal overlay */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 20px; animation: fadeIn 0.2s ease; }
+.modal { background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 28px; width: 100%; max-width: 500px; max-height: 85vh; overflow-y: auto; animation: slideUp 0.3s ease; }
+.modal h2 { font-size: 18px; font-weight: 600; margin-bottom: 20px; }
+.modal-field { margin-bottom: 14px; }
+.modal-field label { display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
+.modal-field input, .modal-field textarea, .modal-field select { width: 100%; }
+.modal-field textarea { min-height: 70px; resize: vertical; }
+.modal-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+.modal-actions button { padding: 8px 20px; font-size: 13px; }
+.btn-primary { background: var(--accent-dim) !important; color: #fff !important; border-color: var(--accent) !important; }
+.btn-primary:hover { background: var(--accent) !important; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+
+@media (max-width: 600px) {
+  .app { padding: 16px 14px 60px; }
+  .header h1 { font-size: 22px; }
+  .pod-stats { grid-template-columns: 1fr; }
+  .controls { gap: 4px; }
+  .modal { padding: 20px; }
+  .modal-row { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+
+<script>
+// ===== DATA =====
+const STORAGE_KEY = "commander-decks-v3";
+
+const INITIAL_DECKS = [
+  { id: "edgar", commander: "Edgar Markov", player: "Joost", colors: "RWB", power: 9, synergy: 8.5, theme: 8.5, optimization: 9, notes: "Near-cEDH aggro-aristocrats. Premium mana base, dense tutor package, Exquisite Blood + Sanguine Bond combo finish. Every card serves the gameplan." },
+  { id: "kaalia", commander: "Kaalia of the Vast", player: "Joost", colors: "RWB", power: 9.5, synergy: 9, theme: 8, optimization: 9.5, notes: "Borderline cEDH. 15+ fast mana sources, 6 tutors, Master of Cruelties instant kill, Ad Nauseam + Angel's Grace, Dualcaster + Twinflame. Ruthlessly optimized." },
+  { id: "pantlaza", commander: "Pantlaza, Sun-Favored", player: "Joost", colors: "RGW", power: 7.5, synergy: 9, theme: 9, optimization: 8.5, notes: "Synergy masterclass. Every card feeds discover triggers. Flicker package, Roaming Throne doubles triggers, Cream of the Crop stacks library." },
+  { id: "kefka", commander: "Kefka, Court Mage", player: "Joost", colors: "UBR", power: 9, synergy: 8.5, theme: 7.5, optimization: 9, notes: "Borderline cEDH Grixis combo. Oracle + Consultation, Dualcaster + Twinflame, Niv-Mizzet + Curiosity, Breach + Brain Freeze. Four overlapping combo lines." },
+  { id: "bruna", commander: "Bruna, the Fading Light", player: "Joost", colors: "W", power: 5.5, synergy: 7, theme: 9.5, optimization: 6.5, notes: "Mono-white Angel tribal. Brisela meld is the dream. Constrained by mono-white but compensates with Land Tax, Smothering Tithe, Moat." },
+  { id: "jodah-archmage", commander: "Jodah, Archmage Eternal", player: "Joost", colors: "WUBRG", power: 8, synergy: 7, theme: 8, optimization: 7, notes: "5-color legendary goodstuff. Six Ultimatums, Omniscience, Emrakul. Spectacular ceiling but zero tutors and thin interaction." },
+  { id: "wayta", commander: "Wayta, Trainer Prodigy", player: "Joost", colors: "RGW", power: 7, synergy: 8, theme: 9, optimization: 7.5, notes: "Enrage dinosaurs. Thematic commitment is excellent — Pyrohemia, Forerunner, Polyraptor loops. Not the strongest mechanic but built with love." },
+  { id: "ulalek", commander: "Ulalek, Fused Atrocity", player: "Joost", colors: "WUBRG", power: 8, synergy: 8.5, theme: 9, optimization: 8, notes: "5-color Eldrazi tribal. Ulalek copies cast triggers, Echoes of Eternity doubles colorless. Tron lands, Eye of Ugin, Eldrazi Temple." },
+  { id: "atraxa", commander: "Atraxa, Praetors' Voice", player: "Joost", colors: "WUBG", power: 8, synergy: 8.5, theme: 8.5, optimization: 8, notes: "4-color infect/proliferate. Opponents have 10 life instead of 40. Vorinclex doubles poison. Tekuthal doubles proliferate." },
+  { id: "najeela", commander: "Najeela, the Blade-Blossom", player: "Joost", colors: "WUBRG", power: 9.5, synergy: 9, theme: 7.5, optimization: 9, notes: "cEDH-level 5-color warriors combo. Infinite combats with Derevi/Nature's Will/Druids' Repository. Densest interaction suite in the pod." },
+  { id: "toph", commander: "Toph, Earthbending Master", player: "Joost", colors: "RG", power: 7.5, synergy: 7.5, theme: 9.5, optimization: 7.5, notes: "Avatar-themed Gruul lands/tokens. Gaea's Cradle, Natural Order, Green Sun's Zenith. Deep ATLA commitment." },
+  { id: "aang", commander: "Avatar Aang", player: "Joost", colors: "WUBRG", power: 7.75, synergy: 7.5, theme: 10, optimization: 7.5, notes: "5-color Avatar tribal. Infinite damage with transformed Aang + Searing Touch buyback. Peak theme score in the pod." },
+  { id: "heibai", commander: "Hei Bai, Forest Guardian", player: "Joost", colors: "WUBRG", power: 7.5, synergy: 8.5, theme: 8.5, optimization: 7.5, notes: "5-color shrine/blink. ETB tutors a shrine — every flicker is a free shrine fetch. Serra's Sanctum, enchantress package." },
+  { id: "etali", commander: "Etali, Primal Conqueror", player: "Joost", colors: "RG", power: 7.5, synergy: 8, theme: 7.5, optimization: 7.5, notes: "Intentionally lower power Gruul clone/cheat. Food Chain combo, Helm of the Host, Panharmonicon." },
+  { id: "lathril", commander: "Lathril, Blade of the Elves", player: "Joost", colors: "BG", power: 8.5, synergy: 9, theme: 9, optimization: 8.5, notes: "Golgari Elf tribal. Gaea's Cradle, 7 tutors, Staff of Domination infinite mana, Craterhoof finisher." },
+  { id: "vorinclex", commander: "Vorinclex, Monstrous Raider", player: "Joost", colors: "G", power: 7.5, synergy: 7.5, theme: 8, optimization: 7, notes: "Mono-green superfriends/hydra. Doubling Season, Hardened Scales, 6 planeswalkers. Gaea's Cradle, Mox Diamond." },
+  { id: "nicol-bolas", commander: "Nicol Bolas, the Ravager", player: "Joost", colors: "UBR", power: 5.5, synergy: 6.5, theme: 8.5, optimization: 5.5, notes: "First self-made deck. Grixis superfriends with proliferate. Signets, 24 basics. Sentimental value is off the charts." },
+  { id: "xenagos", commander: "Xenagos, God of Revels", player: "Joost", colors: "RG", power: 6, synergy: 7, theme: 7.5, optimization: 6, notes: "Early deck. Gruul big creatures + extra combats. Aggravated Assault combo, Craterhoof. Solid but needs tutor density." },
+  { id: "sokka", commander: "Sokka, Tenacious Tactician", player: "Willem", colors: "URW", power: 7, synergy: 6.5, theme: 8.5, optimization: 6.5, notes: "Jeskai Ally storm. Brilliant concept but split personality between storm and tribal. Evolving Wilds in a dual mana base." },
+  { id: "gaaiv", commander: "Grand Arbiter Augustin IV", player: "Willem", colors: "WU", power: 7.5, synergy: 7, theme: 7, optimization: 7, notes: "Azorius stax/control. Elite counterspell suite, premium fast mana. Identity issues — too many big draw spells." },
+  { id: "fynn", commander: "Fynn, the Fangbearer", player: "Willem", colors: "G", power: 6, synergy: 8, theme: 9, optimization: 7.5, notes: "Mono-green infect/poison. Every creature serves the poison plan. Sideboard for meta adaptation. Punches above its weight." },
+  { id: "alania", commander: "Alania, Divergent Storm", player: "Willem", colors: "UR", power: 8, synergy: 8.5, theme: 6, optimization: 8, notes: "Izzet extra turns/copy. Bracket 4. Capture of Jingzhou, Time Warp, Nexus of Fate. Sideboard pushes to near-cEDH." },
+  { id: "tannuk", commander: "Tannuk, Steadfast Second", player: "Willem", colors: "R", power: 7, synergy: 7.5, theme: 7, optimization: 6.5, notes: "Mono-red cheat/warp. Sneak Attack in the command zone. Blightsteel one-shot. 31 Mountains is too many." },
+  { id: "rograkh", commander: "Rograkh / Yoshimaru", player: "Josh", colors: "RW", power: 7, synergy: 7.5, theme: 8, optimization: 7, notes: "Boros legendary voltron. 0-mana commander enables Mox Amber/Opal. Commander's Plate. Functionally Bracket 3.5." },
+  { id: "thalia-gitrog", commander: "Thalia & Gitrog Monster", player: "Josh", colors: "WBG", power: 7, synergy: 8.5, theme: 7.5, optimization: 8, notes: "Abzan lands/landfall. Crucible + fetchlands + Ancient Greenwarden. Deep synergy web. Josh's tightest optimization." },
+  { id: "jodah-unifier", commander: "Jodah, the Unifier", player: "Josh", colors: "WUBRG", power: 7.5, synergy: 8.5, theme: 8.5, optimization: 8, notes: "5-color legendary tribal cascade. Nearly all legends for maximum cascade chains. Better built than Joost's Jodah." },
+  { id: "chatterfang", commander: "Chatterfang, Squirrel General", player: "Josh", colors: "BG", power: 8, synergy: 9, theme: 9, optimization: 8.5, notes: "Golgari squirrel aristocrats. Academy Manufactor triples tokens. Scurry Oak infinite combo. Gaea's Cradle. Most synergistic deck in the pod." },
+  { id: "phelddagrif", commander: "Phelddagrif", player: "Josh", colors: "WUG", power: 5.5, synergy: 7, theme: 10, optimization: 6.5, notes: "Bant group hug. Most thematically complete deck analyzed. Hippo tokens, Approach of the Second Sun. Deliberately low power." },
+  { id: "baylen", commander: "Baylen, the Haymaker", player: "Josh", colors: "RGW", power: 8, synergy: 8, theme: 7.5, optimization: 7.5, notes: "Naya tokens go wide. Scurry Oak + Ivy Lane combo, Aggravated Assault + Cradle infinite combats. Large sideboard." },
+  { id: "ragavan", commander: "Ragavan, Nimble Pilferer", player: "Josh", colors: "R", power: 6.5, synergy: 7, theme: 8, optimization: 6, notes: "Mono-red pirate theft. 25 Mountains is too many. Kediss and Ruby Medallion stuck in sideboard. Josh's weakest deck." },
+];
+
+const TIERS = [
+  { label: "S", color: "var(--tier-s)", bg: "var(--tier-s-bg)", text: "var(--tier-s-text)", desc: "cEDH / Near-cEDH" },
+  { label: "A", color: "var(--tier-a)", bg: "var(--tier-a-bg)", text: "var(--tier-a-text)", desc: "High power" },
+  { label: "B", color: "var(--tier-b)", bg: "var(--tier-b-bg)", text: "var(--tier-b-text)", desc: "Focused" },
+  { label: "C", color: "var(--tier-c)", bg: "var(--tier-c-bg)", text: "var(--tier-c-text)", desc: "Casual" },
+  { label: "D", color: "var(--tier-d)", bg: "var(--tier-d-bg)", text: "var(--tier-d-text)", desc: "Precon-level" },
+];
+
+const PLAYERS = ["All", "Joost", "Willem", "Josh"];
+
+// ===== HELPERS =====
+function getTier(power) {
+  if (power >= 9) return "S";
+  if (power >= 7) return "A";
+  if (power >= 5) return "B";
+  if (power >= 3) return "C";
+  return "D";
+}
+function getOverall(d) {
+  return Math.round(((d.power + d.synergy + d.theme + d.optimization) / 4) * 10) / 10;
+}
+function getTierInfo(label) {
+  return TIERS.find(t => t.label === label) || TIERS[4];
+}
+function playerColor(p) {
+  if (p === "Joost") return { bg: "var(--player-joost-bg)", color: "var(--player-joost)" };
+  if (p === "Willem") return { bg: "var(--player-willem-bg)", color: "var(--player-willem)" };
+  return { bg: "var(--player-josh-bg)", color: "var(--player-josh)" };
+}
+
+// ===== STATE =====
+let state = {
+  decks: [],
+  view: "tiers",
+  playerFilter: "All",
+  sortBy: "power",
+  expanded: {},
+  showAddModal: false,
+  editDeck: null,
+  loaded: false,
+};
+
+// ===== STORAGE =====
+function loadDecks() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.length > 0) return parsed;
+    }
+  } catch {}
+  return [...INITIAL_DECKS];
+}
+function saveDecks(decks) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(decks)); } catch {}
+}
+
+// ===== RENDER =====
+function render() {
+  const app = document.getElementById("app");
+  const decks = state.decks;
+  const filtered = state.playerFilter === "All" ? decks : decks.filter(d => d.player === state.playerFilter);
+  const sorted = [...filtered].sort((a, b) => {
+    if (state.sortBy === "power") return b.power - a.power || getOverall(b) - getOverall(a);
+    return getOverall(b) - getOverall(a);
+  });
+
+  // Pod stats
+  const players = ["Joost", "Willem", "Josh"];
+  const podStats = players.map(p => {
+    const pd = decks.filter(d => d.player === p);
+    const avg = pd.length ? Math.round((pd.reduce((s, d) => s + getOverall(d), 0) / pd.length) * 10) / 10 : 0;
+    const avgP = pd.length ? Math.round((pd.reduce((s, d) => s + d.power, 0) / pd.length) * 10) / 10 : 0;
+    return { player: p, count: pd.length, avg, avgPower: avgP };
+  });
+
+  let html = `
+    <div class="header">
+      <div class="header-glow"></div>
+      <h1>Commander <span>Tier List</span></h1>
+      <p>${decks.length} decks across ${new Set(decks.map(d=>d.player)).size} builders</p>
+    </div>
+
+    <div class="pod-stats">
+      ${podStats.map(s => {
+        const pc = playerColor(s.player);
+        return `<div class="pod-stat">
+          <div class="pod-stat-name" style="color:${pc.color}">${s.player}</div>
+          <div class="pod-stat-value">${s.avg}</div>
+          <div class="pod-stat-sub">${s.count} decks · ${s.avgPower} avg power</div>
+        </div>`;
+      }).join("")}
+    </div>
+
+    <div class="controls">
+      <div class="control-group">
+        ${PLAYERS.map(p => `<button class="${state.playerFilter===p?'active':''}" onclick="setFilter('${p}')">${p}</button>`).join("")}
+      </div>
+      <div class="spacer"></div>
+      <div class="control-group">
+        <button class="${state.view==='tiers'?'active':''}" onclick="setView('tiers')">By tier</button>
+        <button class="${state.view==='list'?'active':''}" onclick="setView('list')">Ranked</button>
+      </div>
+      <div class="control-group">
+        <button class="${state.sortBy==='power'?'active':''}" onclick="setSort('power')">Power</button>
+        <button class="${state.sortBy==='overall'?'active':''}" onclick="setSort('overall')">Overall</button>
+      </div>
+      <button onclick="openAddModal()" style="padding:5px 14px;font-size:12px;background:var(--accent-dim);color:#fff;border-color:var(--accent)">+ Add deck</button>
+    </div>
+
+    <div class="tier-bar">
+      ${TIERS.map(t => {
+        const count = filtered.filter(d => getTier(d.power) === t.label).length;
+        return `<div class="tier-bar-seg" style="background:${t.bg};color:${t.text}">${t.label} <span style="font-weight:400;font-size:11px">(${count})</span></div>`;
+      }).join("")}
+    </div>
+  `;
+
+  if (filtered.length === 0) {
+    html += `<div class="empty"><h3>No decks match filter</h3><p style="color:var(--text-secondary);font-size:13px">Try a different filter</p><button onclick="setFilter('All')">Show all</button></div>`;
+  } else if (state.view === "tiers") {
+    TIERS.forEach(tier => {
+      const td = sorted.filter(d => getTier(d.power) === tier.label);
+      if (!td.length) return;
+      html += `<div class="tier-section">
+        <div class="tier-header">
+          <div class="tier-badge" style="background:${tier.bg};color:${tier.text}">${tier.label}</div>
+          <span class="tier-label" style="color:${tier.text}">${tier.desc}</span>
+          <span class="tier-count">(${td.length})</span>
+        </div>
+        <div class="deck-list">${td.map((d,i) => renderDeckCard(d, tier, i)).join("")}</div>
+      </div>`;
+    });
+  } else {
+    html += `<div class="deck-list">${sorted.map((d,i) => {
+      const tier = getTierInfo(getTier(d.power));
+      return renderDeckCard(d, tier, i);
+    }).join("")}</div>`;
+  }
+
+  html += `
+    <div class="footer">
+      <div class="footer-info">
+        <strong>Add decks:</strong> Click "+ Add deck" above, or paste a decklist in chat and I'll rate it and add it automatically.
+      </div>
+      <button onclick="resetData()" style="color:var(--text-muted)">Reset to defaults</button>
+    </div>
+  `;
+
+  // Modal
+  if (state.showAddModal) {
+    const e = state.editDeck;
+    html += `
+    <div class="modal-overlay" onclick="closeModal(event)">
+      <div class="modal" onclick="event.stopPropagation()">
+        <h2>${e ? 'Edit' : 'Add'} Deck</h2>
+        <div class="modal-field">
+          <label>Commander</label>
+          <input id="m-commander" value="${e ? escHtml(e.commander) : ''}" placeholder="e.g. Edgar Markov">
+        </div>
+        <div class="modal-row">
+          <div class="modal-field">
+            <label>Player</label>
+            <select id="m-player">
+              ${players.map(p => `<option value="${p}" ${e && e.player===p ? 'selected' : ''}>${p}</option>`).join("")}
+            </select>
+          </div>
+          <div class="modal-field">
+            <label>Colors</label>
+            <input id="m-colors" value="${e ? escHtml(e.colors) : ''}" placeholder="e.g. WUBRG">
+          </div>
+        </div>
+        <div class="modal-row">
+          <div class="modal-field"><label>Power (1-10)</label><input id="m-power" type="number" min="1" max="10" step="0.5" value="${e?e.power:'7'}"></div>
+          <div class="modal-field"><label>Synergy (1-10)</label><input id="m-synergy" type="number" min="1" max="10" step="0.5" value="${e?e.synergy:'7'}"></div>
+        </div>
+        <div class="modal-row">
+          <div class="modal-field"><label>Theme (1-10)</label><input id="m-theme" type="number" min="1" max="10" step="0.5" value="${e?e.theme:'7'}"></div>
+          <div class="modal-field"><label>Optimization (1-10)</label><input id="m-optimization" type="number" min="1" max="10" step="0.5" value="${e?e.optimization:'7'}"></div>
+        </div>
+        <div class="modal-field">
+          <label>Notes</label>
+          <textarea id="m-notes" placeholder="Brief analysis of the deck...">${e ? escHtml(e.notes||'') : ''}</textarea>
+        </div>
+        <div class="modal-actions">
+          <button onclick="closeModal()">Cancel</button>
+          <button class="btn-primary" onclick="saveDeck()">${e ? 'Update' : 'Add'} Deck</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  app.innerHTML = html;
+}
+
+function renderDeckCard(deck, tier, index) {
+  const overall = getOverall(deck);
+  const isExpanded = state.expanded[deck.id];
+  const pc = playerColor(deck.player);
+  const delay = Math.min(index * 30, 500);
+
+  let card = `<div class="deck-card" style="border-left-color:${tier.color};animation-delay:${delay}ms" onclick="toggleExpand('${deck.id}')">
+    <div class="deck-top">
+      <div class="deck-info">
+        <div class="deck-name-row">
+          <div class="deck-tier-mini" style="background:${tier.bg};color:${tier.text}">${tier.label}</div>
+          <span class="deck-commander">${escHtml(deck.commander)}</span>
+        </div>
+        <div class="deck-meta">
+          <span class="deck-player" style="background:${pc.bg};color:${pc.color}">${escHtml(deck.player)}</span>
+          <span class="deck-colors">${escHtml(deck.colors)}</span>
+        </div>
+      </div>
+      <div class="deck-score">
+        <div class="deck-score-value">${overall}</div>
+        <div class="deck-score-label">overall</div>
+      </div>
+    </div>`;
+
+  if (isExpanded) {
+    card += `<div class="deck-expanded">
+      ${renderStat("Power", deck.power, tier.color)}
+      ${renderStat("Synergy", deck.synergy, tier.color)}
+      ${renderStat("Theme", deck.theme, tier.color)}
+      ${renderStat("Optimization", deck.optimization, tier.color)}
+      ${deck.notes ? `<div class="deck-notes">${escHtml(deck.notes)}</div>` : ''}
+      <div class="deck-actions">
+        <button onclick="event.stopPropagation();editDeck('${deck.id}')">Edit</button>
+        <button class="btn-danger" onclick="event.stopPropagation();deleteDeck('${deck.id}')">Remove</button>
+      </div>
+    </div>`;
+  }
+
+  card += `</div>`;
+  return card;
+}
+
+function renderStat(label, value, color) {
+  return `<div class="stat-row">
+    <span class="stat-label">${label}</span>
+    <div class="stat-track"><div class="stat-fill" style="width:${value*10}%;background:${color}"></div></div>
+    <span class="stat-value">${value}</span>
+  </div>`;
+}
+
+function escHtml(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ===== ACTIONS =====
+function setFilter(p) { state.playerFilter = p; render(); }
+function setView(v) { state.view = v; render(); }
+function setSort(s) { state.sortBy = s; render(); }
+function toggleExpand(id) { state.expanded[id] = !state.expanded[id]; render(); }
+
+function openAddModal(deck) {
+  state.editDeck = deck || null;
+  state.showAddModal = true;
+  render();
+}
+function closeModal(e) {
+  if (e && e.target !== e.currentTarget) return;
+  state.showAddModal = false;
+  state.editDeck = null;
+  render();
+}
+function editDeck(id) {
+  const deck = state.decks.find(d => d.id === id);
+  if (deck) openAddModal({...deck});
+}
+function saveDeck() {
+  const commander = document.getElementById("m-commander").value.trim();
+  if (!commander) return;
+  const data = {
+    commander,
+    player: document.getElementById("m-player").value,
+    colors: document.getElementById("m-colors").value.trim().toUpperCase(),
+    power: parseFloat(document.getElementById("m-power").value) || 7,
+    synergy: parseFloat(document.getElementById("m-synergy").value) || 7,
+    theme: parseFloat(document.getElementById("m-theme").value) || 7,
+    optimization: parseFloat(document.getElementById("m-optimization").value) || 7,
+    notes: document.getElementById("m-notes").value.trim(),
+  };
+  if (state.editDeck && state.editDeck.id) {
+    state.decks = state.decks.map(d => d.id === state.editDeck.id ? { ...d, ...data } : d);
+  } else {
+    data.id = commander.toLowerCase().replace(/[^a-z0-9]/g,'-') + '-' + Date.now();
+    state.decks.push(data);
+  }
+  saveDecks(state.decks);
+  state.showAddModal = false;
+  state.editDeck = null;
+  render();
+}
+function deleteDeck(id) {
+  if (!confirm("Remove this deck from the tier list?")) return;
+  state.decks = state.decks.filter(d => d.id !== id);
+  saveDecks(state.decks);
+  render();
+}
+function resetData() {
+  if (!confirm("Reset all decks to defaults? This removes any custom additions.")) return;
+  state.decks = [...INITIAL_DECKS];
+  saveDecks(state.decks);
+  render();
+}
+
+// ===== INIT =====
+state.decks = loadDecks();
+state.loaded = true;
+render();
+</script>
+</body>
+</html>
