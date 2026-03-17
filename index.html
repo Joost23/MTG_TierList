@@ -915,8 +915,10 @@ async function loadAndRenderImages(deckId) {
 async function fetchJson(apiUrl) {
   const proxies = [
     u => u,
-    u => "https://api.allorigins.win/raw?url=" + encodeURIComponent(u),
+    u => "https://thingproxy.freeboard.io/fetch/" + u,
+    u => "https://api.codetabs.com/v1/proxy?quest=" + u,
     u => "https://corsproxy.io/?" + encodeURIComponent(u),
+    u => "https://api.allorigins.win/raw?url=" + encodeURIComponent(u),
   ];
   let lastErr;
   for (const proxy of proxies) {
@@ -961,7 +963,8 @@ async function importFromUrl() {
       render(); return;
     }
   } catch (e) {
-    state.decklistImportStatus = "error: Import failed — copy the decklist from the site and paste it in the editor below";
+    state.decklistImportStatus = "error: Auto-import blocked — on Archidekt use Export → MTGO, on Moxfield use Export → Text, then paste below";
+    state.decklistEditing = true;
     render(); return;
   }
 
