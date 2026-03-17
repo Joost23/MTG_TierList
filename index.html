@@ -912,6 +912,20 @@ async function loadAndRenderImages(deckId) {
   render();
 }
 
+async function fetchJson(apiUrl) {
+  // Try direct fetch first, fall back to CORS proxy
+  try {
+    const res = await fetch(apiUrl, { headers: { "Accept": "application/json" } });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    return await res.json();
+  } catch (e) {
+    const proxy = "https://corsproxy.io/?" + encodeURIComponent(apiUrl);
+    const res = await fetch(proxy, { headers: { "Accept": "application/json" } });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    return await res.json();
+  }
+}
+
 async function importFromUrl() {
   const url = (document.getElementById("dl-import-url")?.value || state.decklistImportUrl).trim();
   if (!url) return;
@@ -925,14 +939,10 @@ async function importFromUrl() {
     const moxfieldM = url.match(/moxfield\.com\/decks\/([^/?#]+)/);
 
     if (archidektM) {
-      const res = await fetch(`https://archidekt.com/api/decks/${archidektM[1]}/`, { headers: { "Accept": "application/json" } });
-      if (!res.ok) throw new Error("Archidekt API error");
-      const data = await res.json();
+      const data = await fetchJson(`https://archidekt.com/api/decks/${archidektM[1]}/`);
       text = (data.cards || []).map(c => `${c.quantity} ${c.card?.oracleCard?.name || c.card?.name || ''}`).filter(l => l.trim().length > 2).join('\n');
     } else if (moxfieldM) {
-      const res = await fetch(`https://api2.moxfield.com/v3/decks/all/${moxfieldM[1]}`, { headers: { "Accept": "application/json" } });
-      if (!res.ok) throw new Error("Moxfield API error");
-      const data = await res.json();
+      const data = await fetchJson(`https://api2.moxfield.com/v3/decks/all/${moxfieldM[1]}`);
       const lines = [];
       const boards = data.boards || {};
       ["commanders", "mainboard", "sideboard", "companion"].forEach(b => {
