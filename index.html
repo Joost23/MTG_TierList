@@ -142,6 +142,7 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 .deck-record-badge { font-size: 11px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
 .log-game-form { margin-top: 10px; padding: 10px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .log-game-btns { display: flex; gap: 6px; }
+.deck-card:has(.log-game-form) { position: relative; z-index: 10; }
 .autocomplete-wrap { position: relative; flex: 1; min-width: 160px; }
 .autocomplete-wrap input[type="text"] { width: 100%; font-size: 13px; }
 .autocomplete-list { position: absolute; top: calc(100% + 2px); left: 0; right: 0; background: var(--bg-surface); border: 1px solid var(--border-hover); border-radius: var(--radius-sm); z-index: 20; max-height: 200px; overflow-y: auto; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
@@ -283,6 +284,7 @@ let state = {
   showAddModal: false,
   editDeck: null,
   loggingGame: null,
+  logForm: { query: '', opponentId: '' },
   loaded: false,
 };
 
@@ -497,14 +499,15 @@ function renderDeckCard(deck, tier, index) {
       </div>
       ${state.loggingGame === deck.id ? (() => {
         const others = state.decks.filter(d => d.id !== deck.id).sort((a,b) => a.player.localeCompare(b.player) || a.commander.localeCompare(b.commander));
-        return `<div class="log-game-form" onclick="event.stopPropagation()">
+        return `<div class="log-game-form" onclick="event.stopPropagation()" onmousedown="event.stopPropagation()">
           <div class="autocomplete-wrap">
             <input type="text" id="log-opp-input-${deck.id}" placeholder="Type opponent name…" autocomplete="off"
-              oninput="filterOpponents('${deck.id}',this.value)"
+              value="${escHtml(state.logForm.query)}"
+              oninput="state.logForm.query=this.value;state.logForm.opponentId='';filterOpponents('${deck.id}',this.value)"
               onfocus="filterOpponents('${deck.id}',this.value)"
               onblur="setTimeout(()=>{const l=document.getElementById('log-opp-list-${deck.id}');if(l)l.style.display='none'},150)"
               onkeydown="handleOpponentKey(event,'${deck.id}')">
-            <input type="hidden" id="log-opp-${deck.id}" value="">
+            <input type="hidden" id="log-opp-${deck.id}" value="${escHtml(state.logForm.opponentId)}">
             <div id="log-opp-list-${deck.id}" class="autocomplete-list" style="display:none"></div>
           </div>
           <div class="log-game-btns">
@@ -557,7 +560,11 @@ function escHtml(s) {
 function setFilter(p) { state.playerFilter = p; render(); }
 function setView(v) { state.view = v; render(); }
 function setSort(s) { state.sortBy = s; render(); }
-function toggleExpand(id) { state.expanded[id] = !state.expanded[id]; render(); }
+function toggleExpand(id) {
+  if (state.loggingGame) return;
+  state.expanded[id] = !state.expanded[id];
+  render();
+}
 
 function openAddModal(deck) {
   state.editDeck = deck || null;
@@ -600,10 +607,14 @@ function saveDeck() {
 }
 function startLogGame(id) {
   state.loggingGame = id;
+  state.logForm = { query: '', opponentId: '' };
   render();
+  const input = document.getElementById('log-opp-input-' + id);
+  if (input) input.focus();
 }
 function cancelLogGame() {
   state.loggingGame = null;
+  state.logForm = { query: '', opponentId: '' };
   render();
 }
 function filterOpponents(deckId, query) {
@@ -617,19 +628,23 @@ function filterOpponents(deckId, query) {
   if (!matches.length) { list.style.display = 'none'; return; }
   list.innerHTML = matches.map(d =>
     `<div class="autocomplete-item" data-id="${d.id}" data-name="${escHtml(d.commander)}"
-       onmousedown="event.preventDefault();selectOpponent('${deckId}',this.dataset.id,this.dataset.name)"
+       onmousedown="event.preventDefault();event.stopPropagation();selectOpponent('${deckId}',this.dataset.id,this.dataset.name)"
+       onclick="event.stopPropagation()"
      >${escHtml(d.commander)} <span style="color:var(--text-muted)">· ${escHtml(d.player)}</span></div>`
   ).join('');
   list.style.display = 'block';
 }
 
 function selectOpponent(deckId, oppId, oppName) {
+  state.logForm.query = oppName;
+  state.logForm.opponentId = oppId;
   const input = document.getElementById('log-opp-input-' + deckId);
   const hidden = document.getElementById('log-opp-' + deckId);
   const list = document.getElementById('log-opp-list-' + deckId);
   if (input) input.value = oppName;
   if (hidden) hidden.value = oppId;
   if (list) list.style.display = 'none';
+  if (input) input.focus();
 }
 
 function handleOpponentKey(e, deckId) {
@@ -656,12 +671,15 @@ function submitGame(deckId, result) {
   }
   const opponentId = hidden.value;
   const date = new Date().toISOString().split('T')[0];
+  const oppositeResult = result === 'win' ? 'loss' : 'win';
   state.decks = state.decks.map(d => {
-    if (d.id !== deckId) return d;
-    return { ...d, games: [...(d.games || []), { opponentId, result, date }] };
+    if (d.id === deckId) return { ...d, games: [...(d.games || []), { opponentId, result, date }] };
+    if (d.id === opponentId) return { ...d, games: [...(d.games || []), { opponentId: deckId, result: oppositeResult, date }] };
+    return d;
   });
   saveDecks(state.decks);
   state.loggingGame = null;
+  state.logForm = { query: '', opponentId: '' };
   render();
 }
 function removeGame(deckId, index) {
