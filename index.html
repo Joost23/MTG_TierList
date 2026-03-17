@@ -127,6 +127,34 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 .btn-danger { color: var(--tier-s) !important; }
 .btn-danger:hover { background: var(--tier-s-bg) !important; border-color: var(--tier-s) !important; }
 
+/* Win/Loss record */
+.record-section { display: flex; align-items: center; gap: 10px; margin-top: 12px; padding: 10px 14px; background: var(--bg); border-radius: var(--radius-sm); }
+.record-stat { display: flex; flex-direction: column; align-items: center; min-width: 36px; }
+.record-stat-value { font-size: 17px; font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+.record-stat-label { font-size: 10px; color: var(--text-muted); margin-top: 1px; text-transform: uppercase; letter-spacing: 0.4px; }
+.record-divider { width: 1px; height: 30px; background: var(--border); margin: 0 2px; }
+.record-rate { font-size: 13px; color: var(--text-secondary); margin-left: 4px; }
+.record-btns { display: flex; gap: 6px; margin-left: auto; }
+.btn-win { font-size: 12px !important; padding: 4px 12px !important; color: var(--tier-b-text) !important; border-color: var(--tier-b) !important; }
+.btn-win:hover { background: var(--tier-b-bg) !important; }
+.btn-loss { font-size: 12px !important; padding: 4px 12px !important; color: var(--tier-s-text) !important; border-color: var(--tier-s) !important; }
+.btn-loss:hover { background: var(--tier-s-bg) !important; }
+.deck-record-badge { font-size: 11px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+.log-game-form { margin-top: 10px; padding: 10px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.log-game-form select { flex: 1; min-width: 160px; font-size: 13px; }
+.log-game-btns { display: flex; gap: 6px; }
+.game-history { margin-top: 10px; }
+.game-history-title { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+.game-entry { display: flex; align-items: center; gap: 8px; font-size: 12px; padding: 5px 0; border-bottom: 1px solid var(--border); }
+.game-entry:last-child { border-bottom: none; }
+.game-result-badge { font-size: 11px; font-weight: 600; font-family: 'JetBrains Mono', monospace; padding: 1px 6px; border-radius: 3px; flex-shrink: 0; }
+.game-result-win { background: var(--tier-b-bg); color: var(--tier-b-text); }
+.game-result-loss { background: var(--tier-s-bg); color: var(--tier-s-text); }
+.game-opponent { flex: 1; color: var(--text-secondary); }
+.game-date { font-size: 11px; color: var(--text-muted); }
+.game-remove { font-size: 13px; color: var(--text-muted); background: none !important; border: none !important; padding: 0 4px !important; line-height: 1; }
+.game-remove:hover { color: var(--tier-s-text) !important; background: none !important; }
+
 /* Empty state */
 .empty { text-align: center; padding: 48px 20px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); }
 .empty h3 { font-size: 16px; font-weight: 500; margin-bottom: 8px; }
@@ -250,6 +278,7 @@ let state = {
   expanded: {},
   showAddModal: false,
   editDeck: null,
+  loggingGame: null,
   loaded: false,
 };
 
@@ -284,7 +313,9 @@ function render() {
     const pd = decks.filter(d => d.player === p);
     const avg = pd.length ? Math.round((pd.reduce((s, d) => s + getOverall(d), 0) / pd.length) * 10) / 10 : 0;
     const avgP = pd.length ? Math.round((pd.reduce((s, d) => s + d.power, 0) / pd.length) * 10) / 10 : 0;
-    return { player: p, count: pd.length, avg, avgPower: avgP };
+    const totalW = pd.reduce((s, d) => s + (d.wins || 0), 0);
+    const totalL = pd.reduce((s, d) => s + (d.losses || 0), 0);
+    return { player: p, count: pd.length, avg, avgPower: avgP, wins: totalW, losses: totalL };
   });
 
   let html = `
@@ -297,10 +328,12 @@ function render() {
     <div class="pod-stats">
       ${podStats.map(s => {
         const pc = playerColor(s.player);
+        const hasGames = s.wins + s.losses > 0;
+        const recordStr = hasGames ? ` · ${s.wins}W-${s.losses}L` : '';
         return `<div class="pod-stat">
           <div class="pod-stat-name" style="color:${pc.color}">${s.player}</div>
           <div class="pod-stat-value">${s.avg}</div>
-          <div class="pod-stat-sub">${s.count} decks · ${s.avgPower} avg power</div>
+          <div class="pod-stat-sub">${s.count} decks · ${s.avgPower} avg power${recordStr}</div>
         </div>`;
       }).join("")}
     </div>
@@ -411,6 +444,10 @@ function renderDeckCard(deck, tier, index) {
   const isExpanded = state.expanded[deck.id];
   const pc = playerColor(deck.player);
   const delay = Math.min(index * 30, 500);
+  const games = deck.games || [];
+  const wins = games.filter(g => g.result === 'win').length;
+  const losses = games.filter(g => g.result === 'loss').length;
+  const total = wins + losses;
 
   let card = `<div class="deck-card" style="border-left-color:${tier.color};animation-delay:${delay}ms" onclick="toggleExpand('${deck.id}')">
     <div class="deck-top">
@@ -422,6 +459,7 @@ function renderDeckCard(deck, tier, index) {
         <div class="deck-meta">
           <span class="deck-player" style="background:${pc.bg};color:${pc.color}">${escHtml(deck.player)}</span>
           <span class="deck-colors">${escHtml(deck.colors)}</span>
+          ${total > 0 ? `<span class="deck-record-badge">${wins}W-${losses}L</span>` : ''}
         </div>
       </div>
       <div class="deck-score">
@@ -431,12 +469,57 @@ function renderDeckCard(deck, tier, index) {
     </div>`;
 
   if (isExpanded) {
+    const winRate = total > 0 ? Math.round((wins / total) * 100) : null;
     card += `<div class="deck-expanded">
       ${renderStat("Power", deck.power, tier.color)}
       ${renderStat("Synergy", deck.synergy, tier.color)}
       ${renderStat("Theme", deck.theme, tier.color)}
       ${renderStat("Optimization", deck.optimization, tier.color)}
       ${deck.notes ? `<div class="deck-notes">${escHtml(deck.notes)}</div>` : ''}
+      <div class="record-section">
+        <div class="record-stat">
+          <span class="record-stat-value" style="color:var(--tier-b-text)">${wins}</span>
+          <span class="record-stat-label">Wins</span>
+        </div>
+        <div class="record-divider"></div>
+        <div class="record-stat">
+          <span class="record-stat-value" style="color:var(--tier-s-text)">${losses}</span>
+          <span class="record-stat-label">Losses</span>
+        </div>
+        ${winRate !== null ? `<div class="record-divider"></div><span class="record-rate">${winRate}%</span>` : '<span class="record-rate" style="color:var(--text-muted)">No games</span>'}
+        <div class="record-btns">
+          <button style="font-size:12px;padding:4px 12px" onclick="event.stopPropagation();startLogGame('${deck.id}')">Log game</button>
+        </div>
+      </div>
+      ${state.loggingGame === deck.id ? (() => {
+        const others = state.decks.filter(d => d.id !== deck.id).sort((a,b) => a.player.localeCompare(b.player) || a.commander.localeCompare(b.commander));
+        return `<div class="log-game-form" onclick="event.stopPropagation()">
+          <select id="log-opp-${deck.id}">
+            <option value="">Select opponent…</option>
+            ${others.map(d => `<option value="${d.id}">${escHtml(d.commander)} — ${escHtml(d.player)}</option>`).join('')}
+          </select>
+          <div class="log-game-btns">
+            <button class="btn-win" onclick="event.stopPropagation();submitGame('${deck.id}','win')">Won</button>
+            <button class="btn-loss" onclick="event.stopPropagation();submitGame('${deck.id}','loss')">Lost</button>
+            <button style="font-size:12px;padding:4px 10px" onclick="event.stopPropagation();cancelLogGame()">Cancel</button>
+          </div>
+        </div>`;
+      })() : ''}
+      ${games.length > 0 ? (() => {
+        const entries = games.slice().reverse().map((g, ri) => {
+          const origIdx = games.length - 1 - ri;
+          const opp = state.decks.find(d => d.id === g.opponentId);
+          const oppName = opp ? escHtml(opp.commander) : 'Unknown deck';
+          const oppPlayer = opp ? ` <span style="color:var(--text-muted)">· ${escHtml(opp.player)}</span>` : '';
+          return `<div class="game-entry">
+            <span class="game-result-badge game-result-${g.result}">${g.result === 'win' ? 'W' : 'L'}</span>
+            <span class="game-opponent">${oppName}${oppPlayer}</span>
+            ${g.date ? `<span class="game-date">${g.date}</span>` : ''}
+            <button class="game-remove" onclick="event.stopPropagation();removeGame('${deck.id}',${origIdx})" title="Remove">×</button>
+          </div>`;
+        }).join('');
+        return `<div class="game-history"><div class="game-history-title">Game history (${games.length})</div>${entries}</div>`;
+      })() : ''}
       <div class="deck-actions">
         <button onclick="event.stopPropagation();editDeck('${deck.id}')">Edit</button>
         <button class="btn-danger" onclick="event.stopPropagation();deleteDeck('${deck.id}')">Remove</button>
@@ -504,6 +587,36 @@ function saveDeck() {
   saveDecks(state.decks);
   state.showAddModal = false;
   state.editDeck = null;
+  render();
+}
+function startLogGame(id) {
+  state.loggingGame = id;
+  render();
+}
+function cancelLogGame() {
+  state.loggingGame = null;
+  render();
+}
+function submitGame(deckId, result) {
+  const sel = document.getElementById('log-opp-' + deckId);
+  if (!sel || !sel.value) { if (sel) sel.focus(); return; }
+  const opponentId = sel.value;
+  const date = new Date().toISOString().split('T')[0];
+  state.decks = state.decks.map(d => {
+    if (d.id !== deckId) return d;
+    return { ...d, games: [...(d.games || []), { opponentId, result, date }] };
+  });
+  saveDecks(state.decks);
+  state.loggingGame = null;
+  render();
+}
+function removeGame(deckId, index) {
+  state.decks = state.decks.map(d => {
+    if (d.id !== deckId) return d;
+    const games = (d.games || []).filter((_, i) => i !== index);
+    return { ...d, games };
+  });
+  saveDecks(state.decks);
   render();
 }
 function deleteDeck(id) {
