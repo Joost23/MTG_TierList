@@ -160,6 +160,40 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 .game-remove { font-size: 13px; color: var(--text-muted); background: none !important; border: none !important; padding: 0 4px !important; line-height: 1; }
 .game-remove:hover { color: var(--tier-s-text) !important; background: none !important; }
 
+/* Deck detail page */
+.deck-detail { padding: 20px 0 40px; }
+.deck-detail-topbar { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; flex-wrap: wrap; }
+.deck-detail-back { font-size: 13px; padding: 6px 14px; flex-shrink: 0; }
+.deck-detail-title { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; flex-wrap: wrap; }
+.deck-detail-title h2 { font-size: 20px; font-weight: 600; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.deck-detail-import { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+.deck-detail-import input[type="text"] { flex: 1; min-width: 200px; font-size: 13px; }
+.dl-import-status { font-size: 12px; color: var(--text-muted); font-style: italic; }
+.dl-import-success { color: var(--tier-b-text) !important; font-style: normal !important; font-weight: 500; }
+.dl-import-error { color: var(--tier-s-text) !important; font-style: normal !important; }
+.deck-detail-editor-wrap { margin-bottom: 16px; }
+.dl-edit-toggle { font-size: 12px; padding: 5px 12px; color: var(--text-secondary); }
+.deck-detail-editor { display: block; width: 100%; min-height: 200px; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.7; resize: vertical; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; margin-top: 8px; box-sizing: border-box; }
+.dl-display { margin-top: 4px; }
+/* Image grid */
+.dl-image-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(146px, 1fr)); gap: 10px; }
+.dl-card-img-wrap { position: relative; border-radius: 8px; overflow: hidden; background: var(--bg-card); border: 1px solid var(--border); aspect-ratio: 63 / 88; }
+.dl-card-img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.2s ease; }
+.dl-card-img-wrap:hover img { transform: scale(1.04); }
+.dl-card-qty-badge { position: absolute; top: 5px; left: 5px; background: rgba(0,0,0,0.8); color: #fff; font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 700; padding: 1px 5px; border-radius: 4px; }
+.dl-card-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--text-muted); text-align: center; padding: 8px; }
+/* Text list */
+.dl-text-list { display: flex; flex-direction: column; gap: 20px; }
+.dl-group-header { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; padding-bottom: 5px; border-bottom: 1px solid var(--border); }
+.dl-group-count { font-family: 'JetBrains Mono', monospace; }
+.dl-group-entries { display: flex; flex-direction: column; }
+.dl-entry { display: flex; align-items: center; gap: 8px; padding: 3px 0; font-size: 13px; border-bottom: 1px solid rgba(42,41,48,0.5); }
+.dl-entry:last-child { border-bottom: none; }
+.dl-entry-qty { width: 18px; text-align: right; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; font-size: 12px; flex-shrink: 0; }
+.dl-entry-name { flex: 1; }
+.dl-entry-cost { font-size: 11px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+@media (max-width: 400px) { .dl-image-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); } }
+
 /* Empty state */
 .empty { text-align: center; padding: 48px 20px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); }
 .empty h3 { font-size: 16px; font-weight: 500; margin-bottom: 8px; }
@@ -286,7 +320,14 @@ let state = {
   loggingGame: null,
   logForm: { query: '', opponentId: '' },
   loaded: false,
+  decklistView: null,
+  decklistMode: "text",
+  decklistEditing: false,
+  decklistImportUrl: "",
+  decklistImportStatus: "",
 };
+
+const scryfallCache = {}; // cardName.toLowerCase() → { name, imageUrl, typeLine, manaCost } | null
 
 // ===== STORAGE =====
 function loadDecks() {
@@ -306,6 +347,11 @@ function saveDecks(decks) {
 // ===== RENDER =====
 function render() {
   const app = document.getElementById("app");
+  if (state.decklistView) {
+    const deck = state.decks.find(d => d.id === state.decklistView);
+    if (deck) { app.innerHTML = renderDeckDetail(deck); return; }
+    state.decklistView = null;
+  }
   const decks = state.decks;
   const filtered = state.playerFilter === "All" ? decks : decks.filter(d => d.player === state.playerFilter);
   const sorted = [...filtered].sort((a, b) => {
@@ -533,6 +579,7 @@ function renderDeckCard(deck, tier, index) {
         return `<div class="game-history"><div class="game-history-title">Game history (${games.length})</div>${entries}</div>`;
       })() : ''}
       <div class="deck-actions">
+        <button onclick="event.stopPropagation();openDeckDetail('${deck.id}')">Decklist</button>
         <button onclick="event.stopPropagation();editDeck('${deck.id}')">Edit</button>
         <button class="btn-danger" onclick="event.stopPropagation();deleteDeck('${deck.id}')">Remove</button>
       </div>
@@ -702,6 +749,283 @@ function resetData() {
   state.decks = [...INITIAL_DECKS];
   saveDecks(state.decks);
   render();
+}
+
+// ===== DECKLIST =====
+function openDeckDetail(id) {
+  state.decklistView = id;
+  state.decklistMode = "text";
+  state.decklistEditing = false;
+  state.decklistImportUrl = "";
+  state.decklistImportStatus = "";
+  window.scrollTo(0, 0);
+  render();
+}
+function closeDeckDetail() {
+  state.decklistView = null;
+  render();
+}
+function setDecklistMode(mode) {
+  state.decklistMode = mode;
+  if (mode === "images") {
+    loadAndRenderImages(state.decklistView);
+  } else {
+    render();
+  }
+}
+function toggleDecklistEditor() {
+  state.decklistEditing = !state.decklistEditing;
+  render();
+  if (state.decklistEditing) {
+    setTimeout(() => { const ta = document.getElementById("dl-editor"); if (ta) ta.focus(); }, 0);
+  }
+}
+function saveDecklistText(text) {
+  const id = state.decklistView;
+  state.decks = state.decks.map(d => d.id === id ? { ...d, decklist: text } : d);
+  saveDecks(state.decks);
+}
+
+function parseDecklist(text) {
+  return (text || '').split('\n')
+    .map(l => l.trim())
+    .filter(l => l && !l.startsWith('//') && !l.startsWith('#'))
+    .map(l => {
+      const m = l.match(/^(\d+)x?\s+(.+?)(?:\s+\*[^*]+\*)*$/);
+      return m ? { qty: parseInt(m[1], 10), name: m[2].trim() } : { qty: 1, name: l.replace(/^\d+x?\s+/, '').replace(/\s+\*[^*]+\*$/, '').trim() };
+    })
+    .filter(c => c.name);
+}
+
+const TYPE_ORDER = ["Commander", "Planeswalker", "Creature", "Instant", "Sorcery", "Artifact", "Enchantment", "Land", "Other"];
+
+function getCardGroup(name, typeLine, commanderName) {
+  if (name === commanderName) return "Commander";
+  if (!typeLine) return "Other";
+  if (typeLine.includes("Planeswalker")) return "Planeswalker";
+  if (typeLine.includes("Creature")) return "Creature";
+  if (typeLine.includes("Instant")) return "Instant";
+  if (typeLine.includes("Sorcery")) return "Sorcery";
+  if (typeLine.includes("Artifact")) return "Artifact";
+  if (typeLine.includes("Enchantment")) return "Enchantment";
+  if (typeLine.includes("Land")) return "Land";
+  return "Other";
+}
+
+function groupCardsByType(cards, commanderName) {
+  const groups = {};
+  TYPE_ORDER.forEach(t => groups[t] = []);
+  cards.forEach(c => {
+    const cached = scryfallCache[c.name.toLowerCase()];
+    const typeLine = cached ? cached.typeLine : null;
+    const group = getCardGroup(c.name, typeLine, commanderName);
+    groups[group].push(c);
+  });
+  return groups;
+}
+
+function renderTextList(cards, deck) {
+  if (!cards.length) return `<p style="color:var(--text-muted);font-size:13px">No cards in decklist yet.</p>`;
+  const groups = groupCardsByType(cards, deck.commander);
+  let html = '<div class="dl-text-list">';
+  TYPE_ORDER.forEach(type => {
+    const group = groups[type];
+    if (!group.length) return;
+    const total = group.reduce((s, c) => s + c.qty, 0);
+    html += `<div class="dl-group">
+      <div class="dl-group-header">${escHtml(type)} <span class="dl-group-count">(${total})</span></div>
+      <div class="dl-group-entries">`;
+    group.forEach(c => {
+      const cached = scryfallCache[c.name.toLowerCase()];
+      const cost = cached ? escHtml(cached.manaCost || '') : '';
+      html += `<div class="dl-entry">
+        <span class="dl-entry-qty">${c.qty}</span>
+        <span class="dl-entry-name">${escHtml(c.name)}</span>
+        ${cost ? `<span class="dl-entry-cost">${cost}</span>` : ''}
+      </div>`;
+    });
+    html += `</div></div>`;
+  });
+  html += '</div>';
+  return html;
+}
+
+function renderImageGrid(cards) {
+  if (!cards.length) return `<p style="color:var(--text-muted);font-size:13px">No cards in decklist yet.</p>`;
+  if (state.decklistImportStatus === "loading-images") {
+    return `<p style="color:var(--text-muted);font-size:13px">Fetching card images…</p>`;
+  }
+  let html = '<div class="dl-image-grid">';
+  cards.forEach(c => {
+    const cached = scryfallCache[c.name.toLowerCase()];
+    html += `<div class="dl-card-img-wrap">`;
+    if (cached && cached.imageUrl) {
+      html += `<img src="${escHtml(cached.imageUrl)}" alt="${escHtml(c.name)}" loading="lazy" title="${escHtml(c.name)}">`;
+    } else {
+      html += `<div class="dl-card-placeholder">${escHtml(c.name)}</div>`;
+    }
+    if (c.qty > 1) html += `<span class="dl-card-qty-badge">${c.qty}</span>`;
+    html += `</div>`;
+  });
+  html += '</div>';
+  return html;
+}
+
+async function fetchScryfallBatch(names) {
+  const uncached = [...new Set(names)].filter(n => !(n.toLowerCase() in scryfallCache));
+  if (!uncached.length) return;
+  const batches = [];
+  for (let i = 0; i < uncached.length; i += 75) batches.push(uncached.slice(i, i + 75));
+  for (let i = 0; i < batches.length; i++) {
+    if (i > 0) await new Promise(r => setTimeout(r, 100));
+    try {
+      const res = await fetch("https://api.scryfall.com/cards/collection", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "User-Agent": "MTGTierList/1.0" },
+        body: JSON.stringify({ identifiers: batches[i].map(n => ({ name: n })) }),
+      });
+      const data = await res.json();
+      (data.data || []).forEach(card => {
+        const imageUrl = card.image_uris?.normal ?? card.card_faces?.[0]?.image_uris?.normal ?? null;
+        scryfallCache[card.name.toLowerCase()] = { name: card.name, imageUrl, typeLine: card.type_line, manaCost: card.mana_cost || '' };
+      });
+      (data.not_found || []).forEach(id => {
+        if (id.name) scryfallCache[id.name.toLowerCase()] = null;
+      });
+    } catch (e) { /* network error — leave uncached, will retry next time */ }
+  }
+}
+
+async function loadAndRenderImages(deckId) {
+  const deck = state.decks.find(d => d.id === deckId);
+  if (!deck || !deck.decklist) { render(); return; }
+  const cards = parseDecklist(deck.decklist);
+  if (!cards.length) { render(); return; }
+  const names = cards.map(c => c.name);
+  const hasUncached = names.some(n => !(n.toLowerCase() in scryfallCache));
+  if (hasUncached) {
+    state.decklistImportStatus = "loading-images";
+    render();
+    await fetchScryfallBatch(names);
+    state.decklistImportStatus = "";
+  }
+  render();
+}
+
+async function importFromUrl() {
+  const url = (document.getElementById("dl-import-url")?.value || state.decklistImportUrl).trim();
+  if (!url) return;
+  state.decklistImportUrl = url;
+  state.decklistImportStatus = "loading";
+  render();
+
+  let text = null;
+  try {
+    const archidektM = url.match(/archidekt\.com\/decks\/(\d+)/);
+    const moxfieldM = url.match(/moxfield\.com\/decks\/([^/?#]+)/);
+
+    if (archidektM) {
+      const res = await fetch(`https://archidekt.com/api/decks/${archidektM[1]}/`, { headers: { "Accept": "application/json" } });
+      if (!res.ok) throw new Error("Archidekt API error");
+      const data = await res.json();
+      text = (data.cards || []).map(c => `${c.quantity} ${c.card?.oracleCard?.name || c.card?.name || ''}`).filter(l => l.trim().length > 2).join('\n');
+    } else if (moxfieldM) {
+      const res = await fetch(`https://api2.moxfield.com/v3/decks/all/${moxfieldM[1]}`, { headers: { "Accept": "application/json" } });
+      if (!res.ok) throw new Error("Moxfield API error");
+      const data = await res.json();
+      const lines = [];
+      const boards = data.boards || {};
+      ["commanders", "mainboard", "sideboard", "companion"].forEach(b => {
+        const board = boards[b];
+        if (!board) return;
+        Object.entries(board.cards || {}).forEach(([, entry]) => {
+          lines.push(`${entry.quantity} ${entry.card?.name || ''}`);
+        });
+      });
+      text = lines.filter(l => l.trim().length > 2).join('\n');
+    } else {
+      state.decklistImportStatus = "error: Unrecognised URL — paste an Archidekt or Moxfield link";
+      render(); return;
+    }
+  } catch (e) {
+    state.decklistImportStatus = "error: Import failed — copy the decklist from the site and paste it in the editor below";
+    render(); return;
+  }
+
+  if (!text || !text.trim()) {
+    state.decklistImportStatus = "error: No cards found — try pasting the decklist manually";
+    render(); return;
+  }
+
+  saveDecklistText(text);
+  state.decklistImportStatus = "success";
+  state.decklistEditing = true;
+  render();
+}
+
+function renderDeckDetail(deck) {
+  const tier = getTier(getOverall(deck));
+  const games = deck.games || [];
+  const wins = games.filter(g => g.result === 'win').length;
+  const losses = games.filter(g => g.result === 'loss').length;
+  const cards = parseDecklist(deck.decklist);
+  const totalCards = cards.reduce((s, c) => s + c.qty, 0);
+
+  const importStatusHtml = state.decklistImportStatus
+    ? `<span class="dl-import-status ${state.decklistImportStatus === 'success' ? 'dl-import-success' : state.decklistImportStatus.startsWith('error') ? 'dl-import-error' : ''}">${
+        state.decklistImportStatus === 'loading' ? 'Importing…'
+        : state.decklistImportStatus === 'success' ? 'Imported!'
+        : state.decklistImportStatus === 'loading-images' ? 'Fetching images…'
+        : escHtml(state.decklistImportStatus.replace(/^error:\s*/, ''))
+      }</span>`
+    : '';
+
+  const editorHtml = state.decklistEditing ? `
+    <textarea class="deck-detail-editor" id="dl-editor"
+      oninput="saveDecklistText(this.value)"
+      placeholder="1 Sol Ring&#10;1 Command Tower&#10;1 ${escHtml(deck.commander)} *CMDR*&#10;..."
+    >${escHtml(deck.decklist || '')}</textarea>` : '';
+
+  let displayHtml = '';
+  if (state.decklistMode === "images") {
+    displayHtml = renderImageGrid(cards);
+  } else {
+    displayHtml = renderTextList(cards, deck);
+  }
+
+  return `<div class="deck-detail">
+    <div class="deck-detail-topbar">
+      <button class="deck-detail-back" onclick="closeDeckDetail()">← Back</button>
+      <div class="deck-detail-title">
+        <span class="tier-badge" style="background:${tier.color}">${escHtml(tier.label)}</span>
+        <h2>${escHtml(deck.commander)}</h2>
+        <span class="player-tag" style="background:var(--player-${deck.player.toLowerCase()}-bg);color:var(--player-${deck.player.toLowerCase()})">${escHtml(deck.player)}</span>
+        ${totalCards ? `<span style="font-size:12px;color:var(--text-muted)">${totalCards} cards</span>` : ''}
+      </div>
+      <div class="control-group">
+        <button class="${state.decklistMode === 'text' ? 'active' : ''}" onclick="setDecklistMode('text')">List</button>
+        <button class="${state.decklistMode === 'images' ? 'active' : ''}" onclick="setDecklistMode('images')">Images</button>
+      </div>
+    </div>
+
+    <div class="deck-detail-import">
+      <input type="text" id="dl-import-url" placeholder="Paste Archidekt or Moxfield URL…"
+        value="${escHtml(state.decklistImportUrl)}"
+        oninput="state.decklistImportUrl=this.value"
+        onkeydown="if(event.key==='Enter')importFromUrl()">
+      <button onclick="importFromUrl()">Import</button>
+      ${importStatusHtml}
+    </div>
+
+    <div class="deck-detail-editor-wrap">
+      <button class="dl-edit-toggle" onclick="toggleDecklistEditor()">
+        ${state.decklistEditing ? '▲ Hide editor' : '▼ Edit decklist'}
+      </button>
+      ${editorHtml}
+    </div>
+
+    <div class="dl-display">${displayHtml}</div>
+  </div>`;
 }
 
 // ===== INIT =====
