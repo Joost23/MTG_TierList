@@ -913,17 +913,20 @@ async function loadAndRenderImages(deckId) {
 }
 
 async function fetchJson(apiUrl) {
-  // Try direct fetch first, fall back to CORS proxy
-  try {
-    const res = await fetch(apiUrl, { headers: { "Accept": "application/json" } });
-    if (!res.ok) throw new Error("HTTP " + res.status);
-    return await res.json();
-  } catch (e) {
-    const proxy = "https://corsproxy.io/?" + encodeURIComponent(apiUrl);
-    const res = await fetch(proxy, { headers: { "Accept": "application/json" } });
-    if (!res.ok) throw new Error("HTTP " + res.status);
-    return await res.json();
+  const proxies = [
+    u => u,
+    u => "https://api.allorigins.win/raw?url=" + encodeURIComponent(u),
+    u => "https://corsproxy.io/?" + encodeURIComponent(u),
+  ];
+  let lastErr;
+  for (const proxy of proxies) {
+    try {
+      const res = await fetch(proxy(apiUrl), { headers: { "Accept": "application/json" } });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      return await res.json();
+    } catch (e) { lastErr = e; }
   }
+  throw lastErr;
 }
 
 async function importFromUrl() {
