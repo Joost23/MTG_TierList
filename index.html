@@ -836,13 +836,14 @@ function getLeaderboardData() {
 function getRecentGames(limit = 10) {
   const games = [];
   state.decks.forEach(deck => {
-    (deck.games || []).forEach(g => {
+    (deck.games || []).forEach((g, idx) => {
       if (g.result === 'win') {
-        games.push({ date: g.date || '', ts: g.ts || 0, winnerDeck: deck, loserDeck: state.decks.find(d => d.id === g.opponentId) || null });
+        games.push({ date: g.date || '', ts: g.ts || 0, idx, winnerDeck: deck, loserDeck: state.decks.find(d => d.id === g.opponentId) || null });
       }
     });
   });
-  return games.sort((a, b) => (b.ts - a.ts) || b.date.localeCompare(a.date)).slice(0, limit);
+  // Sort: real timestamp first, then date, then array index (later = more recent)
+  return games.sort((a, b) => (b.ts - a.ts) || b.date.localeCompare(a.date) || (b.idx - a.idx)).slice(0, limit);
 }
 
 function renderDashboard() {
