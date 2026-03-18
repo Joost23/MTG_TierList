@@ -1660,7 +1660,7 @@ async function importFromUrl() {
 
     if (archidektM) {
       const data = await fetchJson(`https://archidekt.com/api/decks/${archidektM[1]}/`);
-      const main = [], side = [], maybe = [];
+      const cmd = [], main = [], side = [], maybe = [];
       (data.cards || []).forEach(c => {
         const name = c.card?.oracleCard?.name || c.card?.name || '';
         if (!name) return;
@@ -1669,11 +1669,25 @@ async function importFromUrl() {
         const suffix = edCode && cn ? ` (${edCode}) ${cn}` : '';
         const line = `${c.quantity} ${name}${suffix}`;
         const cats = (c.categories || []).map(s => s.toLowerCase());
-        if (cats.some(s => s.includes('maybeboard') || s.includes('maybe'))) maybe.push(line);
+        if (cats.some(s => s === 'commander' || s.includes('commander'))) cmd.push(line);
+        else if (cats.some(s => s.includes('maybeboard') || s.includes('maybe'))) maybe.push(line);
         else if (cats.some(s => s.includes('sideboard') || s === 'side')) side.push(line);
         else main.push(line);
       });
-      const parts = [main.join('\n')];
+      const parts = [];
+      if (cmd.length) {
+        parts.push('// Commander\n' + cmd.join('\n'));
+        // Auto-set commander + deck name
+        const cmdName = parseCardLine(cmd[0])?.name;
+        if (cmdName) {
+          const deckId = state.decklistView;
+          const deck = state.decks.find(d => d.id === deckId);
+          const nameUpdate = (!deck?.name || deck.name === 'New Deck') ? { commander: cmdName, name: cmdName } : { commander: cmdName };
+          state.decks = state.decks.map(d => d.id === deckId ? { ...d, ...nameUpdate } : d);
+          fbUpdateDeck(deckId, nameUpdate).catch(console.error);
+        }
+      }
+      if (main.length) parts.push('// Deck\n' + main.join('\n'));
       if (side.length) parts.push('// Sideboard\n' + side.join('\n'));
       if (maybe.length) parts.push('// Maybeboard\n' + maybe.join('\n'));
       text = parts.filter(Boolean).join('\n\n');
