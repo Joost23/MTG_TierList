@@ -109,8 +109,12 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 
 /* Deck list — compact rows */
 .deck-list { display: flex; flex-direction: column; gap: 4px; }
-.deck-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; transition: background var(--transition), border-color var(--transition); border-left: 3px solid transparent; }
-.deck-card:hover { border-color: var(--border-hover); background: var(--bg-hover); }
+.deck-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; transition: background var(--transition), border-color var(--transition); border-left: 3px solid transparent; position: relative; overflow: hidden; }
+.deck-card:hover { border-color: var(--border-hover); }
+.deck-card-art { position: absolute; inset: 0; background-size: cover; background-position: center 15%; opacity: 0; transition: opacity 0.3s ease; z-index: 0; }
+.deck-card-art.loaded { opacity: 0.12; }
+.deck-card:hover .deck-card-art.loaded { opacity: 0.22; }
+.deck-card > *:not(.deck-card-art) { position: relative; z-index: 1; }
 .deck-row-compact { display: flex; align-items: center; gap: 10px; padding: 0 12px; min-height: 44px; }
 .deck-tier-mini { width: 22px; height: 22px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; font-family: 'JetBrains Mono', monospace; flex-shrink: 0; }
 .deck-commander { flex: 1; font-size: 14px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
@@ -851,6 +855,8 @@ function render() {
   if (state.showChangePassword) html += renderChangePasswordModal();
   if (state.gamesHistoryOpen) html += renderGamesHistoryModal();
   app.innerHTML = html;
+  // Lazily load commander art for deck cards
+  if (document.querySelector('.deck-card-art[data-art-commander]')) loadDeckCardArts();
 }
 
 function renderBottomNav(active) {
@@ -1296,7 +1302,12 @@ function renderDeckCard(deck, tier, index) {
   const losses = games.filter(g => g.result === 'loss').length;
   const total = wins + losses;
 
-  let card = `<div class="deck-card" style="border-left-color:${tier.color};animation-delay:${delay}ms" onclick="toggleExpand('${deck.id}')">
+  const artKey = (deck.commander || '').toLowerCase();
+  const artCacheVal = scryfallCache[artKey];
+  const artUrl = typeof artCacheVal === 'string' ? artCacheVal : (artCacheVal?.imageUrl || null);
+
+  let card = `<div class="deck-card" style="border-left-color:${tier.color};animation-delay:${delay}ms" data-art-id="${escHtml(deck.id)}" onclick="toggleExpand('${deck.id}')">
+    <div class="deck-card-art${artUrl ? ' loaded' : ''}" style="${artUrl ? `background-image:url('${escHtml(artUrl)}')` : ''}" data-art-commander="${artUrl ? '' : escHtml(deck.commander)}"></div>
     <div class="deck-row-compact">
       <div class="deck-tier-mini" style="background:${tier.bg};color:${tier.text}">${tier.label}</div>
       <span class="deck-commander">${escHtml(deck.commander)}</span>
@@ -3651,7 +3662,8 @@ function renderMyDecksGallery() {
     const wins = games.filter(g => g.result === 'win').length;
     const losses = games.filter(g => g.result === 'loss').length;
     const cacheKey = (deck.commander || '').toLowerCase();
-    const cachedImg = scryfallCache[cacheKey];
+    const cacheVal = scryfallCache[cacheKey];
+    const cachedImg = typeof cacheVal === 'string' ? cacheVal : (cacheVal?.imageUrl || null);
     const imgHtml = cachedImg
       ? `<img class="gallery-card-img" src="${escHtml(cachedImg)}" alt="" loading="lazy" onerror="this.style.display='none'">`
       : `<div class="gallery-card-placeholder">🧙</div>`;
@@ -3686,7 +3698,15 @@ async function loadGalleryImages() {
   for (const deck of myDecks) {
     const key = (deck.commander || '').toLowerCase();
     if (!key) continue;
-    if (scryfallCache[key]) continue;
+    // If we already have a string URL, skip
+    const existing = scryfallCache[key];
+    if (typeof existing === 'string') continue;
+    // If we have an object with imageUrl, use that immediately (no refetch needed)
+    if (existing?.imageUrl) {
+      scryfallCache[key] = existing.imageUrl;
+      needsRender = true;
+      continue;
+    }
     try {
       const resp = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(deck.commander)}&format=json`);
       if (!resp.ok) continue;
@@ -3702,6 +3722,44 @@ async function loadGalleryImages() {
     await new Promise(r => setTimeout(r, 80));
   }
   if (needsRender && state.myDecksGallery) render();
+}
+
+// Lazily load commander art backgrounds for visible deck cards
+async function loadDeckCardArts() {
+  const artDivs = [...document.querySelectorAll('.deck-card-art[data-art-commander]')];
+  const toFetch = artDivs.filter(el => el.getAttribute('data-art-commander'));
+  if (toFetch.length === 0) return;
+
+  for (const el of toFetch) {
+    const commander = el.getAttribute('data-art-commander');
+    if (!commander) continue;
+    const key = commander.toLowerCase();
+    let imgUrl = null;
+
+    const existing = scryfallCache[key];
+    if (typeof existing === 'string') {
+      imgUrl = existing;
+    } else if (existing?.imageUrl) {
+      imgUrl = existing.imageUrl;
+      scryfallCache[key] = imgUrl;
+    } else {
+      try {
+        const resp = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(commander)}&format=json`);
+        if (resp.ok) {
+          const data = await resp.json();
+          imgUrl = data.image_uris?.art_crop || data.image_uris?.normal || null;
+          if (imgUrl) scryfallCache[key] = imgUrl;
+        }
+      } catch(e) {}
+      await new Promise(r => setTimeout(r, 80));
+    }
+
+    if (imgUrl && document.contains(el)) {
+      el.style.backgroundImage = `url('${imgUrl}')`;
+      el.removeAttribute('data-art-commander');
+      el.classList.add('loaded');
+    }
+  }
 }
 
 // ===== FEATURE 2: GAMES HISTORY MODAL =====
@@ -3890,6 +3948,7 @@ window.closeAvatarModal = closeAvatarModal;
 window.openMyDecksGallery = openMyDecksGallery;
 window.closeMyDecksGallery = closeMyDecksGallery;
 window.loadGalleryImages = loadGalleryImages;
+window.loadDeckCardArts = loadDeckCardArts;
 window.openGamesHistory = openGamesHistory;
 window.closeGamesHistory = closeGamesHistory;
 window.toggleLeaderboardExpand = toggleLeaderboardExpand;
