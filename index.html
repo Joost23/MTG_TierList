@@ -609,6 +609,7 @@ function render() {
   let html = '';
   if (tab === 'home') html = renderDashboard();
   else if (tab === 'collection') html = renderCollectionTab();
+  else if (tab === 'meta') html = renderMetaTab();
   else html = renderPlayTab();
 
   html += renderBottomNav(tab);
@@ -668,6 +669,7 @@ function renderBottomNav(active) {
     { id: 'home', label: 'Home', icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>' },
     { id: 'collection', label: 'Decks', icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg>' },
     { id: 'play', label: 'Play', icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>' },
+    { id: 'meta', label: 'Meta', icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>' },
   ];
   return `<nav class="tab-bar">${tabs.map(t => `<button class="tab-btn${t.id===active?' active':''}" onclick="setTab('${t.id}')">${t.icon}<span class="tab-label">${t.label}</span></button>`).join('')}</nav>`;
 }
@@ -1885,6 +1887,252 @@ function removeChangelogEntry(deckId, idx) {
     return { ...d, changelog };
   });
   render();
+}
+
+// ===== META ANALYSIS =====
+const STRATEGY_TAGS = [
+  { key: 'combo',        label: 'Combo',        emoji: '🔄', keywords: ['combo', 'infinite', 'consultation', 'oracle', 'dualcaster', 'ad nauseam', 'food chain', 'breach', 'storm'] },
+  { key: 'aristocrats',  label: 'Aristocrats',  emoji: '💀', keywords: ['aristocrat', 'sacrifice', 'aristocrats', 'death trigger', 'blood artist'] },
+  { key: 'tribal',       label: 'Tribal',       emoji: '🐉', keywords: ['tribal', 'elf ', 'elves', 'vampire', 'angel', 'dragon', 'eldrazi', 'warrior', 'squirrel', 'pirate', 'ally', 'dinosaur'] },
+  { key: 'infect',       label: 'Infect',       emoji: '☠️', keywords: ['infect', 'poison', 'toxic'] },
+  { key: 'stax',         label: 'Stax',         emoji: '🛡️', keywords: ['stax', 'lock', 'tax', 'winter orb'] },
+  { key: 'control',      label: 'Control',      emoji: '🌊', keywords: ['control', 'counterspell', 'counter suite', 'interaction suite'] },
+  { key: 'tokens',       label: 'Tokens',       emoji: '🪙', keywords: ['token', 'tokens', 'go wide', 'populate'] },
+  { key: 'extra-turns',  label: 'Extra Turns',  emoji: '⏰', keywords: ['extra turn', 'time warp', 'nexus of fate', 'temporal'] },
+  { key: 'superfriends', label: 'Superfriends', emoji: '🌟', keywords: ['superfriend', 'planeswalker', 'proliferate'] },
+  { key: 'lands',        label: 'Lands',        emoji: '🌍', keywords: ['landfall', 'crucible', 'lands matter', 'land tax'] },
+  { key: 'reanimator',   label: 'Reanimator',   emoji: '⚰️', keywords: ['reanimate', 'reanimator', 'sneak attack', 'from graveyard'] },
+  { key: 'group-hug',    label: 'Group Hug',    emoji: '🤝', keywords: ['group hug', 'hug'] },
+  { key: 'voltron',      label: 'Voltron',      emoji: '⚔️', keywords: ['voltron', 'equipment', 'aura', 'commander damage'] },
+  { key: 'aggro',        label: 'Aggro',        emoji: '⚡', keywords: ['aggro', 'aggression', 'attack', 'combat', 'extra combat'] },
+  { key: 'midrange',     label: 'Midrange',     emoji: '⚖️', keywords: ['midrange', 'goodstuff', 'value engine'] },
+  { key: 'stompy',       label: 'Big Mana',     emoji: '🐘', keywords: ['big creature', 'big mana', 'tron', 'ramp into', 'mana base'] },
+];
+
+function getStrategyTag(deck) {
+  const text = ((deck.notes || '') + ' ' + (deck.commander || '') + ' ' + (deck.theme || '')).toLowerCase();
+  for (const tag of STRATEGY_TAGS) {
+    if (tag.keywords.some(kw => text.includes(kw))) return tag;
+  }
+  return { key: 'goodstuff', label: 'Goodstuff', emoji: '✨' };
+}
+
+function getMetaColors() {
+  const COLOR_NAMES = { W: 'White', U: 'Blue', B: 'Black', R: 'Red', G: 'Green' };
+  return ['W','U','B','R','G'].map(c => {
+    const decks = state.decks.filter(d => (d.colors || '').includes(c));
+    const wins = decks.reduce((s, d) => s + (d.games||[]).filter(g => g.result==='win').length, 0);
+    const games = decks.reduce((s, d) => s + (d.games||[]).length, 0);
+    return { c, name: COLOR_NAMES[c], deckCount: decks.length, wins, games, winRate: games > 0 ? Math.round(wins/games*100) : null };
+  });
+}
+
+function getHeadToHead() {
+  const players = [...new Set(state.decks.map(d => d.player))];
+  const matrix = {};
+  players.forEach(p1 => {
+    matrix[p1] = {};
+    players.forEach(p2 => {
+      if (p1 === p2) return;
+      let wins = 0, losses = 0;
+      state.decks.filter(d => d.player === p1).forEach(deck => {
+        (deck.games||[]).forEach(g => {
+          const opp = state.decks.find(d => d.id === g.opponentId);
+          if (opp?.player !== p2) return;
+          if (g.result === 'win') wins++; else losses++;
+        });
+      });
+      matrix[p1][p2] = { wins, losses, total: wins + losses };
+    });
+  });
+  return { matrix, players };
+}
+
+function getTierDistribution() {
+  const players = [...new Set(state.decks.map(d => d.player))];
+  return players.map(p => {
+    const decks = state.decks.filter(d => d.player === p);
+    const tiers = {};
+    TIERS.forEach(t => { tiers[t.label] = decks.filter(d => getTier(getOverall(d)) === t.label).length; });
+    return { player: p, tiers };
+  });
+}
+
+function getStrategyBreakdown() {
+  const map = {};
+  state.decks.forEach(deck => {
+    const tag = getStrategyTag(deck);
+    if (!map[tag.key]) map[tag.key] = { ...tag, count: 0, wins: 0, games: 0 };
+    map[tag.key].count++;
+    map[tag.key].wins  += (deck.games||[]).filter(g => g.result==='win').length;
+    map[tag.key].games += (deck.games||[]).length;
+  });
+  return Object.values(map).sort((a, b) => b.count - a.count);
+}
+
+function renderMetaTab() {
+  const colorData  = getMetaColors();
+  const { matrix, players } = getHeadToHead();
+  const tierDist   = getTierDistribution();
+  const strategies = getStrategyBreakdown();
+  const totalGames = getRecentGames(10000).length;
+
+  const COLOR_BG = { W:'#C8A84B', U:'#1070C8', B:'#6B6B6B', R:'#D0392A', G:'#1A7A3C' };
+  const maxDecks = Math.max(...colorData.map(d => d.deckCount), 1);
+
+  // ── Color Presence ──────────────────────────────────────
+  const colorSection = `
+    <div class="dash-section-title">Color Presence</div>
+    <div class="dash-card" style="padding:16px 18px">
+      ${colorData.map(({ c, name, deckCount, winRate }) => {
+        const pct = Math.round(deckCount / state.decks.length * 100);
+        const bar = Math.round(deckCount / maxDecks * 100);
+        return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+          <div style="width:22px;height:22px;border-radius:50%;background:${COLOR_BG[c]};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0">${c}</div>
+          <span style="font-size:13px;font-weight:500;width:46px;flex-shrink:0">${name}</span>
+          <div style="flex:1;height:8px;background:var(--bg);border-radius:4px;overflow:hidden">
+            <div style="height:100%;width:${bar}%;background:${COLOR_BG[c]};border-radius:4px"></div>
+          </div>
+          <span style="font-size:12px;color:var(--text-secondary);width:70px;text-align:right;flex-shrink:0">${deckCount} decks · ${pct}%</span>
+          <span style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--text-muted);width:32px;text-align:right;flex-shrink:0">${winRate !== null ? winRate+'%' : '—'}</span>
+        </div>`;
+      }).join('')}
+      <div style="font-size:11px;color:var(--text-muted);margin-top:4px;border-top:1px solid var(--border);padding-top:8px">Right column = win rate of decks containing that color</div>
+    </div>`;
+
+  // ── Head-to-Head ────────────────────────────────────────
+  const h2hSection = players.length >= 2 ? `
+    <div class="dash-section-title">Head-to-Head</div>
+    <div class="dash-card" style="padding:16px 18px">
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:280px">
+          <thead><tr>
+            <th style="text-align:left;padding:6px 10px;color:var(--text-muted);font-size:11px;font-weight:500;border-bottom:1px solid var(--border)">Player</th>
+            ${players.map(p => { const pc = playerColor(p); return `<th style="text-align:center;padding:6px 10px;color:${pc.color};font-size:12px;font-weight:600;border-bottom:1px solid var(--border)">${escHtml(p)}</th>`; }).join('')}
+          </tr></thead>
+          <tbody>
+            ${players.map(p1 => {
+              const pc = playerColor(p1);
+              return `<tr>
+                <td style="padding:10px;border-bottom:1px solid var(--border)">
+                  <div style="display:flex;align-items:center;gap:8px">
+                    ${renderAvatar(p1, 24)}
+                    <span style="font-weight:600;color:${pc.color};font-size:13px">${escHtml(p1)}</span>
+                  </div>
+                </td>
+                ${players.map(p2 => {
+                  if (p1 === p2) return `<td style="text-align:center;padding:10px;color:var(--text-muted);border-bottom:1px solid var(--border)">—</td>`;
+                  const r = matrix[p1]?.[p2] || { wins:0, losses:0, total:0 };
+                  if (!r.total) return `<td style="text-align:center;padding:10px;color:var(--text-muted);font-size:12px;border-bottom:1px solid var(--border)">—</td>`;
+                  const col = r.wins > r.losses ? 'var(--tier-b-text)' : r.wins < r.losses ? 'var(--tier-s-text)' : 'var(--text-secondary)';
+                  return `<td style="text-align:center;padding:10px;font-family:'JetBrains Mono',monospace;font-size:12px;color:${col};font-weight:600;border-bottom:1px solid var(--border)">${r.wins}W–${r.losses}L</td>`;
+                }).join('')}
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:10px">Row player's record against each column player</div>
+    </div>` : '';
+
+  // ── Tier Distribution ───────────────────────────────────
+  const tierSection = `
+    <div class="dash-section-title">Power Spread</div>
+    <div class="dash-card" style="padding:16px 18px">
+      ${tierDist.map(({ player, tiers }) => {
+        const pc = playerColor(player);
+        const total = Object.values(tiers).reduce((s, v) => s + v, 0);
+        return `<div style="margin-bottom:16px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            ${renderAvatar(player, 26)}
+            <span style="font-size:13px;font-weight:600;color:${pc.color}">${escHtml(player)}</span>
+            <span style="font-size:11px;color:var(--text-muted)">${total} deck${total!==1?'s':''}</span>
+            <div style="margin-left:auto;display:flex;gap:8px">
+              ${TIERS.map(t => tiers[t.label] ? `<span style="font-size:11px;font-weight:600;color:${t.text};background:${t.bg};padding:1px 7px;border-radius:99px">${t.label} ${tiers[t.label]}</span>` : '').join('')}
+            </div>
+          </div>
+          <div style="display:flex;gap:2px;height:20px;border-radius:6px;overflow:hidden;background:var(--bg)">
+            ${TIERS.map(t => {
+              const count = tiers[t.label] || 0;
+              if (!count) return '';
+              const w = Math.round(count / total * 100);
+              return `<div title="${t.label}: ${count}" style="flex:${count};background:${t.bg};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:${t.text}">${count > 1 ? count : ''}</div>`;
+            }).join('')}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+
+  // ── Archetypes ──────────────────────────────────────────
+  const archSection = `
+    <div class="dash-section-title">Archetypes</div>
+    <div class="dash-card" style="padding:16px 18px">
+      ${strategies.map(s => {
+        const barW = Math.round(s.count / state.decks.length * 100);
+        const wr = s.games > 0 ? Math.round(s.wins / s.games * 100) : null;
+        return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+          <span style="font-size:18px;width:26px;text-align:center;flex-shrink:0">${s.emoji}</span>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+              <span style="font-size:13px;font-weight:500">${s.label}</span>
+              <div style="display:flex;gap:12px;font-size:11px;color:var(--text-muted)">
+                <span>${s.count} deck${s.count!==1?'s':''}</span>
+                ${wr !== null ? `<span style="font-family:'JetBrains Mono',monospace;color:${wr>=50?'var(--tier-b-text)':'var(--text-muted)'}">${wr}% WR</span>` : ''}
+              </div>
+            </div>
+            <div style="height:6px;background:var(--bg);border-radius:3px;overflow:hidden">
+              <div style="height:100%;width:${barW}%;background:var(--accent-dim);border-radius:3px"></div>
+            </div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+
+  // ── Most Lopsided Matchups ──────────────────────────────
+  const matchups = [];
+  state.decks.forEach(d1 => {
+    (d1.games||[]).forEach(g => {
+      if (g.result !== 'win') return;
+      const d2 = state.decks.find(d => d.id === g.opponentId);
+      if (!d2) return;
+      const key = [d1.id, d2.id].sort().join('|');
+      const existing = matchups.find(m => m.key === key);
+      if (existing) { existing.games++; if (d1.id === existing.winner.id) existing.winnerWins++; }
+      else matchups.push({ key, winner: d1, loser: d2, games: 1, winnerWins: 1 });
+    });
+  });
+  const topMatchups = matchups.filter(m => m.games >= 2).sort((a, b) => b.games - a.games).slice(0, 5);
+
+  const matchupSection = topMatchups.length ? `
+    <div class="dash-section-title">Most Played Matchups</div>
+    <div class="dash-card">
+      ${topMatchups.map(m => {
+        const wp1 = playerColor(m.winner.player);
+        const wp2 = playerColor(m.loser.player);
+        return `<div class="activity-entry">
+          <div class="activity-dot"></div>
+          <div class="activity-text" style="flex-wrap:wrap;gap:2px">
+            <span style="color:${wp1.color};font-weight:500">${escHtml(m.winner.commander)}</span>
+            <span style="color:var(--text-muted)"> vs </span>
+            <span style="color:${wp2.color};font-weight:500">${escHtml(m.loser.commander)}</span>
+          </div>
+          <span style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--text-muted);flex-shrink:0">${m.games} game${m.games!==1?'s':''}</span>
+        </div>`;
+      }).join('')}
+    </div>` : '';
+
+  return `
+    <div class="header">
+      <div class="header-glow"></div>
+      <h1>Pod <span>Meta</span></h1>
+      <p>${state.decks.length} decks · ${totalGames} game${totalGames!==1?'s':''} logged</p>
+    </div>
+    ${colorSection}
+    ${h2hSection}
+    ${tierSection}
+    ${archSection}
+    ${matchupSection}
+  `;
 }
 
 // ===== PHASE 5: POLISH =====
