@@ -1640,16 +1640,30 @@ async function importFromUrl() {
       const data = await fetchJson(`https://api2.moxfield.com/v3/decks/all/${moxfieldM[1]}`);
       const boards = data.boards || {};
       const parts = [];
-      // Main deck boards
+      // Commanders — extract separately and auto-set the deck's commander field
+      const cmdLines = [];
+      const cmdBoard = boards['commanders'];
+      if (cmdBoard) Object.entries(cmdBoard.cards || {}).forEach(([, e]) => {
+        if (e.card?.name) cmdLines.push(`${e.quantity} ${e.card.name}`);
+      });
+      if (cmdLines.length) {
+        parts.push('// Commander\n' + cmdLines.join('\n'));
+        // Auto-populate the commander field (first commander name, strip quantity)
+        const cmdName = cmdLines[0].replace(/^\d+\s+/, '').trim();
+        const deckId = state.decklistView;
+        state.decks = state.decks.map(d => d.id === deckId ? { ...d, commander: cmdName } : d);
+        fbUpdateDeck(deckId, { commander: cmdName }).catch(console.error);
+      }
+      // Main deck boards (commanders excluded — tracked separately above)
       const mainLines = [];
-      ['commanders', 'mainboard', 'companions'].forEach(b => {
+      ['mainboard', 'companions'].forEach(b => {
         const board = boards[b];
         if (!board) return;
         Object.entries(board.cards || {}).forEach(([, e]) => {
           if (e.card?.name) mainLines.push(`${e.quantity} ${e.card.name}`);
         });
       });
-      if (mainLines.length) parts.push(mainLines.join('\n'));
+      if (mainLines.length) parts.push('// Deck\n' + mainLines.join('\n'));
       // Sideboard
       const sideLines = [];
       const sb = boards['sideboard'];
@@ -1684,6 +1698,8 @@ async function importFromUrl() {
   state.decklistImportStatus = "success";
   state.decklistEditing = true;
   render();
+  // Auto-fetch card images after import
+  loadAndRenderImages(state.decklistView);
 }
 
 function getManaDistribution(cards, commanderName) {
