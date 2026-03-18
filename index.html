@@ -82,41 +82,50 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 .control-group button:hover:not(.active) { background: var(--bg-hover); }
 .spacer { flex: 1; }
 
-/* Tier bar */
-.tier-bar { display: flex; gap: 2px; margin-bottom: 24px; border-radius: var(--radius-sm); overflow: hidden; }
-.tier-bar-seg { flex: 1; text-align: center; padding: 7px 0; font-size: 12px; font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+/* Search & filter bar */
+.deck-search-bar { display: flex; gap: 8px; margin-bottom: 12px; align-items: center; }
+.deck-search-input { flex: 1; min-width: 0; font-size: 13px; padding: 6px 12px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); }
+.deck-search-input:focus { outline: none; border-color: var(--accent); }
+.deck-filter-select { font-size: 12px; padding: 5px 10px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); cursor: pointer; max-width: 140px; }
+.deck-filter-select:focus { outline: none; border-color: var(--accent); }
+
+/* Tier bar — sticky + clickable */
+.tier-bar-wrap { position: sticky; top: 0; z-index: 10; background: var(--bg); padding: 6px 0 10px; margin-bottom: 8px; }
+.tier-bar { display: flex; gap: 2px; border-radius: var(--radius-sm); overflow: hidden; }
+.tier-bar-seg { flex: 1; text-align: center; padding: 7px 0; font-size: 12px; font-weight: 600; font-family: 'JetBrains Mono', monospace; transition: filter 0.15s; }
+.tier-bar-seg.clickable { cursor: pointer; }
+.tier-bar-seg.clickable:hover { filter: brightness(1.15); }
+.tier-bar-seg.dimmed { opacity: 0.35; }
 
 /* Tier sections */
-.tier-section { margin-bottom: 24px; }
-.tier-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; padding-left: 2px; }
+.tier-section { margin-bottom: 20px; }
+.tier-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; padding-left: 2px; cursor: pointer; user-select: none; }
+.tier-header:hover .tier-chevron { color: var(--text-secondary); }
 .tier-badge { width: 26px; height: 26px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; font-family: 'JetBrains Mono', monospace; }
 .tier-label { font-size: 13px; font-weight: 500; }
 .tier-count { font-size: 12px; color: var(--text-muted); }
+.tier-chevron { margin-left: auto; font-size: 13px; color: var(--text-muted); transition: transform 0.2s ease; }
+.tier-chevron.collapsed { transform: rotate(-90deg); }
 
-/* Deck cards */
-.deck-list { display: flex; flex-direction: column; gap: 6px; }
-.deck-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 14px 18px;
-  cursor: pointer;
-  transition: all var(--transition);
-  border-left: 3px solid var(--tier-color);
-  animation: fadeIn 0.3s ease both;
-}
+/* Deck list — compact rows */
+.deck-list { display: flex; flex-direction: column; gap: 4px; }
+.deck-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; transition: all var(--transition); border-left: 3px solid transparent; animation: fadeIn 0.2s ease both; }
 .deck-card:hover { border-color: var(--border-hover); background: var(--bg-hover); }
-.deck-top { display: flex; justify-content: space-between; align-items: flex-start; }
-.deck-info { flex: 1; min-width: 0; }
-.deck-name-row { display: flex; align-items: center; gap: 10px; margin-bottom: 5px; }
-.deck-tier-mini { width: 26px; height: 26px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; font-family: 'JetBrains Mono', monospace; flex-shrink: 0; }
-.deck-commander { font-size: 15px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.deck-meta { display: flex; gap: 8px; align-items: center; margin-left: 36px; flex-wrap: wrap; }
-.deck-player { padding: 1px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+.deck-row-compact { display: flex; align-items: center; gap: 10px; padding: 0 12px; min-height: 44px; }
+.deck-tier-mini { width: 22px; height: 22px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; font-family: 'JetBrains Mono', monospace; flex-shrink: 0; }
+.deck-commander { flex: 1; font-size: 14px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.deck-player { padding: 1px 7px; border-radius: 4px; font-size: 11px; font-weight: 500; flex-shrink: 0; }
+.deck-row-score { font-size: 14px; font-weight: 600; font-family: 'JetBrains Mono', monospace; flex-shrink: 0; width: 34px; text-align: right; color: var(--text-secondary); }
 .deck-colors { font-size: 12px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; letter-spacing: 1px; }
-.deck-score { text-align: right; flex-shrink: 0; margin-left: 16px; }
-.deck-score-value { font-size: 24px; font-weight: 600; font-family: 'JetBrains Mono', monospace; }
-.deck-score-label { font-size: 11px; color: var(--text-muted); }
+.deck-record-badge { font-size: 11px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+/* Legacy compat */
+.deck-top { display: none; }
+.deck-score { display: none; }
+.deck-info { display: none; }
+.deck-name-row { display: none; }
+.deck-meta { display: none; }
+.deck-score-value { display: none; }
+.deck-score-label { display: none; }
 
 /* Expanded area */
 .deck-expanded { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
@@ -519,6 +528,8 @@ let state = {
   view: "tiers",
   playerFilter: "All",
   sortBy: "power",
+  deckSearch: "",
+  collapsedTiers: {},
   expanded: {},
   showAddModal: false,
   editDeck: null,
@@ -895,11 +906,25 @@ function renderDashboard() {
 
 function renderCollectionTab() {
   const decks = state.decks;
-  const filtered = state.playerFilter === "All" ? decks : decks.filter(d => d.player === state.playerFilter);
-  const sorted = [...filtered].sort((a, b) => {
-    if (state.sortBy === "power") return b.power - a.power || getOverall(b) - getOverall(a);
-    return getOverall(b) - getOverall(a);
-  });
+  const players = ['All', ...new Set(decks.map(d => d.player))];
+  const sortMode = `${state.sortBy}-${state.view === 'tiers' ? 'tiers' : 'ranked'}`;
+
+  // Filter: player + search
+  const q = (state.deckSearch || '').toLowerCase().trim();
+  const COLOR_ALIASES = { white:'W', blue:'U', black:'B', red:'R', green:'G', azorius:'WU', dimir:'UB', rakdos:'BR', gruul:'RG', selesnya:'GW', orzhov:'WB', izzet:'UR', golgari:'BG', boros:'WR', simic:'UG', esper:'WUB', grixis:'UBR', jund:'BRG', naya:'RGW', bant:'GWU', abzan:'WBG', jeskai:'WUR', sultai:'UBG', mardu:'WBR', temur:'URG', wubrg:'WUBRG', colorless:'C' };
+  let filtered = state.playerFilter === 'All' ? decks : decks.filter(d => d.player === state.playerFilter);
+  if (q) {
+    const norm = COLOR_ALIASES[q] || q.toUpperCase();
+    filtered = filtered.filter(d =>
+      (d.commander||'').toLowerCase().includes(q) ||
+      (d.player||'').toLowerCase().includes(q) ||
+      (d.colors||'').toUpperCase().includes(norm) ||
+      (d.notes||'').toLowerCase().includes(q)
+    );
+  }
+  const sorted = [...filtered].sort((a, b) =>
+    state.sortBy === 'power' ? (b.power - a.power || getOverall(b) - getOverall(a)) : (getOverall(b) - getOverall(a))
+  );
 
   let html = `
     <div class="header">
@@ -907,55 +932,55 @@ function renderCollectionTab() {
       <h1>Commander <span>Hub</span></h1>
       <p>${decks.length} decks across ${new Set(decks.map(d => d.player)).size} builders</p>
     </div>
-    <div class="controls">
-      <div class="control-group">
-        ${PLAYERS.map(p => `<button class="${state.playerFilter===p?'active':''}" onclick="setFilter('${p}')">${p}</button>`).join("")}
-      </div>
-      <div class="spacer"></div>
-      <div class="control-group">
-        <button class="${state.view==='tiers'?'active':''}" onclick="setView('tiers')">By tier</button>
-        <button class="${state.view==='list'?'active':''}" onclick="setView('list')">Ranked</button>
-      </div>
-      <div class="control-group">
-        <button class="${state.sortBy==='power'?'active':''}" onclick="setSort('power')">Power</button>
-        <button class="${state.sortBy==='overall'?'active':''}" onclick="setSort('overall')">Overall</button>
-      </div>
-      <button onclick="openAddModal()" style="padding:5px 14px;font-size:12px;background:var(--accent-dim);color:#fff;border-color:var(--accent)">+ Add deck</button>
+    <div class="deck-search-bar">
+      <input class="deck-search-input" type="text" placeholder="🔍  Search decks…"
+        value="${escHtml(state.deckSearch)}" oninput="state.deckSearch=this.value;render()">
+      <select class="deck-filter-select" onchange="setFilter(this.value)">
+        ${players.map(p => `<option value="${p}" ${state.playerFilter===p?'selected':''}>${p==='All'?'All builders':p}</option>`).join('')}
+      </select>
+      <select class="deck-filter-select" onchange="setSortMode(this.value)">
+        <option value="power-tiers"  ${sortMode==='power-tiers' ?'selected':''}>Power · By tier</option>
+        <option value="power-ranked" ${sortMode==='power-ranked'?'selected':''}>Power · Ranked</option>
+        <option value="overall-tiers"  ${sortMode==='overall-tiers' ?'selected':''}>Overall · By tier</option>
+        <option value="overall-ranked" ${sortMode==='overall-ranked'?'selected':''}>Overall · Ranked</option>
+      </select>
+      <button onclick="openAddModal()" style="padding:5px 14px;font-size:12px;background:var(--accent-dim);color:#fff;border-color:var(--accent);flex-shrink:0">+ Add</button>
     </div>
-    <div class="tier-bar">
-      ${TIERS.map(t => {
-        const count = filtered.filter(d => getTier(d.power) === t.label).length;
-        return `<div class="tier-bar-seg" style="background:${t.bg};color:${t.text}">${t.label} <span style="font-weight:400;font-size:11px">(${count})</span></div>`;
-      }).join("")}
+    <div class="tier-bar-wrap">
+      <div class="tier-bar">
+        ${TIERS.map(t => {
+          const count = filtered.filter(d => getTier(d.power) === t.label).length;
+          const canClick = count > 0 && state.view === 'tiers';
+          return `<div class="tier-bar-seg ${canClick?'clickable':'dimmed'}" style="background:${t.bg};color:${t.text}"
+            ${canClick?`onclick="document.getElementById('tier-${t.label}').scrollIntoView({behavior:'smooth',block:'start'})"`:''}>
+            ${t.label} <span style="font-weight:400;font-size:11px">(${count})</span>
+          </div>`;
+        }).join('')}
+      </div>
     </div>
   `;
 
   if (decks.length === 0) {
-    html += `<div class="empty">
-      <h3>No decks yet</h3>
-      <p style="color:var(--text-secondary);font-size:13px;margin-bottom:8px">Seed the database with the default pod decks to get started.</p>
-      <button class="btn-primary" onclick="seedDecks()">Seed default decks</button>
-    </div>`;
+    html += `<div class="empty"><h3>No decks yet</h3><p style="color:var(--text-secondary);font-size:13px;margin-bottom:8px">Seed the database with the default pod decks to get started.</p><button class="btn-primary" onclick="seedDecks()">Seed default decks</button></div>`;
   } else if (filtered.length === 0) {
-    html += `<div class="empty"><h3>No decks match filter</h3><p style="color:var(--text-secondary);font-size:13px">Try a different filter</p><button onclick="setFilter('All')">Show all</button></div>`;
-  } else if (state.view === "tiers") {
+    html += `<div class="empty"><h3>No decks match</h3><p style="color:var(--text-secondary);font-size:13px">Try a different search or filter</p><button onclick="state.deckSearch='';setFilter('All')">Clear</button></div>`;
+  } else if (state.view === 'tiers') {
     TIERS.forEach(tier => {
       const td = sorted.filter(d => getTier(d.power) === tier.label);
       if (!td.length) return;
-      html += `<div class="tier-section">
-        <div class="tier-header">
+      const isCollapsed = !!state.collapsedTiers[tier.label];
+      html += `<div class="tier-section" id="tier-${tier.label}">
+        <div class="tier-header" onclick="toggleTierCollapse('${tier.label}')">
           <div class="tier-badge" style="background:${tier.bg};color:${tier.text}">${tier.label}</div>
           <span class="tier-label" style="color:${tier.text}">${tier.desc}</span>
           <span class="tier-count">(${td.length})</span>
+          <span class="tier-chevron ${isCollapsed?'collapsed':''}">▾</span>
         </div>
-        <div class="deck-list">${td.map((d,i) => renderDeckCard(d, tier, i)).join("")}</div>
+        ${isCollapsed ? '' : `<div class="deck-list">${td.map((d,i) => renderDeckCard(d, tier, i)).join('')}</div>`}
       </div>`;
     });
   } else {
-    html += `<div class="deck-list">${sorted.map((d,i) => {
-      const tier = getTierInfo(getTier(d.power));
-      return renderDeckCard(d, tier, i);
-    }).join("")}</div>`;
+    html += `<div class="deck-list">${sorted.map((d,i) => renderDeckCard(d, getTierInfo(getTier(d.power)), i)).join('')}</div>`;
   }
 
   return html;
@@ -1025,34 +1050,27 @@ function renderDeckCard(deck, tier, index) {
   const overall = getOverall(deck);
   const isExpanded = state.expanded[deck.id];
   const pc = playerColor(deck.player);
-  const delay = Math.min(index * 30, 500);
+  const delay = Math.min(index * 20, 400);
   const games = deck.games || [];
   const wins = games.filter(g => g.result === 'win').length;
   const losses = games.filter(g => g.result === 'loss').length;
   const total = wins + losses;
 
   let card = `<div class="deck-card" style="border-left-color:${tier.color};animation-delay:${delay}ms" onclick="toggleExpand('${deck.id}')">
-    <div class="deck-top">
-      <div class="deck-info">
-        <div class="deck-name-row">
-          <div class="deck-tier-mini" style="background:${tier.bg};color:${tier.text}">${tier.label}</div>
-          <span class="deck-commander">${escHtml(deck.commander)}</span>
-        </div>
-        <div class="deck-meta">
-          <span class="deck-player" style="background:${pc.bg};color:${pc.color}">${escHtml(deck.player)}</span>
-          <span class="deck-colors">${escHtml(deck.colors)}</span>
-          ${total > 0 ? `<span class="deck-record-badge">${wins}W-${losses}L</span>` : ''}
-        </div>
-      </div>
-      <div class="deck-score">
-        <div class="deck-score-value">${overall}</div>
-        <div class="deck-score-label">overall</div>
-      </div>
+    <div class="deck-row-compact">
+      <div class="deck-tier-mini" style="background:${tier.bg};color:${tier.text}">${tier.label}</div>
+      <span class="deck-commander">${escHtml(deck.commander)}</span>
+      <span class="deck-player" style="background:${pc.bg};color:${pc.color}">${escHtml(deck.player)}</span>
+      <span class="deck-row-score">${overall}</span>
     </div>`;
 
   if (isExpanded) {
     const winRate = total > 0 ? Math.round((wins / total) * 100) : null;
     card += `<div class="deck-expanded">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+        ${deck.colors ? `<span class="deck-colors">${escHtml(deck.colors)}</span>` : ''}
+        ${total > 0 ? `<span class="deck-record-badge">${wins}W-${losses}L</span>` : ''}
+      </div>
       ${renderStat("Power", deck.power, tier.color)}
       ${renderStat("Synergy", deck.synergy, tier.color)}
       ${renderStat("Theme", deck.theme, tier.color)}
@@ -1132,6 +1150,16 @@ function renderStat(label, value, color) {
 function setFilter(p) { state.playerFilter = p; render(); }
 function setView(v) { state.view = v; render(); }
 function setSort(s) { state.sortBy = s; render(); }
+function setSortMode(val) {
+  const [sort, view] = val.split('-');
+  state.sortBy = sort;
+  state.view = view === 'tiers' ? 'tiers' : 'list';
+  render();
+}
+function toggleTierCollapse(tier) {
+  state.collapsedTiers = { ...state.collapsedTiers, [tier]: !state.collapsedTiers[tier] };
+  render();
+}
 function toggleExpand(id) {
   if (state.loggingGame) return;
   state.expanded[id] = !state.expanded[id];
@@ -3210,6 +3238,8 @@ window.state = state;
 window.setFilter = setFilter;
 window.setView = setView;
 window.setSort = setSort;
+window.setSortMode = setSortMode;
+window.toggleTierCollapse = toggleTierCollapse;
 window.toggleExpand = toggleExpand;
 window.openAddModal = openAddModal;
 window.closeModal = closeModal;
