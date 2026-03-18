@@ -1431,19 +1431,49 @@ async function importFromUrl() {
 
     if (archidektM) {
       const data = await fetchJson(`https://archidekt.com/api/decks/${archidektM[1]}/`);
-      text = (data.cards || []).map(c => `${c.quantity} ${c.card?.oracleCard?.name || c.card?.name || ''}`).filter(l => l.trim().length > 2).join('\n');
+      const main = [], side = [], maybe = [];
+      (data.cards || []).forEach(c => {
+        const name = c.card?.oracleCard?.name || c.card?.name || '';
+        if (!name) return;
+        const line = `${c.quantity} ${name}`;
+        const cats = (c.categories || []).map(s => s.toLowerCase());
+        if (cats.some(s => s.includes('maybeboard') || s.includes('maybe'))) maybe.push(line);
+        else if (cats.some(s => s.includes('sideboard') || s === 'side')) side.push(line);
+        else main.push(line);
+      });
+      const parts = [main.join('\n')];
+      if (side.length) parts.push('// Sideboard\n' + side.join('\n'));
+      if (maybe.length) parts.push('// Maybeboard\n' + maybe.join('\n'));
+      text = parts.filter(Boolean).join('\n\n');
     } else if (moxfieldM) {
       const data = await fetchJson(`https://api2.moxfield.com/v3/decks/all/${moxfieldM[1]}`);
-      const lines = [];
       const boards = data.boards || {};
-      ["commanders", "mainboard", "sideboard", "companion"].forEach(b => {
+      const parts = [];
+      // Main deck boards
+      const mainLines = [];
+      ['commanders', 'mainboard', 'companions'].forEach(b => {
         const board = boards[b];
         if (!board) return;
-        Object.entries(board.cards || {}).forEach(([, entry]) => {
-          lines.push(`${entry.quantity} ${entry.card?.name || ''}`);
+        Object.entries(board.cards || {}).forEach(([, e]) => {
+          if (e.card?.name) mainLines.push(`${e.quantity} ${e.card.name}`);
         });
       });
-      text = lines.filter(l => l.trim().length > 2).join('\n');
+      if (mainLines.length) parts.push(mainLines.join('\n'));
+      // Sideboard
+      const sideLines = [];
+      const sb = boards['sideboard'];
+      if (sb) Object.entries(sb.cards || {}).forEach(([, e]) => {
+        if (e.card?.name) sideLines.push(`${e.quantity} ${e.card.name}`);
+      });
+      if (sideLines.length) parts.push('// Sideboard\n' + sideLines.join('\n'));
+      // Maybeboard
+      const maybeLines = [];
+      const mb = boards['maybeboard'];
+      if (mb) Object.entries(mb.cards || {}).forEach(([, e]) => {
+        if (e.card?.name) maybeLines.push(`${e.quantity} ${e.card.name}`);
+      });
+      if (maybeLines.length) parts.push('// Maybeboard\n' + maybeLines.join('\n'));
+      text = parts.filter(Boolean).join('\n\n');
     } else {
       state.decklistImportStatus = "error: Unrecognised URL — paste an Archidekt or Moxfield link";
       render(); return;
