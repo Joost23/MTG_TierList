@@ -109,7 +109,7 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 
 /* Deck list — compact rows */
 .deck-list { display: flex; flex-direction: column; gap: 4px; }
-.deck-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; transition: all var(--transition); border-left: 3px solid transparent; animation: fadeIn 0.2s ease both; }
+.deck-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; transition: background var(--transition), border-color var(--transition); border-left: 3px solid transparent; }
 .deck-card:hover { border-color: var(--border-hover); background: var(--bg-hover); }
 .deck-row-compact { display: flex; align-items: center; gap: 10px; padding: 0 12px; min-height: 44px; }
 .deck-tier-mini { width: 22px; height: 22px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; font-family: 'JetBrains Mono', monospace; flex-shrink: 0; }
@@ -529,6 +529,7 @@ let state = {
   playerFilter: "All",
   sortBy: "power",
   deckSearch: "",
+  tierFilter: null,
   collapsedTiers: {},
   expanded: {},
   showAddModal: false,
@@ -907,12 +908,12 @@ function renderDashboard() {
 function renderCollectionTab() {
   const decks = state.decks;
   const players = ['All', ...new Set(decks.map(d => d.player))];
-  const sortMode = `${state.sortBy}-${state.view === 'tiers' ? 'tiers' : 'ranked'}`;
 
-  // Filter: player + search
+  // Filter: player + search + tier
   const q = (state.deckSearch || '').toLowerCase().trim();
   const COLOR_ALIASES = { white:'W', blue:'U', black:'B', red:'R', green:'G', azorius:'WU', dimir:'UB', rakdos:'BR', gruul:'RG', selesnya:'GW', orzhov:'WB', izzet:'UR', golgari:'BG', boros:'WR', simic:'UG', esper:'WUB', grixis:'UBR', jund:'BRG', naya:'RGW', bant:'GWU', abzan:'WBG', jeskai:'WUR', sultai:'UBG', mardu:'WBR', temur:'URG', wubrg:'WUBRG', colorless:'C' };
   let filtered = state.playerFilter === 'All' ? decks : decks.filter(d => d.player === state.playerFilter);
+  if (state.tierFilter) filtered = filtered.filter(d => getTier(d.power) === state.tierFilter);
   if (q) {
     const norm = COLOR_ALIASES[q] || q.toUpperCase();
     filtered = filtered.filter(d =>
@@ -933,26 +934,24 @@ function renderCollectionTab() {
       <p>${decks.length} decks across ${new Set(decks.map(d => d.player)).size} builders</p>
     </div>
     <div class="deck-search-bar">
-      <input class="deck-search-input" type="text" placeholder="🔍  Search decks…"
-        value="${escHtml(state.deckSearch)}" oninput="state.deckSearch=this.value;render()">
+      <input id="deck-search-input" class="deck-search-input" type="text" placeholder="🔍  Search decks…"
+        value="${escHtml(state.deckSearch)}" oninput="setDeckSearch(this.value)">
       <select class="deck-filter-select" onchange="setFilter(this.value)">
         ${players.map(p => `<option value="${p}" ${state.playerFilter===p?'selected':''}>${p==='All'?'All builders':p}</option>`).join('')}
       </select>
-      <select class="deck-filter-select" onchange="setSortMode(this.value)">
-        <option value="power-tiers"  ${sortMode==='power-tiers' ?'selected':''}>Power · By tier</option>
-        <option value="power-ranked" ${sortMode==='power-ranked'?'selected':''}>Power · Ranked</option>
-        <option value="overall-tiers"  ${sortMode==='overall-tiers' ?'selected':''}>Overall · By tier</option>
-        <option value="overall-ranked" ${sortMode==='overall-ranked'?'selected':''}>Overall · Ranked</option>
+      <select class="deck-filter-select" onchange="setSort(this.value)">
+        <option value="power"   ${state.sortBy==='power'  ?'selected':''}>Power</option>
+        <option value="overall" ${state.sortBy==='overall'?'selected':''}>Overall</option>
       </select>
       <button onclick="openAddModal()" style="padding:5px 14px;font-size:12px;background:var(--accent-dim);color:#fff;border-color:var(--accent);flex-shrink:0">+ Add</button>
     </div>
     <div class="tier-bar-wrap">
       <div class="tier-bar">
         ${TIERS.map(t => {
-          const count = filtered.filter(d => getTier(d.power) === t.label).length;
-          const canClick = count > 0 && state.view === 'tiers';
-          return `<div class="tier-bar-seg ${canClick?'clickable':'dimmed'}" style="background:${t.bg};color:${t.text}"
-            ${canClick?`onclick="document.getElementById('tier-${t.label}').scrollIntoView({behavior:'smooth',block:'start'})"`:''}>
+          const count = decks.filter(d => getTier(d.power) === t.label).length;
+          const isActive = state.tierFilter === t.label;
+          return `<div class="tier-bar-seg clickable" style="background:${t.bg};color:${t.text};${isActive?'outline:2px solid #fff;outline-offset:-2px;':count===0?'opacity:0.35;':''}"
+            onclick="toggleTierFilter('${t.label}')">
             ${t.label} <span style="font-weight:400;font-size:11px">(${count})</span>
           </div>`;
         }).join('')}
@@ -1154,6 +1153,17 @@ function setSortMode(val) {
   const [sort, view] = val.split('-');
   state.sortBy = sort;
   state.view = view === 'tiers' ? 'tiers' : 'list';
+  render();
+}
+function setDeckSearch(val) {
+  state.deckSearch = val;
+  render();
+  // Restore focus + cursor after re-render wipes the input
+  const inp = document.getElementById('deck-search-input');
+  if (inp) { inp.focus(); inp.setSelectionRange(val.length, val.length); }
+}
+function toggleTierFilter(tier) {
+  state.tierFilter = state.tierFilter === tier ? null : tier;
   render();
 }
 function toggleTierCollapse(tier) {
@@ -3239,6 +3249,8 @@ window.setFilter = setFilter;
 window.setView = setView;
 window.setSort = setSort;
 window.setSortMode = setSortMode;
+window.setDeckSearch = setDeckSearch;
+window.toggleTierFilter = toggleTierFilter;
 window.toggleTierCollapse = toggleTierCollapse;
 window.toggleExpand = toggleExpand;
 window.openAddModal = openAddModal;
