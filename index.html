@@ -55,6 +55,10 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 
 .app { max-width: 760px; margin: 0 auto; padding: 24px 20px 80px; }
 
+/* User bar */
+.user-bar { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-bottom: 10px; font-size: 12px; color: var(--text-muted); }
+.user-bar button { font-size: 11px; padding: 3px 10px; }
+
 /* Header */
 .header { margin-bottom: 24px; position: relative; }
 .header h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 4px; }
@@ -241,10 +245,29 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 <body>
 <div class="app" id="app"></div>
 
-<script>
-// ===== DATA =====
-const STORAGE_KEY = "commander-decks-v3";
+<script type="module">
+// ===== FIREBASE =====
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+import { getFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, writeBatch }
+  from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut }
+  from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
 
+const firebaseConfig = {
+  apiKey: "AIzaSyC1yDJ0Ue4lu9T2Gzk16Q4T0BoephK7Jr4",
+  authDomain: "mtg-commander-hub.firebaseapp.com",
+  projectId: "mtg-commander-hub",
+  storageBucket: "mtg-commander-hub.firebasestorage.app",
+  messagingSenderId: "520737715812",
+  appId: "1:520737715812:web:df26466c894fa2d8be9171",
+  measurementId: "G-CSP0EN9GJ6"
+};
+
+const fbApp = initializeApp(firebaseConfig);
+const db = getFirestore(fbApp);
+const auth = getAuth(fbApp);
+
+// ===== DATA =====
 const INITIAL_DECKS = [
   { id: "edgar", commander: "Edgar Markov", player: "Joost", colors: "RWB", power: 9, synergy: 8.5, theme: 8.5, optimization: 9, notes: "Near-cEDH aggro-aristocrats. Premium mana base, dense tutor package, Exquisite Blood + Sanguine Bond combo finish. Every card serves the gameplan." },
   { id: "kaalia", commander: "Kaalia of the Vast", player: "Joost", colors: "RWB", power: 9.5, synergy: 9, theme: 8, optimization: 9.5, notes: "Borderline cEDH. 15+ fast mana sources, 6 tutors, Master of Cruelties instant kill, Ad Nauseam + Angel's Grace, Dualcaster + Twinflame. Ruthlessly optimized." },
@@ -307,10 +330,21 @@ function playerColor(p) {
   if (p === "Willem") return { bg: "var(--player-willem-bg)", color: "var(--player-willem)" };
   return { bg: "var(--player-josh-bg)", color: "var(--player-josh)" };
 }
+function currentUserName() {
+  const email = state.currentUser?.email || '';
+  const prefix = email.split('@')[0];
+  return prefix.charAt(0).toUpperCase() + prefix.slice(1);
+}
+function escHtml(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
 
 // ===== STATE =====
 let state = {
   decks: [],
+  currentUser: null,
+  loginError: '',
   view: "tiers",
   playerFilter: "All",
   sortBy: "power",
@@ -327,31 +361,111 @@ let state = {
   decklistImportStatus: "",
 };
 
-const scryfallCache = {}; // cardName.toLowerCase() → { name, imageUrl, typeLine, manaCost } | null
+const scryfallCache = {};
 
-// ===== STORAGE =====
-function loadDecks() {
+// ===== FIRESTORE HELPERS =====
+async function fbSaveDeck(deck) {
+  const { id, ...data } = deck;
+  await setDoc(doc(db, 'decks', id), data);
+}
+async function fbUpdateDeck(id, fields) {
+  await updateDoc(doc(db, 'decks', id), fields);
+}
+async function fbDeleteDeck(id) {
+  await deleteDoc(doc(db, 'decks', id));
+}
+
+// ===== LOGIN SCREEN =====
+function renderLogin() {
+  document.getElementById('app').innerHTML = `
+    <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px">
+      <div style="width:100%;max-width:360px;background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:32px;animation:slideUp 0.3s ease">
+        <h1 style="font-size:22px;font-weight:700;margin-bottom:4px">Commander <span style="color:var(--accent)">Hub</span></h1>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:28px">Sign in to access your pod</p>
+        <div style="margin-bottom:12px">
+          <label style="font-size:12px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:5px">Email</label>
+          <input id="login-email" type="email" style="width:100%" placeholder="you@example.com" onkeydown="if(event.key==='Enter')handleLogin()">
+        </div>
+        <div style="margin-bottom:${state.loginError ? '12px' : '20px'}">
+          <label style="font-size:12px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:5px">Password</label>
+          <input id="login-password" type="password" style="width:100%" placeholder="••••••••" onkeydown="if(event.key==='Enter')handleLogin()">
+        </div>
+        ${state.loginError ? `<p style="font-size:12px;color:var(--tier-s-text);margin-bottom:16px">${escHtml(state.loginError)}</p>` : ''}
+        <button id="login-btn" class="btn-primary" style="width:100%;padding:10px;font-size:14px" onclick="handleLogin()">Sign In</button>
+      </div>
+    </div>
+  `;
+  setTimeout(() => document.getElementById('login-email')?.focus(), 0);
+}
+
+async function handleLogin() {
+  const email = document.getElementById('login-email')?.value.trim();
+  const password = document.getElementById('login-password')?.value;
+  if (!email || !password) return;
+  const btn = document.getElementById('login-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Signing in…'; }
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed && parsed.length > 0) return parsed;
-    }
-  } catch {}
-  return [...INITIAL_DECKS];
+    await signInWithEmailAndPassword(auth, email, password);
+    state.loginError = '';
+    // onAuthStateChanged will handle the rest
+  } catch (e) {
+    state.loginError = (e.code === 'auth/invalid-credential' || e.code === 'auth/wrong-password' || e.code === 'auth/user-not-found')
+      ? 'Invalid email or password' : e.message;
+    renderLogin();
+  }
 }
-function saveDecks(decks) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(decks)); } catch {}
+
+async function handleSignOut() {
+  if (unsubscribeDecks) { unsubscribeDecks(); unsubscribeDecks = null; }
+  await signOut(auth);
+  state.decks = [];
+  state.currentUser = null;
+  state.loaded = false;
+  state.expanded = {};
+  renderLogin();
 }
+
+// ===== FIRESTORE LISTENER =====
+let unsubscribeDecks = null;
+
+function setupFirestoreListener() {
+  if (unsubscribeDecks) unsubscribeDecks();
+  unsubscribeDecks = onSnapshot(collection(db, 'decks'), snapshot => {
+    state.decks = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    state.loaded = true;
+    render();
+  }, err => console.error('Firestore error:', err));
+}
+
+// ===== AUTH LISTENER =====
+onAuthStateChanged(auth, user => {
+  if (user) {
+    state.currentUser = user;
+    state.loginError = '';
+    setupFirestoreListener();
+  } else {
+    if (unsubscribeDecks) { unsubscribeDecks(); unsubscribeDecks = null; }
+    state.currentUser = null;
+    state.loaded = false;
+    renderLogin();
+  }
+});
 
 // ===== RENDER =====
 function render() {
   const app = document.getElementById("app");
+  if (!state.currentUser) { renderLogin(); return; }
+  if (!state.loaded) {
+    app.innerHTML = '<div style="text-align:center;padding:80px 20px;color:var(--text-muted)">Loading…</div>';
+    return;
+  }
+
   if (state.decklistView) {
     const deck = state.decks.find(d => d.id === state.decklistView);
     if (deck) { app.innerHTML = renderDeckDetail(deck); return; }
     state.decklistView = null;
   }
+
   const decks = state.decks;
   const filtered = state.playerFilter === "All" ? decks : decks.filter(d => d.player === state.playerFilter);
   const sorted = [...filtered].sort((a, b) => {
@@ -359,18 +473,22 @@ function render() {
     return getOverall(b) - getOverall(a);
   });
 
-  // Pod stats
   const players = ["Joost", "Willem", "Josh"];
   const podStats = players.map(p => {
     const pd = decks.filter(d => d.player === p);
     const avg = pd.length ? Math.round((pd.reduce((s, d) => s + getOverall(d), 0) / pd.length) * 10) / 10 : 0;
     const avgP = pd.length ? Math.round((pd.reduce((s, d) => s + d.power, 0) / pd.length) * 10) / 10 : 0;
-    const totalW = pd.reduce((s, d) => s + (d.wins || 0), 0);
-    const totalL = pd.reduce((s, d) => s + (d.losses || 0), 0);
+    const allGames = pd.flatMap(d => d.games || []);
+    const totalW = allGames.filter(g => g.result === 'win').length;
+    const totalL = allGames.filter(g => g.result === 'loss').length;
     return { player: p, count: pd.length, avg, avgPower: avgP, wins: totalW, losses: totalL };
   });
 
   let html = `
+    <div class="user-bar">
+      <span style="color:var(--text-secondary)">${escHtml(currentUserName())}</span>
+      <button onclick="handleSignOut()">Sign out</button>
+    </div>
     <div class="header">
       <div class="header-glow"></div>
       <h1>Commander <span>Tier List</span></h1>
@@ -414,7 +532,13 @@ function render() {
     </div>
   `;
 
-  if (filtered.length === 0) {
+  if (decks.length === 0) {
+    html += `<div class="empty">
+      <h3>No decks yet</h3>
+      <p style="color:var(--text-secondary);font-size:13px;margin-bottom:8px">Seed the database with the default pod decks to get started.</p>
+      <button class="btn-primary" onclick="seedDecks()">Seed default decks</button>
+    </div>`;
+  } else if (filtered.length === 0) {
     html += `<div class="empty"><h3>No decks match filter</h3><p style="color:var(--text-secondary);font-size:13px">Try a different filter</p><button onclick="setFilter('All')">Show all</button></div>`;
   } else if (state.view === "tiers") {
     TIERS.forEach(tier => {
@@ -436,18 +560,21 @@ function render() {
     }).join("")}</div>`;
   }
 
-  html += `
-    <div class="footer">
-      <div class="footer-info">
-        <strong>Add decks:</strong> Click "+ Add deck" above, or paste a decklist in chat and I'll rate it and add it automatically.
+  if (decks.length > 0) {
+    html += `
+      <div class="footer">
+        <div class="footer-info">
+          <strong>Add decks:</strong> Click "+ Add deck" above.
+        </div>
+        <button onclick="resetData()" style="color:var(--text-muted)">Reset to defaults</button>
       </div>
-      <button onclick="resetData()" style="color:var(--text-muted)">Reset to defaults</button>
-    </div>
-  `;
+    `;
+  }
 
   // Modal
   if (state.showAddModal) {
     const e = state.editDeck;
+    const players = ["Joost", "Willem", "Josh"];
     html += `
     <div class="modal-overlay" onclick="closeModal(event)">
       <div class="modal" onclick="event.stopPropagation()">
@@ -598,11 +725,6 @@ function renderStat(label, value, color) {
   </div>`;
 }
 
-function escHtml(s) {
-  if (!s) return '';
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
 // ===== ACTIONS =====
 function setFilter(p) { state.playerFilter = p; render(); }
 function setView(v) { state.view = v; render(); }
@@ -643,15 +765,19 @@ function saveDeck() {
   };
   if (state.editDeck && state.editDeck.id) {
     state.decks = state.decks.map(d => d.id === state.editDeck.id ? { ...d, ...data } : d);
+    const updated = state.decks.find(d => d.id === state.editDeck.id);
+    if (updated) fbSaveDeck(updated).catch(console.error);
   } else {
     data.id = commander.toLowerCase().replace(/[^a-z0-9]/g,'-') + '-' + Date.now();
+    data.games = [];
     state.decks.push(data);
+    fbSaveDeck(data).catch(console.error);
   }
-  saveDecks(state.decks);
   state.showAddModal = false;
   state.editDeck = null;
   render();
 }
+
 function startLogGame(id) {
   state.loggingGame = id;
   state.logForm = { query: '', opponentId: '' };
@@ -681,7 +807,6 @@ function filterOpponents(deckId, query) {
   ).join('');
   list.style.display = 'block';
 }
-
 function selectOpponent(deckId, oppId, oppName) {
   state.logForm.query = oppName;
   state.logForm.opponentId = oppId;
@@ -693,7 +818,6 @@ function selectOpponent(deckId, oppId, oppName) {
   if (list) list.style.display = 'none';
   if (input) input.focus();
 }
-
 function handleOpponentKey(e, deckId) {
   const list = document.getElementById('log-opp-list-' + deckId);
   if (!list || list.style.display === 'none') return;
@@ -719,36 +843,77 @@ function submitGame(deckId, result) {
   const opponentId = hidden.value;
   const date = new Date().toISOString().split('T')[0];
   const oppositeResult = result === 'win' ? 'loss' : 'win';
+
+  // Optimistic local update
   state.decks = state.decks.map(d => {
     if (d.id === deckId) return { ...d, games: [...(d.games || []), { opponentId, result, date }] };
     if (d.id === opponentId) return { ...d, games: [...(d.games || []), { opponentId: deckId, result: oppositeResult, date }] };
     return d;
   });
-  saveDecks(state.decks);
   state.loggingGame = null;
   state.logForm = { query: '', opponentId: '' };
   render();
+
+  // Firestore batch write
+  const deck1 = state.decks.find(d => d.id === deckId);
+  const deck2 = state.decks.find(d => d.id === opponentId);
+  const batch = writeBatch(db);
+  if (deck1) { const { id, ...data } = deck1; batch.set(doc(db, 'decks', id), data); }
+  if (deck2) { const { id, ...data } = deck2; batch.set(doc(db, 'decks', id), data); }
+  batch.commit().catch(console.error);
 }
-function removeGame(deckId, index) {
+
+function removeGame(deckId, gameIndex) {
+  const deck = state.decks.find(d => d.id === deckId);
+  if (!deck || !deck.games?.[gameIndex]) return;
+  const game = deck.games[gameIndex];
+  const opponentId = game.opponentId;
+
   state.decks = state.decks.map(d => {
-    if (d.id !== deckId) return d;
-    const games = (d.games || []).filter((_, i) => i !== index);
-    return { ...d, games };
+    if (d.id === deckId) return { ...d, games: d.games.filter((_, i) => i !== gameIndex) };
+    if (d.id === opponentId) {
+      const mirrorIdx = (d.games || []).findIndex(g => g.opponentId === deckId && g.date === game.date);
+      if (mirrorIdx >= 0) return { ...d, games: d.games.filter((_, i) => i !== mirrorIdx) };
+    }
+    return d;
   });
-  saveDecks(state.decks);
   render();
+
+  const updated1 = state.decks.find(d => d.id === deckId);
+  const updated2 = state.decks.find(d => d.id === opponentId);
+  const batch = writeBatch(db);
+  if (updated1) { const { id, ...data } = updated1; batch.set(doc(db, 'decks', id), data); }
+  if (updated2) { const { id, ...data } = updated2; batch.set(doc(db, 'decks', id), data); }
+  batch.commit().catch(console.error);
 }
+
 function deleteDeck(id) {
   if (!confirm("Remove this deck from the tier list?")) return;
   state.decks = state.decks.filter(d => d.id !== id);
-  saveDecks(state.decks);
+  fbDeleteDeck(id).catch(console.error);
   render();
 }
-function resetData() {
-  if (!confirm("Reset all decks to defaults? This removes any custom additions.")) return;
-  state.decks = [...INITIAL_DECKS];
-  saveDecks(state.decks);
-  render();
+
+async function resetData() {
+  if (!confirm("Reset all decks to defaults? This removes any custom additions and game history.")) return;
+  const batch = writeBatch(db);
+  state.decks.forEach(d => batch.delete(doc(db, 'decks', d.id)));
+  INITIAL_DECKS.forEach(deck => {
+    const { id, ...data } = deck;
+    batch.set(doc(db, 'decks', id), data);
+  });
+  await batch.commit();
+  // onSnapshot will update state
+}
+
+async function seedDecks() {
+  const batch = writeBatch(db);
+  INITIAL_DECKS.forEach(deck => {
+    const { id, ...data } = deck;
+    batch.set(doc(db, 'decks', id), data);
+  });
+  await batch.commit();
+  console.log('Seeded', INITIAL_DECKS.length, 'decks to Firestore');
 }
 
 // ===== DECKLIST =====
@@ -783,7 +948,7 @@ function toggleDecklistEditor() {
 function saveDecklistText(text) {
   const id = state.decklistView;
   state.decks = state.decks.map(d => d.id === id ? { ...d, decklist: text } : d);
-  saveDecks(state.decks);
+  fbUpdateDeck(id, { decklist: text }).catch(console.error);
 }
 
 function parseDecklist(text) {
@@ -892,7 +1057,7 @@ async function fetchScryfallBatch(names) {
       (data.not_found || []).forEach(id => {
         if (id.name) scryfallCache[id.name.toLowerCase()] = null;
       });
-    } catch (e) { /* network error — leave uncached, will retry next time */ }
+    } catch (e) { /* network error — leave uncached */ }
   }
 }
 
@@ -1044,10 +1209,48 @@ function renderDeckDetail(deck) {
   </div>`;
 }
 
-// ===== INIT =====
-state.decks = loadDecks();
-state.loaded = true;
-render();
+// ===== WINDOW EXPORTS (needed because this is a module) =====
+window.state = state;
+window.setFilter = setFilter;
+window.setView = setView;
+window.setSort = setSort;
+window.toggleExpand = toggleExpand;
+window.openAddModal = openAddModal;
+window.closeModal = closeModal;
+window.editDeck = editDeck;
+window.saveDeck = saveDeck;
+window.startLogGame = startLogGame;
+window.cancelLogGame = cancelLogGame;
+window.filterOpponents = filterOpponents;
+window.selectOpponent = selectOpponent;
+window.handleOpponentKey = handleOpponentKey;
+window.submitGame = submitGame;
+window.removeGame = removeGame;
+window.deleteDeck = deleteDeck;
+window.resetData = resetData;
+window.seedDecks = seedDecks;
+window.openDeckDetail = openDeckDetail;
+window.closeDeckDetail = closeDeckDetail;
+window.setDecklistMode = setDecklistMode;
+window.toggleDecklistEditor = toggleDecklistEditor;
+window.saveDecklistText = saveDecklistText;
+window.importFromUrl = importFromUrl;
+window.handleLogin = handleLogin;
+window.handleSignOut = handleSignOut;
+
+// ===== ADMIN HELPERS (run from browser console) =====
+// createPodUser("willem@example.com", "password123")
+// NOTE: this signs you in as the new user — sign back in as yourself afterwards
+window.createPodUser = async (email, password) => {
+  try {
+    const uc = await createUserWithEmailAndPassword(auth, email, password);
+    console.log('✓ Created user:', email, '(uid:', uc.user.uid + ')');
+    console.log('You are now signed in as', email, '— sign back in as yourself.');
+  } catch (e) {
+    if (e.code === 'auth/email-already-in-use') console.log('- Already exists:', email);
+    else console.error('✗', e.code, e.message);
+  }
+};
 </script>
 </body>
 </html>
