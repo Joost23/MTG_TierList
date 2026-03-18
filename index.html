@@ -308,6 +308,50 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 .changelog-remove { font-size: 12px; color: var(--text-muted); background: none !important; border: none !important; padding: 2px 4px !important; flex-shrink: 0; }
 .changelog-remove:hover { color: var(--tier-s-text) !important; }
 .changelog-empty { font-size: 13px; color: var(--text-muted); padding: 8px 0; }
+/* ===== GAME SESSION ===== */
+.life-grid { display: grid; gap: 12px; margin-bottom: 20px; }
+.life-tile { background: var(--bg-card); border: 2px solid transparent; border-radius: 14px; padding: 18px 14px 14px; text-align: center; }
+.life-tile-name { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 2px; }
+.life-tile-deck { font-size: 11px; color: var(--text-muted); margin-bottom: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.life-number { font-size: 68px; font-weight: 700; font-family: 'JetBrains Mono', monospace; line-height: 1; margin-bottom: 12px; }
+.life-controls { display: flex; gap: 5px; justify-content: center; }
+.life-btn { width: 36px; height: 36px; border-radius: 50%; font-size: 18px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
+.life-btn-sm { font-size: 12px; width: 30px; height: 30px; }
+.life-btn-minus { color: var(--tier-s-text); border-color: rgba(226,75,74,0.4); }
+.life-btn-minus:hover { background: var(--tier-s-bg); border-color: var(--tier-s); }
+.life-btn-plus { color: var(--tier-b-text); border-color: rgba(29,158,117,0.4); }
+.life-btn-plus:hover { background: var(--tier-b-bg); border-color: var(--tier-b); }
+.life-btn:disabled { opacity: 0.3; cursor: default; }
+.life-dead { opacity: 0.45; }
+.cmd-dmg-box { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 16px; }
+.cmd-dmg-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 12px; }
+.cmd-dmg-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.cmd-dmg-row:last-child { margin-bottom: 0; }
+.cmd-dmg-victim { font-size: 12px; width: 86px; flex-shrink: 0; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cmd-dmg-sources { display: flex; gap: 12px; flex-wrap: wrap; }
+.cmd-dmg-cell { display: flex; align-items: center; gap: 3px; }
+.cmd-dmg-cell-label { font-size: 10px; color: var(--text-muted); }
+.cmd-dmg-cell-val { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600; min-width: 18px; text-align: center; }
+.cmd-btn { width: 20px; height: 20px; font-size: 10px; padding: 0; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; }
+.session-setup-row { display: flex; gap: 8px; margin-bottom: 10px; align-items: center; }
+.session-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.join-session-bar { display: flex; gap: 8px; margin-top: 12px; border-top: 1px solid var(--border); padding-top: 12px; }
+/* ===== PHASE 5 POLISH ===== */
+.streak-badge { display:inline-flex;align-items:center;gap:2px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px;font-family:'JetBrains Mono',monospace;flex-shrink:0; }
+.streak-win { background:var(--tier-b-bg);color:var(--tier-b-text); }
+.streak-loss { background:var(--tier-s-bg);color:var(--tier-s-text); }
+.avatar-circle { border-radius:50%;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;transition:transform 0.15s;line-height:1; }
+.avatar-circle:hover { transform:scale(1.1); }
+.avatar-picker-grid { display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:16px 0; }
+.avatar-option { width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;cursor:pointer;background:var(--bg-surface);border:2px solid transparent;transition:all 0.15s; }
+.avatar-option:hover,.avatar-option.selected { border-color:var(--accent);background:var(--bg-hover); }
+.hot-deck-banner { background:linear-gradient(135deg,#2A2010 0%,var(--bg-card) 100%);border:1px solid var(--tier-a);border-radius:var(--radius);padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:14px; }
+.hot-deck-info { flex:1;min-width:0; }
+.matchup-insights { display:flex;gap:10px;flex-wrap:wrap;margin-top:16px; }
+.matchup-pill { display:flex;flex-direction:column;gap:2px;padding:10px 14px;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius);font-size:12px;flex:1;min-width:120px; }
+.matchup-pill-label { font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:2px; }
+.matchup-pill-deck { font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+.matchup-pill-record { font-size:11px;color:var(--text-muted);font-family:'JetBrains Mono',monospace; }
 </style>
 </head>
 <body>
@@ -430,6 +474,14 @@ let state = {
   decklistImportStatus: "",
   showChangelogModal: false,
   changelogDraft: { cardsIn: '', cardsOut: '', notes: '' },
+  activeSessionId: null,
+  gameSession: null,
+  sessionSetup: { players: [] },
+  showNewGameModal: false,
+  showEndGameModal: false,
+  showJoinInput: false,
+  playerAvatars: {},
+  showAvatarModal: null,
 };
 
 const scryfallCache = {};
@@ -498,9 +550,17 @@ async function handleSignOut() {
 
 // ===== FIRESTORE LISTENER =====
 let unsubscribeDecks = null;
+let unsubscribeSession = null;
 
 function setupFirestoreListener() {
   if (unsubscribeDecks) unsubscribeDecks();
+  // Load player avatars in real-time
+  onSnapshot(collection(db, 'users'), snap => {
+    const avatars = {};
+    snap.docs.forEach(d => { if (d.data().avatar) avatars[d.id] = d.data().avatar; });
+    state.playerAvatars = avatars;
+    render();
+  });
   unsubscribeDecks = onSnapshot(collection(db, 'decks'), snapshot => {
     state.decks = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
     state.loaded = true;
@@ -596,6 +656,10 @@ function render() {
     </div>`;
   }
 
+  if (state.showNewGameModal) html += renderNewGameModal();
+  if (state.showEndGameModal && state.gameSession) html += renderEndGameModal(state.gameSession);
+  if (state.showAvatarModal) html += renderAvatarModal(state.showAvatarModal);
+
   app.innerHTML = html;
 }
 
@@ -684,17 +748,34 @@ function renderDashboard() {
         <div class="dash-stat-value">${userWinRate !== null ? userWinRate + '%' : '—'}</div>
       </div>
     </div>
+    ${(() => {
+      const hot = getHotDeck();
+      if (!hot) return '';
+      const pc = playerColor(hot.deck.player);
+      return `<div class="hot-deck-banner">
+        <div style="font-size:28px">🔥</div>
+        <div class="hot-deck-info">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:var(--tier-a-text);font-weight:600;margin-bottom:3px">Hot This Week</div>
+          <div style="font-weight:600;font-size:14px">${escHtml(hot.deck.commander)}</div>
+          <div style="font-size:12px;color:var(--text-muted)">${escHtml(hot.deck.player)} · ${hot.wins} win${hot.wins !== 1 ? 's' : ''} this week</div>
+        </div>
+        <button onclick="openDeckDetail('${hot.deck.id}')" style="font-size:12px;padding:6px 14px;flex-shrink:0">View →</button>
+      </div>`;
+    })()}
     <div class="dash-section-title">Pod Leaderboard</div>
     <div class="dash-card">
       ${leaderboard.map((p, i) => {
         const lpc = playerColor(p.player);
+        const streak = getPlayerStreak(p.player);
         return `<div class="leaderboard-row">
           <span class="lb-rank">${i + 1}</span>
-          <div style="flex:1;min-width:0">
+          ${renderAvatar(p.player, 34)}
+          <div style="flex:1;min-width:0;margin-left:6px">
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
               <span style="font-weight:600;font-size:14px;color:${lpc.color}">${escHtml(p.player)}</span>
               <span style="font-size:11px;color:var(--text-muted)">${p.deckCount} deck${p.deckCount !== 1 ? 's' : ''}</span>
               ${p.total > 0 ? `<span class="lb-record">${p.wins}W-${p.losses}L</span>` : ''}
+              ${streak && streak.count >= 2 ? `<span class="streak-badge streak-${streak.type}">${streak.type === 'win' ? '🔥' : '💀'} ${streak.count}${streak.type === 'win' ? 'W' : 'L'}</span>` : ''}
             </div>
             ${p.bestDeck ? `<div class="lb-best">${escHtml(p.bestDeck.commander)}</div>` : ''}
           </div>
@@ -801,17 +882,33 @@ function renderCollectionTab() {
 
 function renderPlayTab() {
   const allGames = getRecentGames(100);
+  const sessionHtml = state.gameSession
+    ? renderActiveSession()
+    : `<div class="dash-card" style="padding:18px;margin-bottom:20px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+          <div>
+            <div style="font-weight:600;margin-bottom:3px">Pod Game</div>
+            <div style="font-size:13px;color:var(--text-secondary)">Track life & commander damage in real-time</div>
+          </div>
+          <button class="btn-primary" onclick="openNewGameModal()" style="padding:8px 18px;font-size:13px;white-space:nowrap;flex-shrink:0">New Game</button>
+        </div>
+        ${state.showJoinInput ? `
+          <div class="join-session-bar">
+            <input type="text" id="join-code-input" placeholder="Session code…" style="flex:1;font-family:'JetBrains Mono',monospace;font-size:14px;letter-spacing:2px" oninput="this.value=this.value.toUpperCase()">
+            <button onclick="joinSession(document.getElementById('join-code-input').value.trim())">Join</button>
+            <button onclick="state.showJoinInput=false;render()" style="color:var(--text-muted)">✕</button>
+          </div>` :
+          `<button onclick="state.showJoinInput=true;render()" style="margin-top:10px;font-size:11px;padding:3px 10px;color:var(--text-muted);border-color:transparent;background:transparent">Join existing session</button>`}
+      </div>`;
+
   return `
     <div class="header">
       <div class="header-glow"></div>
       <h1>Play <span>Hub</span></h1>
-      <p>Match history for the pod</p>
+      <p>Sessions · Match history</p>
     </div>
-    <div class="dash-card" style="padding:16px 18px;margin-bottom:20px">
-      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">Log a game from the <strong style="color:var(--text)">Decks</strong> tab — expand any deck and click <strong style="color:var(--text)">Log game</strong>.</p>
-      <button onclick="setTab('collection')" style="font-size:13px;padding:8px 18px">Go to Decks →</button>
-    </div>
-    <div class="dash-section-title">All Games (${allGames.length})</div>
+    ${sessionHtml}
+    <div class="dash-section-title" style="margin-bottom:10px">All Games (${allGames.length})</div>
     ${allGames.length === 0
       ? `<div class="dash-card" style="padding:16px 18px"><p style="color:var(--text-muted);font-size:13px">No games logged yet.</p></div>`
       : `<div class="dash-card">
@@ -1678,6 +1775,32 @@ function renderDeckDetail(deck) {
 
     <div class="dl-display">${displayHtml}</div>
 
+    ${(() => {
+      const insights = getMatchupInsights(deck);
+      if (!insights) return '';
+      const { prey, nemesis, rival } = insights;
+      if (!prey && !nemesis) return '';
+      return `<div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--border)">
+        <div class="dl-stat-box-title" style="margin-bottom:10px">Matchup History</div>
+        <div class="matchup-insights">
+          ${prey ? `<div class="matchup-pill" style="border-color:var(--tier-b)44">
+            <span class="matchup-pill-label" style="color:var(--tier-b-text)">Favoured vs</span>
+            <span class="matchup-pill-deck">${escHtml(prey.opp.commander)}</span>
+            <span class="matchup-pill-record">${prey.wins}W-${prey.losses}L</span>
+          </div>` : ''}
+          ${nemesis && nemesis.id !== prey?.id ? `<div class="matchup-pill" style="border-color:var(--tier-s)44">
+            <span class="matchup-pill-label" style="color:var(--tier-s-text)">Nemesis</span>
+            <span class="matchup-pill-deck">${escHtml(nemesis.opp.commander)}</span>
+            <span class="matchup-pill-record">${nemesis.wins}W-${nemesis.losses}L</span>
+          </div>` : ''}
+          ${rival && rival.total >= 2 ? `<div class="matchup-pill">
+            <span class="matchup-pill-label">Most played vs</span>
+            <span class="matchup-pill-deck">${escHtml(rival.opp.commander)}</span>
+            <span class="matchup-pill-record">${rival.wins}W-${rival.losses}L</span>
+          </div>` : ''}
+        </div>
+      </div>`;
+    })()}
     <div class="changelog-section" style="margin-top:24px;padding-top:20px;border-top:1px solid var(--border)">
       <div class="changelog-header">
         <span class="dl-stat-box-title" style="margin-bottom:0">Changelog</span>
@@ -1764,6 +1887,356 @@ function removeChangelogEntry(deckId, idx) {
   render();
 }
 
+// ===== PHASE 5: POLISH =====
+const AVATAR_EMOJIS = ['🧙','🐉','🦁','🦊','🐺','🦅','🌊','🔥','⚡','🌿','💀','👑','🗡️','🛡️','✨','🎭','🧿','🏹','🌙','🐦','🦇','🐲','🦄','🎯','🗺️','⚔️'];
+
+function getPlayerStreak(playerName) {
+  const allGames = state.decks
+    .filter(d => d.player === playerName)
+    .flatMap(d => d.games || [])
+    .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  if (!allGames.length) return null;
+  const first = allGames[0].result;
+  let count = 0;
+  for (const g of allGames) { if (g.result === first) count++; else break; }
+  return { type: first, count };
+}
+
+function getHotDeck() {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 7);
+  const cutoffStr = cutoff.toISOString().split('T')[0];
+  let best = null, bestWins = 0;
+  state.decks.forEach(d => {
+    const w = (d.games || []).filter(g => g.result === 'win' && (g.date || '') >= cutoffStr).length;
+    if (w > bestWins) { bestWins = w; best = d; }
+  });
+  return best && bestWins > 0 ? { deck: best, wins: bestWins } : null;
+}
+
+function getMatchupInsights(deck) {
+  const games = deck.games || [];
+  if (!games.length) return null;
+  const vs = {};
+  games.forEach(g => {
+    if (!g.opponentId) return;
+    if (!vs[g.opponentId]) vs[g.opponentId] = { wins: 0, losses: 0 };
+    vs[g.opponentId][g.result === 'win' ? 'wins' : 'losses']++;
+  });
+  const entries = Object.entries(vs).map(([id, r]) => {
+    const opp = state.decks.find(d => d.id === id);
+    return opp ? { opp, id, ...r, total: r.wins + r.losses } : null;
+  }).filter(Boolean);
+  if (!entries.length) return null;
+  const byRate = [...entries].sort((a, b) => (b.wins / b.total) - (a.wins / a.total));
+  return {
+    prey: byRate[0]?.wins > 0 ? byRate[0] : null,
+    nemesis: byRate[byRate.length - 1]?.losses > 0 ? byRate[byRate.length - 1] : null,
+    rival: [...entries].sort((a, b) => b.total - a.total)[0] || null,
+  };
+}
+
+function renderAvatar(playerName, size = 36) {
+  const emoji = state.playerAvatars?.[playerName];
+  const pc = playerColor(playerName);
+  const inner = emoji
+    ? `<span style="font-size:${Math.round(size * 0.55)}px;line-height:1">${emoji}</span>`
+    : `<span style="color:${pc.color};font-weight:700;font-size:${Math.round(size * 0.42)}px">${playerName[0]}</span>`;
+  return `<div class="avatar-circle" style="width:${size}px;height:${size}px;background:${pc.bg};border:2px solid ${pc.color}" onclick="openAvatarModal('${escHtml(playerName)}')" title="Change ${escHtml(playerName)}'s avatar">${inner}</div>`;
+}
+
+function openAvatarModal(playerName) { state.showAvatarModal = playerName; render(); }
+function closeAvatarModal() { state.showAvatarModal = null; render(); }
+
+async function saveAvatar(playerName, emoji) {
+  state.playerAvatars = { ...state.playerAvatars, [playerName]: emoji };
+  state.showAvatarModal = null;
+  render();
+  try {
+    await setDoc(doc(db, 'users', playerName), { avatar: emoji }, { merge: true });
+  } catch(e) { console.error('saveAvatar:', e); }
+}
+
+function renderAvatarModal(playerName) {
+  const current = state.playerAvatars?.[playerName];
+  const pc = playerColor(playerName);
+  return `<div class="modal-overlay" onclick="closeAvatarModal()">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width:360px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
+        ${renderAvatar(playerName, 44)}
+        <div>
+          <h2 style="margin-bottom:2px">Avatar</h2>
+          <p style="font-size:13px;color:var(--text-secondary)">Pick an emoji for <span style="color:${pc.color};font-weight:600">${escHtml(playerName)}</span></p>
+        </div>
+      </div>
+      <div class="avatar-picker-grid">
+        ${AVATAR_EMOJIS.map(e => `<div class="avatar-option${e===current?' selected':''}" onclick="saveAvatar('${escHtml(playerName)}','${e}')">${e}</div>`).join('')}
+      </div>
+      <div style="text-align:center;margin-top:8px">
+        <button onclick="closeAvatarModal()" style="font-size:12px;padding:5px 16px">Cancel</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ===== GAME SESSION =====
+const SESSION_COLORS = ['#A78BFA', '#34D399', '#FBBF24', '#F472B6'];
+
+function openNewGameModal() {
+  const allPlayers = [...new Set(state.decks.map(d => d.player))];
+  state.sessionSetup = {
+    players: allPlayers.map(name => ({
+      name,
+      deckId: state.decks.find(d => d.player === name)?.id || ''
+    })).filter(p => p.deckId).slice(0, 4)
+  };
+  state.showNewGameModal = true;
+  render();
+}
+function closeNewGameModal() { state.showNewGameModal = false; render(); }
+
+function setSessionPlayer(i, key, val) {
+  state.sessionSetup.players = state.sessionSetup.players.map((p, idx) => {
+    if (idx !== i) return p;
+    if (key === 'name') return { ...p, name: val, deckId: state.decks.find(d => d.player === val)?.id || '' };
+    return { ...p, [key]: val };
+  });
+  render();
+}
+function addSessionPlayer() {
+  const allPlayers = [...new Set(state.decks.map(d => d.player))];
+  const existing = state.sessionSetup.players.map(p => p.name);
+  const next = allPlayers.find(p => !existing.includes(p)) || allPlayers[0] || '';
+  state.sessionSetup.players = [...state.sessionSetup.players, { name: next, deckId: state.decks.find(d => d.player === next)?.id || '' }];
+  render();
+}
+function removeSessionPlayer(i) {
+  state.sessionSetup.players = state.sessionSetup.players.filter((_, idx) => idx !== i);
+  render();
+}
+
+async function createSession() {
+  const valid = state.sessionSetup.players.filter(p => p.deckId);
+  if (valid.length < 2) return;
+  const id = (Date.now().toString(36).slice(-4) + Math.random().toString(36).slice(2, 5)).toUpperCase();
+  const sessionData = {
+    hostUid: state.currentUser?.uid || '',
+    status: 'active',
+    createdAt: new Date().toISOString(),
+    players: valid.map(p => {
+      const deck = state.decks.find(d => d.id === p.deckId);
+      return { id: p.deckId, name: deck?.player || p.name, deckId: p.deckId, deckName: deck?.commander || '?', life: 40, commanderDamage: {}, poisonCounters: 0 };
+    })
+  };
+  try {
+    await setDoc(doc(db, 'gameSessions', id), sessionData);
+    state.showNewGameModal = false;
+    listenToSession(id);
+  } catch(e) { console.error('createSession:', e); }
+}
+
+async function joinSession(id) {
+  if (!id) return;
+  state.showJoinInput = false;
+  listenToSession(id.toUpperCase());
+}
+
+function listenToSession(id) {
+  if (unsubscribeSession) { unsubscribeSession(); unsubscribeSession = null; }
+  state.activeSessionId = id;
+  unsubscribeSession = onSnapshot(doc(db, 'gameSessions', id), snap => {
+    if (snap.exists()) {
+      state.gameSession = { id: snap.id, ...snap.data() };
+      if (state.tab !== 'play') { state.tab = 'play'; }
+      render();
+    } else {
+      state.gameSession = null;
+      state.activeSessionId = null;
+      render();
+    }
+  });
+}
+
+async function updateLife(playerId, delta) {
+  if (!state.gameSession || state.gameSession.status !== 'active') return;
+  const players = state.gameSession.players.map(p =>
+    p.id === playerId ? { ...p, life: p.life + delta } : p
+  );
+  await updateDoc(doc(db, 'gameSessions', state.activeSessionId), { players });
+}
+
+async function updateCmdDmg(toId, fromId, delta) {
+  if (!state.gameSession || state.gameSession.status !== 'active') return;
+  const players = state.gameSession.players.map(p => {
+    if (p.id !== toId) return p;
+    const commanderDamage = { ...(p.commanderDamage || {}) };
+    commanderDamage[fromId] = Math.max(0, (commanderDamage[fromId] || 0) + delta);
+    return { ...p, commanderDamage };
+  });
+  await updateDoc(doc(db, 'gameSessions', state.activeSessionId), { players });
+}
+
+function openEndGameModal() { state.showEndGameModal = true; render(); }
+function closeEndGameModal() { state.showEndGameModal = false; render(); }
+
+async function endGame(winnerId) {
+  if (!state.gameSession) return;
+  if (winnerId) {
+    const date = new Date().toISOString().split('T')[0];
+    const session = state.gameSession;
+    const others = session.players.filter(p => p.id !== winnerId);
+    state.decks = state.decks.map(d => {
+      const isWinner = d.id === winnerId;
+      const isLoser = others.some(o => o.id === d.id);
+      if (!isWinner && !isLoser) return d;
+      const newGames = isWinner
+        ? others.map(o => ({ opponentId: o.id, result: 'win', date }))
+        : [{ opponentId: winnerId, result: 'loss', date }];
+      return { ...d, games: [...(d.games || []), ...newGames] };
+    });
+    const batch = writeBatch(db);
+    session.players.forEach(p => {
+      const deck = state.decks.find(d => d.id === p.id);
+      if (deck) { const { id, ...data } = deck; batch.set(doc(db, 'decks', id), data); }
+    });
+    await batch.commit().catch(console.error);
+  }
+  await updateDoc(doc(db, 'gameSessions', state.activeSessionId), {
+    status: 'ended', winnerId: winnerId || null, endedAt: new Date().toISOString()
+  });
+  state.showEndGameModal = false;
+  render();
+}
+
+async function clearSession() {
+  if (unsubscribeSession) { unsubscribeSession(); unsubscribeSession = null; }
+  state.activeSessionId = null;
+  state.gameSession = null;
+  render();
+}
+
+function renderNewGameModal() {
+  const allPlayers = [...new Set(state.decks.map(d => d.player))];
+  const setup = state.sessionSetup;
+  return `<div class="modal-overlay" onclick="closeNewGameModal()">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width:440px">
+      <h2 style="margin-bottom:6px">New Game</h2>
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:18px">Pick 2–4 players and their decks.</p>
+      ${setup.players.map((p, i) => `
+        <div class="session-setup-row">
+          <select onchange="setSessionPlayer(${i},'name',this.value)" style="width:100px;flex-shrink:0">
+            ${allPlayers.map(pl => `<option value="${escHtml(pl)}" ${p.name===pl?'selected':''}>${escHtml(pl)}</option>`).join('')}
+          </select>
+          <select onchange="setSessionPlayer(${i},'deckId',this.value)" style="flex:1">
+            <option value="">— deck —</option>
+            ${state.decks.filter(d => d.player === p.name).map(d => `<option value="${d.id}" ${p.deckId===d.id?'selected':''}>${escHtml(d.commander)}</option>`).join('')}
+          </select>
+          <button onclick="removeSessionPlayer(${i})" style="padding:4px 8px;color:var(--text-muted);border:none;background:transparent;font-size:18px;line-height:1">×</button>
+        </div>`).join('')}
+      ${setup.players.length < 4 ? `<button onclick="addSessionPlayer()" style="font-size:12px;padding:5px 14px;margin-bottom:18px">+ Add player</button>` : ''}
+      <div class="modal-actions" style="margin-top:8px">
+        <button onclick="closeNewGameModal()">Cancel</button>
+        <button class="btn-primary" onclick="createSession()" ${setup.players.filter(p=>p.deckId).length<2?'disabled':''}>Start Game</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderEndGameModal(session) {
+  return `<div class="modal-overlay" onclick="closeEndGameModal()">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width:360px">
+      <h2 style="margin-bottom:6px">End Game</h2>
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:18px">Who won? Results will be logged to each deck's history.</p>
+      ${session.players.map((p, i) => {
+        const col = SESSION_COLORS[i % SESSION_COLORS.length];
+        const lifeColor = p.life <= 5 ? 'var(--tier-s-text)' : p.life <= 15 ? 'var(--tier-a-text)' : 'var(--text)';
+        return `<button onclick="endGame('${p.id}')" style="width:100%;text-align:left;padding:12px 16px;margin-bottom:8px;font-size:14px;border-radius:var(--radius);display:flex;align-items:center;gap:10px;border-color:${col}44">
+          <span style="font-weight:600;color:${col}">${escHtml(p.deckName)}</span>
+          <span style="color:var(--text-muted);font-size:12px">${escHtml(p.name)}</span>
+          <span style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;color:${lifeColor}">${p.life}♥</span>
+        </button>`;
+      }).join('')}
+      <button onclick="endGame(null)" style="width:100%;padding:10px;font-size:13px;margin-top:4px;color:var(--text-muted)">No winner / Draw</button>
+      <div style="text-align:center;margin-top:10px">
+        <button onclick="closeEndGameModal()" style="font-size:12px;padding:4px;border:none;background:transparent;color:var(--text-muted)">Cancel</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderActiveSession() {
+  const s = state.gameSession;
+  const isEnded = s.status === 'ended';
+  const gridCols = s.players.length > 2 ? 2 : s.players.length;
+
+  const lifeTiles = s.players.map((p, i) => {
+    const col = SESSION_COLORS[i % SESSION_COLORS.length];
+    const isDead = p.life <= 0;
+    const lifeColor = p.life <= 5 ? 'var(--tier-s)' : p.life <= 15 ? 'var(--tier-a)' : 'var(--text)';
+    const totalCmdDmg = Object.values(p.commanderDamage || {}).reduce((a, b) => a + b, 0);
+    return `<div class="life-tile ${isDead ? 'life-dead' : ''}" style="border-color:${col}55">
+      <div class="life-tile-name" style="color:${col}">${escHtml(p.name)}</div>
+      <div class="life-tile-deck">${escHtml(p.deckName)}</div>
+      <div class="life-number" style="color:${lifeColor}">${p.life}</div>
+      ${!isEnded ? `<div class="life-controls">
+        <button class="life-btn life-btn-minus life-btn-sm" onclick="updateLife('${p.id}',-5)">−5</button>
+        <button class="life-btn life-btn-minus" onclick="updateLife('${p.id}',-1)">−</button>
+        <button class="life-btn life-btn-plus" onclick="updateLife('${p.id}',1)">+</button>
+        <button class="life-btn life-btn-plus life-btn-sm" onclick="updateLife('${p.id}',5)">+5</button>
+      </div>` : ''}
+      ${totalCmdDmg > 0 ? `<div style="font-size:11px;color:var(--text-muted);margin-top:8px">⚔ ${totalCmdDmg} cmd dmg</div>` : ''}
+    </div>`;
+  }).join('');
+
+  // Commander damage matrix (only show during active game with 2+ players)
+  const cmdDmgHtml = (!isEnded && s.players.length > 1) ? `
+    <div class="cmd-dmg-box">
+      <div class="cmd-dmg-title">Commander Damage</div>
+      ${s.players.map(victim => {
+        const attackers = s.players.filter(atk => atk.id !== victim.id);
+        return `<div class="cmd-dmg-row">
+          <div class="cmd-dmg-victim">${escHtml(victim.name)}</div>
+          <div class="cmd-dmg-sources">
+            ${attackers.map(atk => {
+              const dmg = (victim.commanderDamage || {})[atk.id] || 0;
+              const atkIdx = s.players.findIndex(p => p.id === atk.id);
+              const col = SESSION_COLORS[atkIdx % SESSION_COLORS.length];
+              return `<div class="cmd-dmg-cell">
+                <button class="cmd-btn life-btn-minus" onclick="updateCmdDmg('${victim.id}','${atk.id}',-1)" ${dmg===0?'disabled':''}>−</button>
+                <div class="cmd-dmg-cell-val" style="color:${dmg>=21?'var(--tier-s)':col}">${dmg}</div>
+                <button class="cmd-btn life-btn-plus" onclick="updateCmdDmg('${victim.id}','${atk.id}',1)">+</button>
+                <span class="cmd-dmg-cell-label">${escHtml(atk.name.slice(0,3))}</span>
+              </div>`;
+            }).join('')}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>` : '';
+
+  const winnerDeck = isEnded && s.winnerId ? state.decks.find(d => d.id === s.winnerId) : null;
+
+  return `<div style="margin-bottom:20px">
+    <div class="session-header">
+      <div>
+        <div style="font-size:17px;font-weight:600;margin-bottom:2px">${isEnded ? '🏆 Game Over' : '⚔ Live Session'}</div>
+        <div style="font-size:12px;color:var(--text-muted)">${s.players.length} players · Code: <span style="font-family:'JetBrains Mono',monospace;color:var(--accent);letter-spacing:1px">${s.id}</span></div>
+      </div>
+      ${isEnded
+        ? `<button onclick="clearSession()" style="font-size:12px;padding:6px 14px">Close</button>`
+        : `<button onclick="openEndGameModal()" style="font-size:12px;padding:6px 14px;color:var(--tier-s-text);border-color:var(--tier-s)">End Game</button>`}
+    </div>
+    ${isEnded && winnerDeck ? `<div class="dash-card" style="padding:12px 16px;margin-bottom:16px;border-color:var(--tier-a);background:var(--tier-a-bg)">
+      <span style="font-weight:600;color:var(--tier-a-text)">🏆 ${escHtml(winnerDeck.commander)}</span>
+      <span style="color:var(--text-muted);font-size:12px;margin-left:8px">${escHtml(winnerDeck.player)} wins · results logged</span>
+    </div>` : ''}
+    ${isEnded && !winnerDeck && s.status === 'ended' ? `<div class="dash-card" style="padding:12px 16px;margin-bottom:16px">
+      <span style="color:var(--text-secondary);font-size:13px">Game ended · no winner declared</span>
+    </div>` : ''}
+    <div class="life-grid" style="grid-template-columns:repeat(${gridCols},1fr)">${lifeTiles}</div>
+    ${cmdDmgHtml}
+  </div>`;
+}
+
 // ===== WINDOW EXPORTS (needed because this is a module) =====
 window.state = state;
 window.setFilter = setFilter;
@@ -1798,6 +2271,22 @@ window.closeChangelogModal = closeChangelogModal;
 window.saveChangelogEntry = saveChangelogEntry;
 window.removeChangelogEntry = removeChangelogEntry;
 window.renderDeckStats = renderDeckStats;
+window.openAvatarModal = openAvatarModal;
+window.closeAvatarModal = closeAvatarModal;
+window.saveAvatar = saveAvatar;
+window.openNewGameModal = openNewGameModal;
+window.closeNewGameModal = closeNewGameModal;
+window.setSessionPlayer = setSessionPlayer;
+window.addSessionPlayer = addSessionPlayer;
+window.removeSessionPlayer = removeSessionPlayer;
+window.createSession = createSession;
+window.joinSession = joinSession;
+window.updateLife = updateLife;
+window.updateCmdDmg = updateCmdDmg;
+window.openEndGameModal = openEndGameModal;
+window.closeEndGameModal = closeEndGameModal;
+window.endGame = endGame;
+window.clearSession = clearSession;
 
 // ===== ADMIN HELPERS (run from browser console) =====
 // createPodUser("willem@example.com", "password123")
