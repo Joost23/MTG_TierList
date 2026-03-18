@@ -247,6 +247,7 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes progress-pulse { 0%,100% { opacity:0.4; transform:scaleX(0.7); transform-origin:left; } 50% { opacity:1; transform:scaleX(1); transform-origin:left; } }
 
 @media (max-width: 600px) {
   .app { padding: 16px 14px 60px; }
@@ -547,6 +548,7 @@ let state = {
   decklistImportStatus: "",
   showImportPanel: false,
   userProfile: null,
+  playtestLoading: '',
   showNameModal: false,
   showChangePassword: false,
   nameModalError: '',
@@ -2231,6 +2233,20 @@ async function ptStart() {
   const players = Object.entries(session.players || {});
   const publicUpdate = {};
   try {
+    // Pre-fetch all card images for every deck before dealing
+    const allDecks = players.map(([, p]) => state.decks.find(d => d.id === p.deckId)).filter(Boolean);
+    const allCardNames = allDecks.flatMap(deck => {
+      const sections = parseDecklistSections(deck.decklist || '');
+      return [...sections.main, ...sections.commanders].map(c => c);
+    });
+    const uncached = allCardNames.filter(c => !(c.name.toLowerCase() in scryfallCache));
+    if (uncached.length) {
+      state.playtestLoading = `Fetching card art… (${uncached.length} cards)`;
+      render();
+      await fetchScryfallBatch(allCardNames);
+      state.playtestLoading = '';
+    }
+
     for (const [uid, player] of players) {
       // Use deck from state if available, otherwise deal empty hand
       const deck = state.decks.find(d => d.id === player.deckId);
@@ -2478,11 +2494,18 @@ function renderPTLobby() {
           </div>`;
         }).join('')}
       </div>
-      ${isHost
-        ? `<button class="btn-primary" onclick="ptStart()" style="width:100%;padding:13px;font-size:14px">
-            ▶ Start Game (${players.length} player${players.length!==1?'s':''})
-           </button>`
-        : `<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px">Waiting for host to start the game…</div>`}
+      ${state.playtestLoading
+        ? `<div style="text-align:center;padding:20px">
+            <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px">${escHtml(state.playtestLoading)}</div>
+            <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden">
+              <div style="height:100%;background:var(--accent);border-radius:2px;animation:progress-pulse 1.2s ease-in-out infinite"></div>
+            </div>
+           </div>`
+        : isHost
+          ? `<button class="btn-primary" onclick="ptStart()" style="width:100%;padding:13px;font-size:14px">
+              ▶ Start Game (${players.length} player${players.length!==1?'s':''})
+             </button>`
+          : `<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px">Waiting for host to start the game…</div>`}
     </div>
   </div>`;
 }
