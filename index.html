@@ -588,6 +588,26 @@ async function fbDeleteDeck(id) {
   await deleteDoc(doc(db, 'decks', id));
 }
 
+// Returns decks owned by the current user (UID-first, name fallback for legacy decks)
+function getMyDecks() {
+  const myUid = state.currentUser?.uid;
+  const myName = currentUserName();
+  return state.decks.filter(d => d.ownerUid ? d.ownerUid === myUid : d.player === myName);
+}
+
+// One-time migration: claims existing decks matching the current display name
+async function claimMyDecks() {
+  const myUid = state.currentUser?.uid;
+  const myName = currentUserName();
+  if (!myUid) return;
+  const unclaimed = state.decks.filter(d => !d.ownerUid && d.player === myName);
+  if (!unclaimed.length) { alert('All your decks are already claimed!'); return; }
+  const batch = writeBatch(db);
+  unclaimed.forEach(d => batch.update(doc(db, 'decks', d.id), { ownerUid: myUid }));
+  await batch.commit();
+  alert(`Claimed ${unclaimed.length} deck${unclaimed.length !== 1 ? 's' : ''} for ${myName} ✅`);
+}
+
 // ===== LOGIN SCREEN =====
 function renderLogin() {
   document.getElementById('app').innerHTML = `
@@ -1011,10 +1031,15 @@ function renderAccountTab() {
   const email = state.currentUser?.email || '';
   const pc = playerColor(name);
   const avatar = state.playerAvatars?.[name] || '🧙';
-  const myDecks = state.decks.filter(d => d.player === name);
+  const myDecks = getMyDecks();
   const myGames = myDecks.flatMap(d => d.games || []);
-  const wins = myGames.filter(g => g.result === 'win').length;
-  const winRate = myGames.length ? Math.round(wins / myGames.length * 100) : null;
+  const ownedGames = myGames.filter(g => !g.loaned);
+  const loanedGames = myGames.filter(g => g.loaned);
+  const wins = ownedGames.filter(g => g.result === 'win').length;
+  const winRate = ownedGames.length ? Math.round(wins / ownedGames.length * 100) : null;
+  const loanedWins = loanedGames.filter(g => g.result === 'win').length;
+  const loanedWinRate = loanedGames.length ? Math.round(loanedWins / loanedGames.length * 100) : null;
+  const hasUnclaimed = state.decks.some(d => !d.ownerUid && d.player === name);
 
   const row = (icon, label, value, onclick) => `
     <div onclick="${onclick}" style="display:flex;align-items:center;gap:14px;padding:14px 20px;cursor:${onclick?'pointer':'default'};transition:background 0.15s${onclick?';hover:background:var(--bg-hover)':''}">
@@ -1043,7 +1068,7 @@ function renderAccountTab() {
             <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Decks</div>
           </div>
           <div style="text-align:center">
-            <div style="font-size:18px;font-weight:700;color:var(--text-primary)">${myGames.length}</div>
+            <div style="font-size:18px;font-weight:700;color:var(--text-primary)">${ownedGames.length}</div>
             <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Games</div>
           </div>
           <div style="text-align:center">
@@ -1066,6 +1091,37 @@ function renderAccountTab() {
         ${sectionLabel('Security')}
         ${row('🔑', 'Change password', '', "state.showChangePassword=true;render()")}
       </div>
+
+      <!-- Loaned deck stats -->
+      ${loanedGames.length ? `
+      <div style="background:var(--bg-card);margin:16px 0 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
+        ${sectionLabel('Borrowed Decks')}
+        <div style="display:flex;gap:0;padding:4px 20px 16px">
+          <div style="flex:1;text-align:center">
+            <div style="font-size:18px;font-weight:700;color:var(--text-muted)">${loanedGames.length}</div>
+            <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Games</div>
+          </div>
+          <div style="flex:1;text-align:center">
+            <div style="font-size:18px;font-weight:700;color:var(--text-muted)">${loanedWins}</div>
+            <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Wins</div>
+          </div>
+          <div style="flex:1;text-align:center">
+            <div style="font-size:18px;font-weight:700;color:var(--text-muted)">${loanedWinRate !== null ? loanedWinRate + '%' : '—'}</div>
+            <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Win rate</div>
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--text-muted);padding:0 20px 14px">These games don't affect your main win rate.</div>
+      </div>` : ''}
+
+      <!-- Claim decks (migration) -->
+      ${hasUnclaimed ? `
+      <div style="background:var(--bg-card);margin:16px 0 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
+        ${sectionLabel('Ownership')}
+        <div style="padding:4px 20px 16px">
+          <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px">Some of your decks aren't linked to your account yet. Claim them so they stay yours even if you change your display name.</p>
+          <button onclick="claimMyDecks()" class="btn-primary" style="width:100%;padding:10px;font-size:13px">🔗 Claim my decks</button>
+        </div>
+      </div>` : ''}
 
       <!-- Sign out -->
       <div style="background:var(--bg-card);margin:16px 0 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
@@ -1305,6 +1361,7 @@ function saveDeck() {
   } else {
     data.id = commander.toLowerCase().replace(/[^a-z0-9]/g,'-') + '-' + Date.now();
     data.games = [];
+    data.ownerUid = state.currentUser?.uid || null;
     state.decks.push(data);
     fbSaveDeck(data).catch(console.error);
   }
@@ -2252,12 +2309,14 @@ function deckToCardObjects(deck) {
 }
 
 function ptBuildPlayer(uid, deck) {
+  const isLoaned = deck.ownerUid ? deck.ownerUid !== uid : deck.player !== currentUserName();
   return {
     uid, displayName: currentUserName(),
     deckId: deck.id, commander: deck.commander, colors: deck.colors || '',
     life: 40, poison: 0, commanderDamage: {},
     battlefield: [], graveyard: [], exile: [], commandZone: [],
     mulliganCount: 0, conceded: false,
+    isLoaned,
   };
 }
 
@@ -2506,15 +2565,17 @@ function renderPTLobby() {
   const session = state.playtestGame;
   const myUid = state.currentUser?.uid;
   const myName = currentUserName();
-  const myDecks = state.decks.filter(d => d.player === myName);
+  const myDecks = getMyDecks();
+  const otherDecks = state.decks.filter(d => !myDecks.includes(d));
   const deckSelect = (id, label) => `
     <label style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px">${label}</label>
     <select id="${id}" style="width:100%;margin-bottom:14px" onchange="state.playtestDeckId=this.value;render()">
-      <option value="">— pick your deck —</option>
-      ${myDecks.map(d => `<option value="${d.id}" ${state.playtestDeckId===d.id?'selected':''}>${escHtml(d.commander)}</option>`).join('')}
+      <option value="">— pick a deck —</option>
+      ${myDecks.length ? `<optgroup label="My Decks">${myDecks.map(d => `<option value="${d.id}" ${state.playtestDeckId===d.id?'selected':''}>${escHtml(d.commander)}</option>`).join('')}</optgroup>` : ''}
+      ${otherDecks.length ? `<optgroup label="Borrow a Deck">${otherDecks.map(d => `<option value="${d.id}" ${state.playtestDeckId===d.id?'selected':''}>↩ ${escHtml(d.commander)} (${escHtml(d.player)})</option>`).join('')}</optgroup>` : ''}
     </select>`;
   if (!session) {
-    const noDecks = myDecks.length === 0;
+    const noDecks = myDecks.length === 0 && otherDecks.length === 0;
     return `<div style="min-height:100vh;background:var(--bg)">
       <div style="display:flex;align-items:center;padding:16px 20px;background:var(--bg-card);border-bottom:1px solid var(--border)">
         <button onclick="ptLeave()" style="padding:6px 12px;font-size:12px;margin-right:12px">← Back</button>
@@ -3312,9 +3373,12 @@ async function endGame(winnerId) {
       const isWinner = d.id === winnerId;
       const isLoser = others.some(o => o.id === d.id);
       if (!isWinner && !isLoser) return d;
+      // Check if the player using this deck is actually its owner
+      const sessionPlayer = session.players.find(p => p.id === d.id);
+      const isLoaned = sessionPlayer && d.player !== sessionPlayer.name;
       const newGames = isWinner
-        ? others.map(o => ({ opponentId: o.id, result: 'win', date }))
-        : [{ opponentId: winnerId, result: 'loss', date }];
+        ? others.map(o => ({ opponentId: o.id, result: 'win', date, ...(isLoaned ? { loaned: true, loanedBy: sessionPlayer.name } : {}) }))
+        : [{ opponentId: winnerId, result: 'loss', date, ...(isLoaned ? { loaned: true, loanedBy: sessionPlayer.name } : {}) }];
       return { ...d, games: [...(d.games || []), ...newGames] };
     });
     const batch = writeBatch(db);
@@ -3494,6 +3558,7 @@ window.importFromUrl = importFromUrl;
 window.handleLogin = handleLogin;
 window.handleSignOut = handleSignOut;
 window.saveDisplayName = saveDisplayName;
+window.claimMyDecks = claimMyDecks;
 window.doChangePassword = doChangePassword;
 window.closeChangePassword = closeChangePassword;
 window.togglePwVis = togglePwVis;
