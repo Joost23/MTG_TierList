@@ -547,7 +547,6 @@ let state = {
   playtestCardMenu: null,
   playtestZoneOverlay: null,
   showPlaytester: false,
-  cardPopup: null,
   playerAvatars: {},
   showAvatarModal: null,
 };
@@ -740,8 +739,6 @@ function render() {
   if (state.showNewGameModal) html += renderNewGameModal();
   if (state.showEndGameModal && state.gameSession) html += renderEndGameModal(state.gameSession);
   if (state.showAvatarModal) html += renderAvatarModal(state.showAvatarModal);
-  if (state.cardPopup) html += renderCardPopup();
-
   app.innerHTML = html;
 }
 
@@ -2888,19 +2885,24 @@ function renderAvatar(playerName, size = 36) {
 function openAvatarModal(playerName) { state.showAvatarModal = playerName; render(); }
 function closeAvatarModal() { state.showAvatarModal = null; render(); }
 
-function showCardPopup(name, imageUrl) { state.cardPopup = { name, imageUrl }; render(); }
-function closeCardPopup() { state.cardPopup = null; render(); }
-function renderCardPopup() {
-  const { name, imageUrl } = state.cardPopup;
-  return `<div class="card-popup-overlay" onclick="closeCardPopup()">
+function showCardPopup(name, imageUrl) {
+  // Inject directly into body — bypasses render() so Firestore snapshots can't wipe it
+  document.getElementById('card-popup-root')?.remove();
+  const div = document.createElement('div');
+  div.id = 'card-popup-root';
+  div.innerHTML = `<div class="card-popup-overlay" onclick="closeCardPopup()">
     <div class="card-popup-inner" onclick="event.stopPropagation()">
       <div class="card-popup-close" onclick="closeCardPopup()">×</div>
       ${imageUrl
         ? `<img src="${escHtml(imageUrl)}" alt="${escHtml(name)}">`
-        : `<div style="background:var(--bg-card);border-radius:16px;aspect-ratio:63/88;display:flex;align-items:center;justify-content:center;padding:20px;font-size:14px;color:var(--text)">${escHtml(name)}</div>`}
+        : `<div style="background:var(--bg-card);border-radius:16px;aspect-ratio:63/88;display:flex;align-items:center;justify-content:center;padding:20px;font-size:14px;color:var(--text-muted)">${escHtml(name)}</div>`}
       <div class="card-popup-name">${escHtml(name)}</div>
     </div>
   </div>`;
+  document.body.appendChild(div);
+}
+function closeCardPopup() {
+  document.getElementById('card-popup-root')?.remove();
 }
 
 async function saveAvatar(playerName, emoji) {
