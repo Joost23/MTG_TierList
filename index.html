@@ -189,6 +189,7 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 /* Text list */
 .dl-text-list { display: flex; flex-direction: column; gap: 20px; }
 .dl-group-header { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; padding-bottom: 5px; border-bottom: 1px solid var(--border); }
+.dl-section-header { font-size: 13px; font-weight: 600; color: var(--text-secondary); margin: 28px 0 12px; padding-bottom: 8px; border-bottom: 2px solid var(--border); }
 .dl-group-count { font-family: 'JetBrains Mono', monospace; }
 .dl-group-entries { display: flex; flex-direction: column; }
 .dl-entry { display: flex; align-items: center; gap: 8px; padding: 3px 0; font-size: 13px; border-bottom: 1px solid rgba(42,41,48,0.5); }
@@ -1167,15 +1168,55 @@ function saveDecklistText(text) {
   fbUpdateDeck(id, { decklist: text }).catch(console.error);
 }
 
+function parseCardLine(line) {
+  const m = line.match(/^(\d+)x?\s+(.+?)(?:\s+\*[^*]+\*)*\s*$/);
+  if (m) return { qty: parseInt(m[1], 10), name: m[2].trim() };
+  const name = line.replace(/^\d+x?\s+/, '').replace(/\s+\*[^*]+\*$/, '').trim();
+  return name ? { qty: 1, name } : null;
+}
+
 function parseDecklist(text) {
-  return (text || '').split('\n')
-    .map(l => l.trim())
-    .filter(l => l && !l.startsWith('//') && !l.startsWith('#'))
-    .map(l => {
-      const m = l.match(/^(\d+)x?\s+(.+?)(?:\s+\*[^*]+\*)*$/);
-      return m ? { qty: parseInt(m[1], 10), name: m[2].trim() } : { qty: 1, name: l.replace(/^\d+x?\s+/, '').replace(/\s+\*[^*]+\*$/, '').trim() };
-    })
-    .filter(c => c.name);
+  const sections = parseDecklistSections(text);
+  return [...sections.main, ...sections.sideboard, ...sections.maybeboard];
+}
+
+function parseDecklistSections(text) {
+  const sections = { main: [], sideboard: [], maybeboard: [] };
+  let current = 'main';
+  let mainHasCards = false, sideHasCards = false, blankAfterMain = false;
+
+  for (const rawLine of (text || '').split('\n')) {
+    const line = rawLine.trim();
+    if (!line) {
+      // MTGO blank-line section switching
+      if (mainHasCards && current === 'main') { blankAfterMain = true; current = 'sideboard'; }
+      else if (sideHasCards && current === 'sideboard') current = 'maybeboard';
+      continue;
+    }
+    if (line.startsWith('#')) continue;
+
+    // Explicit section headers (Archidekt, Moxfield, MTGA formats)
+    if (/^\/\/\s*(sideboard|sb)\b/i.test(line) || /^sideboard\s*:?\s*$/i.test(line)) { current = 'sideboard'; continue; }
+    if (/^\/\/\s*(maybeboard|maybe)\b/i.test(line) || /^maybeboard\s*:?\s*$/i.test(line)) { current = 'maybeboard'; continue; }
+    if (/^\/\/\s*(mainboard|deck|main|commander)\b/i.test(line) || /^(mainboard|deck|main|commander)\s*:?\s*$/i.test(line)) {
+      // If blank-line switch happened but we see a "Deck" header, correct it back
+      if (blankAfterMain && current === 'sideboard' && !sideHasCards) current = 'main';
+      else current = 'main';
+      continue;
+    }
+    if (line.startsWith('//')) continue;
+
+    // "SB: 1 Card Name" prefix
+    let parseLine = line, target = current;
+    if (/^SB:\s*/i.test(line)) { parseLine = line.replace(/^SB:\s*/i, ''); target = 'sideboard'; }
+
+    const card = parseCardLine(parseLine);
+    if (!card) continue;
+    sections[target].push(card);
+    if (target === 'main') mainHasCards = true;
+    if (target === 'sideboard') sideHasCards = true;
+  }
+  return sections;
 }
 
 const TYPE_ORDER = ["Commander", "Planeswalker", "Creature", "Instant", "Sorcery", "Artifact", "Enchantment", "Land", "Other"];
@@ -1205,9 +1246,8 @@ function groupCardsByType(cards, commanderName) {
   return groups;
 }
 
-function renderTextList(cards, deck) {
-  if (!cards.length) return `<p style="color:var(--text-muted);font-size:13px">No cards in decklist yet.</p>`;
-  const groups = groupCardsByType(cards, deck.commander);
+function renderTypeGroupText(cards, commanderName) {
+  const groups = groupCardsByType(cards, commanderName);
   let html = '<div class="dl-text-list">';
   TYPE_ORDER.forEach(type => {
     const group = groups[type];
@@ -1231,12 +1271,24 @@ function renderTextList(cards, deck) {
   return html;
 }
 
-function renderImageGrid(cards, deck) {
-  if (!cards.length) return `<p style="color:var(--text-muted);font-size:13px">No cards in decklist yet.</p>`;
-  if (state.decklistImportStatus === "loading-images") {
-    return `<p style="color:var(--text-muted);font-size:13px">Fetching card images…</p>`;
+function renderTextList(sections, deck) {
+  const allCards = [...sections.main, ...sections.sideboard, ...sections.maybeboard];
+  if (!allCards.length) return `<p style="color:var(--text-muted);font-size:13px">No cards in decklist yet.</p>`;
+  let html = renderTypeGroupText(sections.main, deck.commander);
+  if (sections.sideboard.length) {
+    const total = sections.sideboard.reduce((s, c) => s + c.qty, 0);
+    html += `<div class="dl-section-header">Sideboard <span class="dl-group-count">(${total})</span></div>`;
+    html += renderTypeGroupText(sections.sideboard, '');
   }
-  const commanderName = deck?.commander || '';
+  if (sections.maybeboard.length) {
+    const total = sections.maybeboard.reduce((s, c) => s + c.qty, 0);
+    html += `<div class="dl-section-header">Maybeboard <span class="dl-group-count">(${total})</span></div>`;
+    html += renderTypeGroupText(sections.maybeboard, '');
+  }
+  return html;
+}
+
+function renderTypeGroupImages(cards, commanderName) {
   const groups = groupCardsByType(cards, commanderName);
   let html = '';
   TYPE_ORDER.forEach(type => {
@@ -1258,6 +1310,26 @@ function renderImageGrid(cards, deck) {
     });
     html += '</div>';
   });
+  return html;
+}
+
+function renderImageGrid(sections, deck) {
+  const allCards = [...sections.main, ...sections.sideboard, ...sections.maybeboard];
+  if (!allCards.length) return `<p style="color:var(--text-muted);font-size:13px">No cards in decklist yet.</p>`;
+  if (state.decklistImportStatus === "loading-images") {
+    return `<p style="color:var(--text-muted);font-size:13px">Fetching card images…</p>`;
+  }
+  let html = renderTypeGroupImages(sections.main, deck?.commander || '');
+  if (sections.sideboard.length) {
+    const total = sections.sideboard.reduce((s, c) => s + c.qty, 0);
+    html += `<div class="dl-section-header">Sideboard <span class="dl-group-count">(${total})</span></div>`;
+    html += renderTypeGroupImages(sections.sideboard, '');
+  }
+  if (sections.maybeboard.length) {
+    const total = sections.maybeboard.reduce((s, c) => s + c.qty, 0);
+    html += `<div class="dl-section-header">Maybeboard <span class="dl-group-count">(${total})</span></div>`;
+    html += renderTypeGroupImages(sections.maybeboard, '');
+  }
   return html;
 }
 
@@ -1312,7 +1384,8 @@ async function fetchScryfallBatch(names) {
 async function loadAndRenderImages(deckId) {
   const deck = state.decks.find(d => d.id === deckId);
   if (!deck || !deck.decklist) { render(); return; }
-  const cards = parseDecklist(deck.decklist);
+  const sects = parseDecklistSections(deck.decklist);
+  const cards = [...sects.main, ...sects.sideboard, ...sects.maybeboard];
   if (!cards.length) { render(); return; }
   const names = cards.map(c => c.name);
   const hasUncached = names.some(n => !(n.toLowerCase() in scryfallCache));
@@ -1513,8 +1586,9 @@ function renderDeckDetail(deck) {
   const games = deck.games || [];
   const wins = games.filter(g => g.result === 'win').length;
   const losses = games.filter(g => g.result === 'loss').length;
-  const cards = parseDecklist(deck.decklist);
-  const totalCards = cards.reduce((s, c) => s + c.qty, 0);
+  const sections = parseDecklistSections(deck.decklist);
+  const cards = sections.main; // used for stats
+  const totalCards = sections.main.reduce((s, c) => s + c.qty, 0);
 
   const importStatusHtml = state.decklistImportStatus
     ? `<span class="dl-import-status ${state.decklistImportStatus === 'success' ? 'dl-import-success' : state.decklistImportStatus.startsWith('error') ? 'dl-import-error' : ''}">${
@@ -1533,11 +1607,11 @@ function renderDeckDetail(deck) {
 
   let displayHtml = '';
   if (state.decklistMode === "images") {
-    displayHtml = renderImageGrid(cards, deck);
+    displayHtml = renderImageGrid(sections, deck);
   } else if (state.decklistMode === "stats") {
-    displayHtml = renderDeckStats(cards, deck);
+    displayHtml = renderDeckStats(sections.main, deck);
   } else {
-    displayHtml = renderTextList(cards, deck);
+    displayHtml = renderTextList(sections, deck);
   }
 
   return `<div class="deck-detail">
