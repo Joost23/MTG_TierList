@@ -421,6 +421,52 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 .matchup-pill-label { font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:2px; }
 .matchup-pill-deck { font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
 .matchup-pill-record { font-size:11px;color:var(--text-muted);font-family:'JetBrains Mono',monospace; }
+
+/* ===== MY DECKS GALLERY ===== */
+.gallery-page { padding: 0 0 40px; }
+.gallery-back { font-size: 13px; padding: 6px 14px; margin-bottom: 18px; display: inline-flex; align-items: center; gap: 6px; }
+.gallery-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+@media (min-width: 480px) { .gallery-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 700px) { .gallery-grid { grid-template-columns: repeat(4, 1fr); } }
+.gallery-card { position: relative; border-radius: var(--radius); overflow: hidden; aspect-ratio: 16/9; cursor: pointer; background: var(--bg-card); border: 1px solid var(--border); transition: border-color var(--transition), transform 0.15s; }
+.gallery-card:hover { border-color: var(--border-hover); transform: translateY(-2px); }
+.gallery-card-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.gallery-card-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 28px; color: var(--text-muted); background: var(--bg-card); }
+.gallery-card-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 50%, transparent 100%); }
+.gallery-card-footer { position: absolute; bottom: 0; left: 0; right: 0; padding: 8px 10px 9px; }
+.gallery-card-name { font-size: 12px; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 3px rgba(0,0,0,0.8); line-height: 1.3; }
+.gallery-card-meta { display: flex; align-items: center; gap: 5px; margin-top: 3px; }
+.gallery-card-tier { font-size: 9px; font-weight: 700; font-family: 'JetBrains Mono', monospace; padding: 1px 5px; border-radius: 3px; flex-shrink: 0; }
+.gallery-card-score { font-size: 10px; font-weight: 600; font-family: 'JetBrains Mono', monospace; color: rgba(255,255,255,0.75); }
+.gallery-card-record { font-size: 10px; color: rgba(255,255,255,0.55); font-family: 'JetBrains Mono', monospace; margin-left: auto; }
+
+/* ===== GAMES HISTORY MODAL ===== */
+.gh-modal { background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 22px; width: 100%; max-width: 480px; max-height: 80vh; overflow-y: auto; animation: slideUp 0.25s ease; }
+.gh-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.gh-title { font-size: 16px; font-weight: 600; }
+.gh-close { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; padding: 0; flex-shrink: 0; }
+.gh-entry { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border); }
+.gh-entry:last-child { border-bottom: none; }
+.gh-avatars { display: flex; gap: 4px; flex-shrink: 0; }
+.gh-info { flex: 1; min-width: 0; }
+.gh-winner { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gh-loser { font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gh-date { font-size: 10px; color: var(--text-muted); flex-shrink: 0; font-family: 'JetBrains Mono', monospace; }
+.gh-see-all { display: block; text-align: center; font-size: 13px; padding: 10px; margin-top: 12px; border-radius: var(--radius-sm); }
+
+/* ===== LEADERBOARD EXPAND ===== */
+.lb-expand-row { background: var(--bg-surface); border-top: 1px solid var(--border); padding: 12px 18px 14px; }
+.lb-expand-row-inner { padding-left: 54px; }
+.lb-expand-section { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 5px; margin-top: 10px; }
+.lb-expand-section:first-child { margin-top: 0; }
+.lb-form-dots { display: flex; gap: 4px; }
+.lb-form-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.lb-expand-deck { font-size: 12px; color: var(--text-secondary); }
+.lb-expand-h2h { font-size: 12px; font-family: 'JetBrains Mono', monospace; }
+.lb-chevron { margin-left: auto; font-size: 11px; color: var(--text-muted); transition: transform 0.2s ease; flex-shrink: 0; cursor: pointer; padding: 4px; }
+.lb-chevron.open { transform: rotate(180deg); }
+.leaderboard-row { cursor: pointer; }
+.leaderboard-row:hover { background: var(--bg-hover); }
 </style>
 </head>
 <body>
@@ -572,6 +618,9 @@ let state = {
   showPlaytester: false,
   playerAvatars: {},
   showAvatarModal: null,
+  myDecksGallery: false,
+  gamesHistoryOpen: false,
+  leaderboardExpanded: {},
 };
 
 const scryfallCache = {};
@@ -726,6 +775,11 @@ function render() {
     state.decklistView = null;
   }
 
+  if (state.myDecksGallery) {
+    app.innerHTML = renderMyDecksGallery() + renderBottomNav('home');
+    return;
+  }
+
   if (state.showPlaytester || state.playtestGameId) {
     const g = state.playtestGame;
     if (g?.status === 'active') {
@@ -795,6 +849,7 @@ function render() {
   if (state.showAvatarModal) html += renderAvatarModal(state.showAvatarModal);
   if (state.showNameModal) html += renderNameModal();
   if (state.showChangePassword) html += renderChangePasswordModal();
+  if (state.gamesHistoryOpen) html += renderGamesHistoryModal();
   app.innerHTML = html;
 }
 
@@ -874,11 +929,11 @@ function renderDashboard() {
       <div class="greeting-sub">${allDecks.length} decks in the pod · ${totalGames} game${totalGames !== 1 ? 's' : ''} logged</div>
     </div>
     <div class="dash-stats">
-      <div class="dash-stat-card">
+      <div class="dash-stat-card" onclick="openMyDecksGallery()" style="cursor:pointer">
         <div class="dash-stat-label">Your decks</div>
         <div class="dash-stat-value" style="color:${pc.color}">${userDecks.length}</div>
       </div>
-      <div class="dash-stat-card">
+      <div class="dash-stat-card" onclick="openGamesHistory()" style="cursor:pointer">
         <div class="dash-stat-label">Games played</div>
         <div class="dash-stat-value">${userTotal}</div>
       </div>
@@ -906,21 +961,26 @@ function renderDashboard() {
       ${leaderboard.map((p, i) => {
         const lpc = playerColor(p.player);
         const streak = getPlayerStreak(p.player);
-        return `<div class="leaderboard-row">
-          <span class="lb-rank">${i + 1}</span>
-          ${renderAvatar(p.player, 34)}
-          <div style="flex:1;min-width:0;margin-left:6px">
-            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-              <span style="font-weight:600;font-size:14px;color:${lpc.color}">${escHtml(p.player)}</span>
-              <span style="font-size:11px;color:var(--text-muted)">${p.deckCount} deck${p.deckCount !== 1 ? 's' : ''}</span>
-              ${p.total > 0 ? `<span class="lb-record">${p.wins}W-${p.losses}L</span>` : ''}
-              ${streak && streak.count >= 2 ? `<span class="streak-badge streak-${streak.type}">${streak.type === 'win' ? '🔥' : '💀'} ${streak.count}${streak.type === 'win' ? 'W' : 'L'}</span>` : ''}
+        const isExpanded = !!state.leaderboardExpanded[p.player];
+        return `<div>
+          <div class="leaderboard-row" onclick="toggleLeaderboardExpand('${escHtml(p.player)}')">
+            <span class="lb-rank">${i + 1}</span>
+            ${renderAvatar(p.player, 34)}
+            <div style="flex:1;min-width:0;margin-left:6px">
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <span style="font-weight:600;font-size:14px;color:${lpc.color}">${escHtml(p.player)}</span>
+                <span style="font-size:11px;color:var(--text-muted)">${p.deckCount} deck${p.deckCount !== 1 ? 's' : ''}</span>
+                ${p.total > 0 ? `<span class="lb-record">${p.wins}W-${p.losses}L</span>` : ''}
+                ${streak && streak.count >= 2 ? `<span class="streak-badge streak-${streak.type}">${streak.type === 'win' ? '🔥' : '💀'} ${streak.count}${streak.type === 'win' ? 'W' : 'L'}</span>` : ''}
+              </div>
+              ${p.bestDeck ? `<div class="lb-best">${escHtml(p.bestDeck.commander)}</div>` : ''}
             </div>
-            ${p.bestDeck ? `<div class="lb-best">${escHtml(p.bestDeck.commander)}</div>` : ''}
+            <div style="text-align:right;flex-shrink:0">
+              ${p.winRate !== null ? `<div class="lb-winrate">${p.winRate}%</div>` : '<div style="font-size:11px;color:var(--text-muted)">No games</div>'}
+            </div>
+            <span class="lb-chevron${isExpanded ? ' open' : ''}">▼</span>
           </div>
-          <div style="text-align:right;flex-shrink:0">
-            ${p.winRate !== null ? `<div class="lb-winrate">${p.winRate}%</div>` : '<div style="font-size:11px;color:var(--text-muted)">No games</div>'}
-          </div>
+          ${isExpanded ? renderLeaderboardExpanded(p.player) : ''}
         </div>`;
       }).join('')}
     </div>
@@ -3565,6 +3625,202 @@ function renderActiveSession() {
   </div>`;
 }
 
+// ===== FEATURE 1: MY DECKS GALLERY =====
+function openMyDecksGallery() {
+  state.myDecksGallery = true;
+  window.scrollTo(0, 0);
+  render();
+  loadGalleryImages();
+}
+
+function closeMyDecksGallery() {
+  state.myDecksGallery = false;
+  render();
+}
+
+function renderMyDecksGallery() {
+  const myDecks = getMyDecks();
+  const name = currentUserName();
+  const pc = playerColor(name);
+
+  const cards = myDecks.map(deck => {
+    const tier = getTier(deck.power);
+    const tierInfo = getTierInfo(tier);
+    const overall = getOverall(deck);
+    const games = deck.games || [];
+    const wins = games.filter(g => g.result === 'win').length;
+    const losses = games.filter(g => g.result === 'loss').length;
+    const cacheKey = (deck.commander || '').toLowerCase();
+    const cachedImg = scryfallCache[cacheKey];
+    const imgHtml = cachedImg
+      ? `<img class="gallery-card-img" src="${escHtml(cachedImg)}" alt="" loading="lazy" onerror="this.style.display='none'">`
+      : `<div class="gallery-card-placeholder">🧙</div>`;
+    const recordStr = (wins + losses) > 0 ? `${wins}W-${losses}L` : '';
+    return `<div class="gallery-card" onclick="openDeckDetail('${escHtml(deck.id)}')">
+      ${imgHtml}
+      <div class="gallery-card-overlay"></div>
+      <div class="gallery-card-footer">
+        <div class="gallery-card-name">${escHtml(deck.commander)}</div>
+        <div class="gallery-card-meta">
+          <span class="gallery-card-tier" style="background:${tierInfo.bg};color:${tierInfo.text}">${tier}</span>
+          <span class="gallery-card-score">${overall}</span>
+          ${recordStr ? `<span class="gallery-card-record">${recordStr}</span>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  return `<div class="app gallery-page">
+    <button class="gallery-back" onclick="closeMyDecksGallery()">← My Decks</button>
+    <div class="dash-section-title" style="margin-bottom:12px">Your Commander Collection · <span style="color:${pc.color}">${myDecks.length} deck${myDecks.length !== 1 ? 's' : ''}</span></div>
+    ${myDecks.length === 0
+      ? `<div class="empty"><h3>No decks yet</h3><p style="color:var(--text-secondary);font-size:13px">Add your first deck to build your gallery.</p><button class="btn-primary" style="margin-top:12px" onclick="closeMyDecksGallery();openAddModal()">+ Add deck</button></div>`
+      : `<div class="gallery-grid">${cards}</div>`
+    }
+  </div>`;
+}
+
+async function loadGalleryImages() {
+  const myDecks = getMyDecks();
+  let needsRender = false;
+  for (const deck of myDecks) {
+    const key = (deck.commander || '').toLowerCase();
+    if (!key) continue;
+    if (scryfallCache[key]) continue;
+    try {
+      const resp = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(deck.commander)}&format=json`);
+      if (!resp.ok) continue;
+      const data = await resp.json();
+      const imgUrl = data.image_uris?.art_crop || data.image_uris?.normal || null;
+      if (imgUrl) {
+        scryfallCache[key] = imgUrl;
+        needsRender = true;
+      }
+    } catch (e) {
+      // ignore fetch errors
+    }
+    await new Promise(r => setTimeout(r, 80));
+  }
+  if (needsRender && state.myDecksGallery) render();
+}
+
+// ===== FEATURE 2: GAMES HISTORY MODAL =====
+function openGamesHistory() {
+  state.gamesHistoryOpen = true;
+  render();
+}
+
+function closeGamesHistory() {
+  state.gamesHistoryOpen = false;
+  render();
+}
+
+function renderGamesHistoryModal() {
+  const recentGames = getRecentGames(5);
+  const entries = recentGames.map(g => {
+    const wpc = playerColor(g.winnerDeck.player);
+    const lpc = g.loserDeck ? playerColor(g.loserDeck.player) : { color: 'var(--text-muted)' };
+    const wav = state.playerAvatars?.[g.winnerDeck.player] || '🧙';
+    const lav = g.loserDeck ? (state.playerAvatars?.[g.loserDeck.player] || '🧙') : '❓';
+    const dateStr = g.date ? g.date.slice(5) : '';
+    return `<div class="gh-entry">
+      <div class="gh-avatars">
+        <span style="font-size:16px">${wav}</span>
+        <span style="font-size:12px;opacity:0.6">${lav}</span>
+      </div>
+      <div class="gh-info">
+        <div class="gh-winner" style="color:${wpc.color}">${escHtml(g.winnerDeck.commander)}</div>
+        <div class="gh-loser">beat <span style="color:${lpc.color}">${g.loserDeck ? escHtml(g.loserDeck.commander) : '?'}</span></div>
+      </div>
+      <div class="gh-date">${escHtml(dateStr)}</div>
+    </div>`;
+  }).join('');
+
+  return `<div class="modal-overlay" onclick="closeGamesHistory()">
+    <div class="gh-modal" onclick="event.stopPropagation()">
+      <div class="gh-header">
+        <span class="gh-title">Recent Games</span>
+        <button class="gh-close" onclick="closeGamesHistory()">✕</button>
+      </div>
+      ${recentGames.length === 0
+        ? '<p style="color:var(--text-muted);font-size:13px;text-align:center;padding:16px 0">No games logged yet.</p>'
+        : entries
+      }
+      <button class="gh-see-all" onclick="closeGamesHistory();setTab('collection')">See all games →</button>
+    </div>
+  </div>`;
+}
+
+// ===== FEATURE 3: EXPANDABLE LEADERBOARD =====
+function toggleLeaderboardExpand(playerName) {
+  state.leaderboardExpanded[playerName] = !state.leaderboardExpanded[playerName];
+  render();
+}
+
+function renderLeaderboardExpanded(playerName) {
+  const myName = currentUserName();
+  const playerDecks = state.decks.filter(d => d.player === playerName);
+  const allGames = playerDecks.flatMap(d => (d.games || []).map(g => ({ ...g, deckCommander: d.commander })));
+  const ownedGames = allGames.filter(g => !g.loaned);
+
+  // Recent form: last 5 results
+  const sorted = [...ownedGames].sort((a, b) => ((b.ts || 0) - (a.ts || 0)) || (b.date || '').localeCompare(a.date || ''));
+  const last5 = sorted.slice(0, 5);
+  const formDots = last5.map(g => {
+    const isWin = g.result === 'win';
+    return `<span class="lb-form-dot" style="background:${isWin ? 'var(--tier-b)' : 'var(--tier-s)'}" title="${isWin ? 'Win' : 'Loss'}"></span>`;
+  }).join('');
+
+  // Favorite deck (most played)
+  const deckPlayCounts = {};
+  playerDecks.forEach(d => {
+    const count = (d.games || []).filter(g => !g.loaned).length;
+    if (count > 0) deckPlayCounts[d.id] = { commander: d.commander, count };
+  });
+  const favDeck = Object.values(deckPlayCounts).sort((a, b) => b.count - a.count)[0] || null;
+
+  // Best performing deck (min 3 games)
+  const deckWinRates = playerDecks.map(d => {
+    const dg = (d.games || []).filter(g => !g.loaned);
+    if (dg.length < 3) return null;
+    const wins = dg.filter(g => g.result === 'win').length;
+    return { commander: d.commander, winRate: Math.round(wins / dg.length * 100), games: dg.length };
+  }).filter(Boolean).sort((a, b) => b.winRate - a.winRate);
+  const bestDeck = deckWinRates[0] || null;
+
+  // Head-to-head vs current user
+  let h2hWins = 0;
+  let h2hLosses = 0;
+  if (playerName !== myName) {
+    const myDecks = getMyDecks();
+    const myDeckIds = new Set(myDecks.map(d => d.id));
+    playerDecks.forEach(d => {
+      (d.games || []).filter(g => !g.loaned).forEach(g => {
+        if (g.result === 'win' && myDeckIds.has(g.opponentId)) h2hWins++;
+        if (g.result === 'loss' && myDeckIds.has(g.opponentId)) h2hLosses++;
+      });
+    });
+  }
+
+  return `<div class="lb-expand-row">
+    <div class="lb-expand-row-inner">
+      ${last5.length > 0 ? `
+        <div class="lb-expand-section">Recent form</div>
+        <div class="lb-form-dots">${formDots}</div>` : ''}
+      ${favDeck ? `
+        <div class="lb-expand-section">Favourite deck</div>
+        <div class="lb-expand-deck">${escHtml(favDeck.commander)} <span style="color:var(--text-muted);font-family:'JetBrains Mono',monospace;font-size:11px">(${favDeck.count}g)</span></div>` : ''}
+      ${bestDeck ? `
+        <div class="lb-expand-section">Best deck (≥3 games)</div>
+        <div class="lb-expand-deck">${escHtml(bestDeck.commander)} <span style="color:var(--text-muted);font-family:'JetBrains Mono',monospace;font-size:11px">${bestDeck.winRate}% in ${bestDeck.games}g</span></div>` : ''}
+      ${playerName !== myName && (h2hWins + h2hLosses) > 0 ? `
+        <div class="lb-expand-section">Head-to-head vs you</div>
+        <div class="lb-expand-h2h"><span style="color:var(--tier-s-text)">${h2hWins}W</span> – <span style="color:var(--tier-b-text)">${h2hLosses}L</span> <span style="color:var(--text-muted);font-size:11px">(${playerName}'s perspective)</span></div>` : ''}
+      ${last5.length === 0 && !favDeck && !bestDeck ? `<div style="font-size:12px;color:var(--text-muted)">No games recorded yet.</div>` : ''}
+    </div>
+  </div>`;
+}
+
 // ===== WINDOW EXPORTS (needed because this is a module) =====
 window.render = render;
 window.state = state;
@@ -3631,6 +3887,12 @@ window.ptCloseZone = ptCloseZone;
 window.openPlaytester = openPlaytester;
 window.openAvatarModal = openAvatarModal;
 window.closeAvatarModal = closeAvatarModal;
+window.openMyDecksGallery = openMyDecksGallery;
+window.closeMyDecksGallery = closeMyDecksGallery;
+window.loadGalleryImages = loadGalleryImages;
+window.openGamesHistory = openGamesHistory;
+window.closeGamesHistory = closeGamesHistory;
+window.toggleLeaderboardExpand = toggleLeaderboardExpand;
 window.showCardPopup = showCardPopup;
 window.closeCardPopup = closeCardPopup;
 window.saveAvatar = saveAvatar;
