@@ -1578,12 +1578,23 @@ async function loadAndRenderImages(deckId) {
   render();
 }
 
+// Deployed Cloudflare Worker URL — update this after deploying moxfield-proxy/worker.js
+const MOXFIELD_PROXY_URL = "https://moxfield-proxy.joost23.workers.dev";
+
 async function fetchJson(apiUrl) {
+  // Moxfield requires PostmanRuntime User-Agent — route through dedicated worker
+  const isMoxfield = apiUrl.includes("api2.moxfield.com");
+  if (isMoxfield) {
+    const proxied = `${MOXFIELD_PROXY_URL}?url=${encodeURIComponent(apiUrl)}`;
+    const res = await fetch(proxied, { headers: { "Accept": "application/json" } });
+    if (!res.ok) throw new Error("Moxfield proxy HTTP " + res.status);
+    return await res.json();
+  }
+  // For other APIs (Archidekt etc.) try public CORS proxies
   const proxies = [
     u => u,
     u => "https://thingproxy.freeboard.io/fetch/" + u,
     u => "https://api.codetabs.com/v1/proxy?quest=" + u,
-    u => "https://corsproxy.io/?" + encodeURIComponent(u),
     u => "https://api.allorigins.win/raw?url=" + encodeURIComponent(u),
   ];
   let lastErr;
