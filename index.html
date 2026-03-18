@@ -128,14 +128,14 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 .deck-score-label { display: none; }
 
 /* Expanded area */
-.deck-expanded { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+.deck-expanded { padding: 10px 12px 12px; border-top: 1px solid var(--border); }
 .stat-row { display: flex; align-items: center; gap: 10px; font-size: 13px; margin-bottom: 8px; }
 .stat-label { width: 95px; color: var(--text-secondary); flex-shrink: 0; }
 .stat-track { flex: 1; height: 5px; background: var(--bg); border-radius: 3px; overflow: hidden; }
 .stat-fill { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
 .stat-value { width: 30px; text-align: right; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 500; }
-.deck-notes { font-size: 13px; color: var(--text-secondary); margin-top: 14px; line-height: 1.65; font-style: italic; border-left: 2px solid var(--border); padding-left: 12px; }
-.deck-actions { display: flex; gap: 8px; margin-top: 14px; }
+.deck-notes { font-size: 13px; color: var(--text-secondary); margin-top: 10px; line-height: 1.6; font-style: italic; border-left: 2px solid var(--border); padding-left: 10px; }
+.deck-actions { display: flex; gap: 8px; margin-top: 10px; }
 .deck-actions button { font-size: 12px; padding: 5px 14px; }
 .btn-danger { color: var(--tier-s) !important; }
 .btn-danger:hover { background: var(--tier-s-bg) !important; border-color: var(--tier-s) !important; }
@@ -1066,10 +1066,10 @@ function renderDeckCard(deck, tier, index) {
   if (isExpanded) {
     const winRate = total > 0 ? Math.round((wins / total) * 100) : null;
     card += `<div class="deck-expanded">
-      <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+      ${(deck.colors || total > 0) ? `<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
         ${deck.colors ? `<span class="deck-colors">${escHtml(deck.colors)}</span>` : ''}
         ${total > 0 ? `<span class="deck-record-badge">${wins}W-${losses}L</span>` : ''}
-      </div>
+      </div>` : ''}
       ${renderStat("Power", deck.power, tier.color)}
       ${renderStat("Synergy", deck.synergy, tier.color)}
       ${renderStat("Theme", deck.theme, tier.color)}
@@ -1077,12 +1077,12 @@ function renderDeckCard(deck, tier, index) {
       ${deck.notes ? `<div class="deck-notes">${escHtml(deck.notes)}</div>` : ''}
       <div class="record-section">
         <div class="record-stat">
-          <span class="record-stat-value" style="color:var(--tier-b-text)">${wins}</span>
+          <span class="record-stat-value" style="color:${wins>0?'var(--tier-b-text)':'var(--text-muted)'}">${wins}</span>
           <span class="record-stat-label">Wins</span>
         </div>
         <div class="record-divider"></div>
         <div class="record-stat">
-          <span class="record-stat-value" style="color:var(--tier-s-text)">${losses}</span>
+          <span class="record-stat-value" style="color:${losses>0?'var(--tier-s-text)':'var(--text-muted)'}">${losses}</span>
           <span class="record-stat-label">Losses</span>
         </div>
         ${winRate !== null ? `<div class="record-divider"></div><span class="record-rate">${winRate}%</span>` : '<span class="record-rate" style="color:var(--text-muted)">No games</span>'}
