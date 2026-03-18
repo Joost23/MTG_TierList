@@ -3711,7 +3711,8 @@ async function loadGalleryImages() {
       const resp = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(deck.commander)}&format=json`);
       if (!resp.ok) continue;
       const data = await resp.json();
-      const imgUrl = data.image_uris?.art_crop || data.image_uris?.normal || null;
+      const iuris = data.image_uris || data.card_faces?.[0]?.image_uris;
+      const imgUrl = iuris?.art_crop || iuris?.normal || null;
       if (imgUrl) {
         scryfallCache[key] = imgUrl;
         needsRender = true;
@@ -3747,7 +3748,8 @@ async function loadDeckCardArts() {
         const resp = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(commander)}&format=json`);
         if (resp.ok) {
           const data = await resp.json();
-          imgUrl = data.image_uris?.art_crop || data.image_uris?.normal || null;
+          const iuris = data.image_uris || data.card_faces?.[0]?.image_uris;
+          imgUrl = iuris?.art_crop || iuris?.normal || null;
           if (imgUrl) scryfallCache[key] = imgUrl;
         }
       } catch(e) {}
