@@ -1344,14 +1344,26 @@ function toggleDecklistEditor() {
 }
 function saveDecklistText(text) {
   const id = state.decklistView;
-  state.decks = state.decks.map(d => d.id === id ? { ...d, decklist: text } : d);
-  fbUpdateDeck(id, { decklist: text }).catch(console.error);
+  const updates = { decklist: text };
+  // Auto-detect commander from Moxfield copy-paste format (first card = commander)
+  // Moxfield paste has "(SET) COLLNUM" suffix on every card line
+  const isMoxfieldPaste = /\d+\s+.+\([A-Z0-9]{2,7}\)\s+\S/.test(text);
+  if (isMoxfieldPaste) {
+    for (const rawLine of text.split('\n')) {
+      const card = parseCardLine(rawLine.trim());
+      if (card) { updates.commander = card.name; break; }
+    }
+  }
+  state.decks = state.decks.map(d => d.id === id ? { ...d, ...updates } : d);
+  fbUpdateDeck(id, updates).catch(console.error);
 }
 
 function parseCardLine(line) {
-  const m = line.match(/^(\d+)x?\s+(.+?)(?:\s+\*[^*]+\*)*\s*$/);
+  // Strip Moxfield copy format: " (SET) COLLECTORNUM" suffix + foil markers (*F*, ★)
+  const cleaned = line.replace(/\s+\([A-Z0-9]{2,7}\)\s+\S+.*$/, '').trim();
+  const m = cleaned.match(/^(\d+)x?\s+(.+?)\s*$/);
   if (m) return { qty: parseInt(m[1], 10), name: m[2].trim() };
-  const name = line.replace(/^\d+x?\s+/, '').replace(/\s+\*[^*]+\*$/, '').trim();
+  const name = cleaned.replace(/^\d+x?\s+/, '').trim();
   return name ? { qty: 1, name } : null;
 }
 
@@ -1696,8 +1708,9 @@ async function importFromUrl() {
 
   saveDecklistText(text);
   state.decklistImportStatus = "success";
-  state.decklistEditing = true;
-  render();
+  state.decklistEditing = false;
+  state.decklistMode = "images";
+  loadAndRenderImages(state.decklistView);
   // Auto-fetch card images after import
   loadAndRenderImages(state.decklistView);
 }
