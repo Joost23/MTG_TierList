@@ -336,6 +336,59 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 .session-setup-row { display: flex; gap: 8px; margin-bottom: 10px; align-items: center; }
 .session-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
 .join-session-bar { display: flex; gap: 8px; margin-top: 12px; border-top: 1px solid var(--border); padding-top: 12px; }
+/* ===== MULTIPLAYER PLAYTESTER ===== */
+.pt-playmat { position:fixed;top:0;left:0;right:0;bottom:0;display:flex;flex-direction:column;background:var(--bg);z-index:200;overflow:hidden; }
+.pt-tabs { display:flex;overflow-x:auto;background:var(--bg-card);border-bottom:1px solid var(--border);flex-shrink:0;scrollbar-width:none; }
+.pt-tabs::-webkit-scrollbar { display:none; }
+.pt-tab { display:flex;flex-direction:column;align-items:center;padding:8px 14px;border:none;border-radius:0;border-right:1px solid var(--border);background:transparent;color:var(--text-muted);cursor:pointer;min-width:80px;flex-shrink:0;border-bottom:3px solid transparent;transition:all 0.15s; }
+.pt-tab-active { color:var(--tab-col,var(--accent));border-bottom-color:var(--tab-col,var(--accent));background:var(--bg-surface); }
+.pt-tab-name { font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:1px; }
+.pt-tab-life { font-size:20px;font-weight:700;font-family:'JetBrains Mono',monospace;line-height:1.1; }
+.pt-tab-poison { font-size:10px;color:var(--tier-b-text);margin-top:1px; }
+.pt-deckbar { display:flex;align-items:center;gap:10px;padding:6px 12px;background:var(--bg-surface);border-bottom:1px solid var(--border);font-size:12px;flex-shrink:0;overflow:hidden; }
+.pt-deckbar-commander { font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.pt-deckbar-meta { color:var(--text-muted);flex-shrink:0;font-family:'JetBrains Mono',monospace;font-size:11px; }
+.pt-battlefield { flex:1;position:relative;overflow:auto;background:#090811; }
+.pt-zone-btns { position:absolute;top:8px;right:8px;display:flex;flex-direction:column;gap:4px;z-index:10; }
+.pt-zone-btn { font-size:10px;padding:5px 9px;background:rgba(0,0,0,0.7);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-secondary);cursor:pointer;backdrop-filter:blur(4px);white-space:nowrap; }
+.pt-zone-btn:hover { background:var(--bg-surface);color:var(--text); }
+.pt-bf-cards { display:flex;flex-wrap:wrap;gap:8px;padding:12px;padding-right:68px;min-height:100%;align-content:flex-start; }
+.pt-bf-empty { position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:13px;pointer-events:none; }
+.pt-bf-card { position:relative;cursor:pointer;transition:transform 0.2s ease;flex-shrink:0;border-radius:5px; }
+.pt-bf-card:hover { filter:brightness(1.15); }
+.pt-tapped { transform:rotate(90deg);margin:14px 8px; }
+.pt-card-selected { outline:2px solid var(--accent);outline-offset:2px; }
+.pt-card-back { width:72px;height:100px;background:linear-gradient(135deg,#1a1535,#0d0b1a);border:1px solid var(--border);border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--text-muted);text-align:center;padding:4px;word-break:break-word; }
+.pt-hand-card-back { width:90px;height:126px;background:linear-gradient(135deg,#1a1535,#0d0b1a);border:1px solid var(--border);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--text-muted);text-align:center;padding:6px;word-break:break-word; }
+.pt-counter { position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;background:#22c55e;color:#fff;border-radius:99px;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 3px; }
+.pt-cmd-badge { position:absolute;bottom:-4px;left:2px;font-size:9px;background:rgba(167,139,250,0.8);border-radius:99px;padding:1px 4px;color:#fff; }
+.pt-action-bar { display:flex;gap:6px;padding:8px 10px;background:var(--bg-card);border-top:1px solid var(--border);overflow-x:auto;flex-shrink:0;scrollbar-width:none; }
+.pt-action-bar::-webkit-scrollbar { display:none; }
+.pt-action-btn { font-size:12px;padding:7px 14px;white-space:nowrap;flex-shrink:0;border-radius:var(--radius-sm); }
+.pt-action-danger { color:var(--tier-s-text) !important;border-color:rgba(226,75,74,0.5) !important; }
+.pt-hand { display:flex;gap:8px;padding:10px 12px;background:var(--bg-card);border-top:1px solid var(--border);overflow-x:auto;flex-shrink:0;min-height:118px;max-height:140px;scrollbar-width:none; }
+.pt-hand::-webkit-scrollbar { display:none; }
+.pt-hand-card { flex-shrink:0;cursor:pointer;border-radius:6px;transition:transform 0.15s; }
+.pt-hand-card:hover { transform:translateY(-6px); }
+.pt-card-menu { position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:var(--bg-card);border:1px solid var(--border-hover);border-radius:var(--radius);padding:8px;z-index:50;min-width:210px;max-width:280px;box-shadow:0 8px 32px rgba(0,0,0,0.6); }
+.pt-card-menu-name { font-size:11px;color:var(--text-muted);padding:0 6px 8px;border-bottom:1px solid var(--border);margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-style:italic; }
+.pt-menu-btn { display:block;width:100%;text-align:left;padding:8px 10px;font-size:13px;border:none;background:transparent;color:var(--text);border-radius:var(--radius-sm);cursor:pointer; }
+.pt-menu-btn:hover { background:var(--bg-hover); }
+.pt-menu-cancel { color:var(--text-muted);border-top:1px solid var(--border);margin-top:4px;padding-top:8px; }
+.pt-overlay-bg { position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:300;display:flex;align-items:flex-end; }
+.pt-overlay { width:100%;max-height:72vh;background:var(--bg-card);border-radius:18px 18px 0 0;display:flex;flex-direction:column; }
+.pt-overlay-header { display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);flex-shrink:0; }
+.pt-overlay-title { font-weight:600;font-size:14px; }
+.pt-overlay-cards { display:flex;gap:10px;padding:14px;overflow-x:auto;align-items:flex-start;scrollbar-width:none;flex-wrap:wrap; }
+.pt-overlay-cards::-webkit-scrollbar { display:none; }
+.pt-overlay-card { display:flex;flex-direction:column;align-items:center;gap:5px; }
+.pt-overlay-card-btn { font-size:10px;padding:3px 8px;border-radius:99px; }
+.pt-life-editor { display:flex;align-items:center;gap:6px;margin-top:4px; }
+.pt-life-adj { width:28px;height:28px;border-radius:50%;font-size:14px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;padding:0; }
+.pt-lobby { padding:20px;max-width:500px;margin:0 auto; }
+.pt-lobby-card { background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px; }
+.pt-player-row { display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border); }
+.pt-player-row:last-child { border-bottom:none; }
 /* ===== PHASE 5 POLISH ===== */
 .streak-badge { display:inline-flex;align-items:center;gap:2px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px;font-family:'JetBrains Mono',monospace;flex-shrink:0; }
 .streak-win { background:var(--tier-b-bg);color:var(--tier-b-text); }
@@ -480,6 +533,14 @@ let state = {
   showNewGameModal: false,
   showEndGameModal: false,
   showJoinInput: false,
+  playtestGameId: null,
+  playtestGame: null,
+  playtestPrivate: null,
+  playtestViewUid: null,
+  playtestDeckId: null,
+  playtestCardMenu: null,
+  playtestZoneOverlay: null,
+  showPlaytester: false,
   playerAvatars: {},
   showAvatarModal: null,
 };
@@ -551,6 +612,8 @@ async function handleSignOut() {
 // ===== FIRESTORE LISTENER =====
 let unsubscribeDecks = null;
 let unsubscribeSession = null;
+let unsubscribePlaytest = null;
+let unsubscribePrivate = null;
 
 function setupFirestoreListener() {
   if (unsubscribeDecks) unsubscribeDecks();
@@ -603,6 +666,16 @@ function render() {
     const deck = state.decks.find(d => d.id === state.decklistView);
     if (deck) { app.innerHTML = renderDeckDetail(deck); return; }
     state.decklistView = null;
+  }
+
+  if (state.showPlaytester || state.playtestGameId) {
+    const g = state.playtestGame;
+    if (g?.status === 'active') {
+      app.innerHTML = renderPTGame();
+    } else {
+      app.innerHTML = renderPTLobby();
+    }
+    return;
   }
 
   const tab = state.tab || 'home';
@@ -883,6 +956,7 @@ function renderCollectionTab() {
 }
 
 function renderPlayTab() {
+  if (state.showPlaytester || state.playtestGameId) return ''; // handled by render()
   const allGames = getRecentGames(100);
   const sessionHtml = state.gameSession
     ? renderActiveSession()
@@ -908,6 +982,13 @@ function renderPlayTab() {
       <div class="header-glow"></div>
       <h1>Play <span>Hub</span></h1>
       <p>Sessions · Match history</p>
+    </div>
+    <div class="dash-card" style="padding:16px 18px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+      <div>
+        <div style="font-weight:600;margin-bottom:3px">🎮 Playtester</div>
+        <div style="font-size:13px;color:var(--text-secondary)">Full virtual tabletop — play cards, tap, move zones</div>
+      </div>
+      <button onclick="state.showPlaytester=true;render()" style="padding:8px 16px;font-size:13px;white-space:nowrap;flex-shrink:0;background:var(--accent-dim);color:#fff;border-color:var(--accent)">Open →</button>
     </div>
     ${sessionHtml}
     <div class="dash-section-title" style="margin-bottom:10px">All Games (${allGames.length})</div>
@@ -1889,6 +1970,498 @@ function removeChangelogEntry(deckId, idx) {
   render();
 }
 
+// ===== MULTIPLAYER PLAYTESTER =====
+const PT_COLORS = ['#A78BFA','#34D399','#FBBF24','#F472B6','#60A5FA','#F87171'];
+
+function genId() {
+  return typeof crypto !== 'undefined' && crypto.randomUUID
+    ? crypto.randomUUID()
+    : Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+
+function shuffleArr(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function deckToCardObjects(deck) {
+  const sections = parseDecklistSections(deck.decklist || '');
+  const cards = [];
+  sections.main.forEach(c => {
+    const cached = scryfallCache[c.name.toLowerCase()] || scryfallCache[c.name.split(' // ')[0].trim().toLowerCase()];
+    for (let i = 0; i < (c.qty || 1); i++) {
+      cards.push({
+        cardId: genId(),
+        name: c.name,
+        imageUrl: cached?.imageUrl || null,
+        zone: c.name === deck.commander ? 'command' : 'library',
+        tapped: false,
+        counters: 0,
+        isCommander: c.name === deck.commander,
+        isToken: false,
+        faceDown: false,
+      });
+    }
+  });
+  return cards;
+}
+
+function ptBuildPlayer(uid, deck) {
+  return {
+    uid, displayName: currentUserName(),
+    deckId: deck.id, commander: deck.commander, colors: deck.colors || '',
+    life: 40, poison: 0, commanderDamage: {},
+    battlefield: [], graveyard: [], exile: [], commandZone: [],
+    mulliganCount: 0, conceded: false,
+  };
+}
+
+// ── Lobby actions ─────────────────────────────────────
+async function ptCreate() {
+  const myUid = state.currentUser?.uid;
+  const deck = state.decks.find(d => d.id === state.playtestDeckId);
+  if (!myUid || !deck) return;
+  const sessionId = (Date.now().toString(36).slice(-4) + Math.random().toString(36).slice(2,5)).toUpperCase();
+  await setDoc(doc(db, 'gameSessions', sessionId), {
+    hostId: myUid, status: 'waiting', turn: 1, sessionType: 'playtest',
+    players: { [myUid]: ptBuildPlayer(myUid, deck) },
+    createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+  });
+  state.playtestGameId = sessionId;
+  state.playtestViewUid = myUid;
+  ptListen(sessionId);
+}
+
+async function ptJoin(sessionId) {
+  const myUid = state.currentUser?.uid;
+  const deck = state.decks.find(d => d.id === state.playtestDeckId);
+  if (!myUid || !deck || !sessionId) return;
+  await updateDoc(doc(db, 'gameSessions', sessionId), {
+    [`players.${myUid}`]: ptBuildPlayer(myUid, deck),
+    updatedAt: new Date().toISOString(),
+  });
+  state.playtestGameId = sessionId;
+  state.playtestViewUid = myUid;
+  ptListen(sessionId);
+}
+
+async function ptStart() {
+  const sessionId = state.playtestGameId;
+  const session = state.playtestGame;
+  if (!session || session.status !== 'waiting') return;
+  const players = Object.entries(session.players || {});
+  const publicUpdate = {};
+  for (const [uid, player] of players) {
+    const deck = state.decks.find(d => d.id === player.deckId);
+    if (!deck) continue;
+    const all = deckToCardObjects(deck);
+    const commanders = all.filter(c => c.isCommander);
+    const library = shuffleArr(all.filter(c => !c.isCommander));
+    const hand = library.splice(0, 7).map(c => ({ ...c, zone: 'hand' }));
+    await setDoc(doc(db, 'gameSessions', sessionId, 'privateZones', uid), { hand, library });
+    publicUpdate[`players.${uid}.commandZone`] = commanders;
+  }
+  publicUpdate.status = 'active';
+  publicUpdate.updatedAt = new Date().toISOString();
+  await updateDoc(doc(db, 'gameSessions', sessionId), publicUpdate);
+}
+
+function ptListen(sessionId) {
+  if (unsubscribePlaytest) { unsubscribePlaytest(); unsubscribePlaytest = null; }
+  if (unsubscribePrivate) { unsubscribePrivate(); unsubscribePrivate = null; }
+  const myUid = state.currentUser?.uid;
+  state.playtestGameId = sessionId;
+  unsubscribePlaytest = onSnapshot(doc(db, 'gameSessions', sessionId), snap => {
+    if (snap.exists()) { state.playtestGame = { id: snap.id, ...snap.data() }; render(); }
+  });
+  if (myUid) {
+    unsubscribePrivate = onSnapshot(doc(db, 'gameSessions', sessionId, 'privateZones', myUid), snap => {
+      state.playtestPrivate = snap.exists() ? snap.data() : { hand: [], library: [] };
+      render();
+    });
+  }
+}
+
+async function ptLeave() {
+  if (unsubscribePlaytest) { unsubscribePlaytest(); unsubscribePlaytest = null; }
+  if (unsubscribePrivate) { unsubscribePrivate(); unsubscribePrivate = null; }
+  state.playtestGameId = null; state.playtestGame = null; state.playtestPrivate = null;
+  state.playtestViewUid = null; state.playtestDeckId = null; state.playtestCardMenu = null;
+  state.playtestZoneOverlay = null; state.showPlaytester = false;
+  render();
+}
+
+// ── Firestore write helpers ───────────────────────────
+async function ptPub(fields) {
+  if (!state.playtestGameId) return;
+  await updateDoc(doc(db, 'gameSessions', state.playtestGameId), { ...fields, updatedAt: new Date().toISOString() });
+}
+async function ptPriv(data) {
+  const uid = state.currentUser?.uid;
+  if (!state.playtestGameId || !uid) return;
+  await setDoc(doc(db, 'gameSessions', state.playtestGameId, 'privateZones', uid), data);
+}
+
+// ── Game actions ──────────────────────────────────────
+async function ptDraw(count = 1) {
+  const priv = state.playtestPrivate;
+  if (!priv) return;
+  const library = [...(priv.library || [])];
+  const hand = [...(priv.hand || [])];
+  const drawn = library.splice(0, count);
+  if (!drawn.length) return;
+  drawn.forEach(c => hand.push({ ...c, zone: 'hand' }));
+  await ptPriv({ hand, library });
+}
+
+async function ptUntapAll() {
+  const uid = state.currentUser?.uid;
+  const player = state.playtestGame?.players?.[uid];
+  if (!player) return;
+  await ptPub({ [`players.${uid}.battlefield`]: (player.battlefield || []).map(c => ({ ...c, tapped: false })) });
+}
+
+async function ptMulligan() {
+  const uid = state.currentUser?.uid;
+  const player = state.playtestGame?.players?.[uid];
+  const priv = state.playtestPrivate;
+  if (!player || !priv) return;
+  const mulliganCount = (player.mulliganCount || 0) + 1;
+  const drawCount = Math.max(7 - mulliganCount, 0);
+  const library = shuffleArr([...(priv.library || []), ...(priv.hand || []).map(c => ({ ...c, zone: 'library' }))]);
+  const hand = library.splice(0, drawCount).map(c => ({ ...c, zone: 'hand' }));
+  await ptPriv({ hand, library });
+  await ptPub({ [`players.${uid}.mulliganCount`]: mulliganCount });
+}
+
+async function ptShuffle() {
+  const priv = state.playtestPrivate;
+  if (!priv) return;
+  await ptPriv({ ...priv, library: shuffleArr([...(priv.library || [])]) });
+}
+
+async function ptNextTurn() {
+  await ptPub({ turn: (state.playtestGame?.turn || 1) + 1 });
+}
+
+async function ptAdjustLife(delta) {
+  const uid = state.currentUser?.uid;
+  const player = state.playtestGame?.players?.[uid];
+  if (!player) return;
+  await ptPub({ [`players.${uid}.life`]: (player.life ?? 40) + delta });
+}
+
+async function ptConcede() {
+  const uid = state.currentUser?.uid;
+  if (!uid) return;
+  await ptPub({ [`players.${uid}.conceded`]: true });
+  await ptLeave();
+}
+
+// ── Card actions ──────────────────────────────────────
+async function ptPlayCard(cardId) {
+  const uid = state.currentUser?.uid;
+  const player = state.playtestGame?.players?.[uid];
+  const priv = state.playtestPrivate;
+  if (!player || !priv) return;
+  const hand = [...(priv.hand || [])];
+  const idx = hand.findIndex(c => c.cardId === cardId);
+  if (idx === -1) return;
+  const [card] = hand.splice(idx, 1);
+  const battlefield = [...(player.battlefield || []), { ...card, zone: 'battlefield', tapped: false }];
+  await ptPriv({ ...priv, hand });
+  await ptPub({ [`players.${uid}.battlefield`]: battlefield });
+  ptCloseMenu();
+}
+
+async function ptTapCard(cardId) {
+  const uid = state.currentUser?.uid;
+  const player = state.playtestGame?.players?.[uid];
+  if (!player) return;
+  await ptPub({ [`players.${uid}.battlefield`]: (player.battlefield || []).map(c => c.cardId === cardId ? { ...c, tapped: !c.tapped } : c) });
+  ptCloseMenu();
+}
+
+async function ptMoveCard(cardId, fromZone, toZone) {
+  const uid = state.currentUser?.uid;
+  const player = state.playtestGame?.players?.[uid];
+  const priv = state.playtestPrivate;
+  if (!player || !priv) return;
+  const PRIV = ['hand', 'library'];
+  let card;
+  const newPriv = { hand: [...(priv.hand||[])], library: [...(priv.library||[])] };
+  const pubUp = {};
+  if (PRIV.includes(fromZone)) {
+    const arr = [...newPriv[fromZone]];
+    const idx = arr.findIndex(c => c.cardId === cardId);
+    if (idx === -1) return;
+    [card] = arr.splice(idx, 1);
+    newPriv[fromZone] = arr;
+  } else {
+    const arr = [...(player[fromZone] || [])];
+    const idx = arr.findIndex(c => c.cardId === cardId);
+    if (idx === -1) return;
+    [card] = arr.splice(idx, 1);
+    pubUp[`players.${uid}.${fromZone}`] = arr;
+  }
+  card = { ...card, zone: toZone, tapped: false };
+  if (PRIV.includes(toZone)) {
+    if (toZone === 'library') newPriv.library = [card, ...newPriv.library];
+    else newPriv[toZone] = [...newPriv[toZone], card];
+  } else {
+    const existing = pubUp[`players.${uid}.${toZone}`] || [...(player[toZone] || [])];
+    pubUp[`players.${uid}.${toZone}`] = [...existing, card];
+  }
+  if (PRIV.includes(fromZone) || PRIV.includes(toZone)) await ptPriv(newPriv);
+  if (Object.keys(pubUp).length) await ptPub(pubUp);
+  ptCloseMenu();
+}
+
+async function ptAddCounter(cardId, zone, delta) {
+  const uid = state.currentUser?.uid;
+  const player = state.playtestGame?.players?.[uid];
+  if (!player) return;
+  await ptPub({ [`players.${uid}.${zone}`]: (player[zone]||[]).map(c => c.cardId === cardId ? { ...c, counters: Math.max(0,(c.counters||0)+delta) } : c) });
+}
+
+function ptOpenMenu(cardId, zone) { state.playtestCardMenu = { cardId, zone }; render(); }
+function ptCloseMenu() { state.playtestCardMenu = null; render(); }
+function ptOpenZone(uid, zone) { state.playtestZoneOverlay = { uid, zone }; render(); }
+function ptCloseZone() { state.playtestZoneOverlay = null; render(); }
+
+// ── Render: Lobby ─────────────────────────────────────
+function renderPTLobby() {
+  const session = state.playtestGame;
+  const myUid = state.currentUser?.uid;
+  const myName = currentUserName();
+  const myDecks = state.decks.filter(d => d.player === myName);
+  const deckSelect = (id, label) => `
+    <label style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px">${label}</label>
+    <select id="${id}" style="width:100%;margin-bottom:14px" onchange="state.playtestDeckId=this.value;render()">
+      <option value="">— pick your deck —</option>
+      ${myDecks.map(d => `<option value="${d.id}" ${state.playtestDeckId===d.id?'selected':''}>${escHtml(d.commander)}</option>`).join('')}
+    </select>`;
+  if (!session) {
+    return `<div style="min-height:100vh;background:var(--bg)">
+      <div style="display:flex;align-items:center;padding:16px 20px;background:var(--bg-card);border-bottom:1px solid var(--border)">
+        <button onclick="ptLeave()" style="padding:6px 12px;font-size:12px;margin-right:12px">← Back</button>
+        <div><div style="font-weight:700;font-size:16px">🎮 Playtester</div><div style="font-size:11px;color:var(--text-muted)">Multiplayer virtual tabletop</div></div>
+      </div>
+      <div class="pt-lobby">
+        <div class="pt-lobby-card">
+          <div style="font-weight:600;font-size:15px;margin-bottom:14px">Create Game</div>
+          ${deckSelect('pt-deck-create','Your Deck')}
+          <button class="btn-primary" onclick="ptCreate()" ${!state.playtestDeckId?'disabled':''} style="width:100%;padding:11px;font-size:14px">Create Game</button>
+        </div>
+        <div class="pt-lobby-card">
+          <div style="font-weight:600;font-size:15px;margin-bottom:14px">Join Game</div>
+          ${deckSelect('pt-deck-join','Your Deck')}
+          <div style="display:flex;gap:8px">
+            <input id="pt-join-code" type="text" placeholder="Session code…" style="flex:1;font-family:'JetBrains Mono',monospace;letter-spacing:2px;font-size:15px" oninput="this.value=this.value.toUpperCase()">
+            <button onclick="ptJoin(document.getElementById('pt-join-code').value.trim())" ${!state.playtestDeckId?'disabled':''} style="padding:8px 16px">Join</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }
+  const isHost = session.hostId === myUid;
+  const players = Object.entries(session.players || {});
+  return `<div style="min-height:100vh;background:var(--bg)">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-card);border-bottom:1px solid var(--border)">
+      <div>
+        <div style="font-weight:700;font-size:16px">Waiting Room</div>
+        <div style="font-size:11px;color:var(--text-muted)">Code: <span style="font-family:'JetBrains Mono',monospace;color:var(--accent);letter-spacing:2px;font-size:13px">${session.id}</span></div>
+      </div>
+      <button onclick="ptLeave()" style="font-size:12px;padding:6px 14px;color:var(--text-muted)">Leave</button>
+    </div>
+    <div class="pt-lobby">
+      <div class="pt-lobby-card">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:14px">Players (${players.length}/4)</div>
+        ${players.map(([uid, p], i) => {
+          const col = PT_COLORS[i % PT_COLORS.length];
+          return `<div class="pt-player-row">
+            <div style="width:38px;height:38px;border-radius:50%;background:${col}22;border:2px solid ${col};display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:${col};flex-shrink:0">${p.displayName[0]}</div>
+            <div style="flex:1">
+              <div style="font-weight:600;font-size:14px">${escHtml(p.displayName)}</div>
+              <div style="font-size:12px;color:var(--text-muted)">${escHtml(p.commander)}</div>
+            </div>
+            ${uid === session.hostId ? `<span style="font-size:10px;padding:2px 8px;background:var(--accent-dim);color:#fff;border-radius:99px">Host</span>` : ''}
+          </div>`;
+        }).join('')}
+      </div>
+      ${isHost
+        ? `<button class="btn-primary" onclick="ptStart()" ${players.length < 2?'disabled':''} style="width:100%;padding:13px;font-size:14px">
+            ${players.length < 2 ? 'Waiting for players to join…' : `▶ Start Game (${players.length} players)`}
+           </button>`
+        : `<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px">Waiting for host to start the game…</div>`}
+    </div>
+  </div>`;
+}
+
+// ── Render: Game ──────────────────────────────────────
+function renderPTGame() {
+  const session = state.playtestGame;
+  const myUid = state.currentUser?.uid;
+  const viewUid = state.playtestViewUid || myUid;
+  const isMyBoard = viewUid === myUid;
+  const players = Object.entries(session.players || {});
+  const viewedPlayer = session.players?.[viewUid];
+  const myPlayer = session.players?.[myUid];
+
+  // Player tabs
+  const tabsHtml = `<div class="pt-tabs">
+    ${players.map(([uid, p], i) => {
+      const col = PT_COLORS[i % PT_COLORS.length];
+      const isActive = uid === viewUid;
+      const lifeCol = (p.life??40) <= 5 ? 'var(--tier-s)' : (p.life??40) <= 15 ? 'var(--tier-a)' : col;
+      return `<button class="pt-tab${isActive?' pt-tab-active':''}" style="--tab-col:${col}" onclick="state.playtestViewUid='${uid}';render()">
+        <div class="pt-tab-name">${escHtml(p.displayName)}</div>
+        <div class="pt-tab-life" style="color:${lifeCol}">${p.life??40}</div>
+        ${p.poison>0?`<div class="pt-tab-poison">☠${p.poison}</div>`:''}
+      </button>`;
+    }).join('')}
+    <button class="pt-tab" style="min-width:44px;font-size:18px" onclick="ptLeave()">✕</button>
+  </div>`;
+
+  // Deck info bar
+  const libCount = isMyBoard ? (state.playtestPrivate?.library?.length ?? '?') : '?';
+  const handCount = isMyBoard ? (state.playtestPrivate?.hand?.length ?? '?') : '?';
+  const deckBar = `<div class="pt-deckbar">
+    <span class="pt-deckbar-commander">${escHtml(viewedPlayer?.commander || '—')}</span>
+    <span class="pt-deckbar-meta">📚${libCount} ✋${isMyBoard?handCount:'?'} Turn ${session.turn||1}</span>
+  </div>`;
+
+  // Battlefield
+  const bf = viewedPlayer?.battlefield || [];
+  const gvLen = (viewedPlayer?.graveyard||[]).length;
+  const exLen = (viewedPlayer?.exile||[]).length;
+  const czLen = (viewedPlayer?.commandZone||[]).length;
+  const battlefieldHtml = `<div class="pt-battlefield" onclick="ptCloseMenu()">
+    <div class="pt-zone-btns">
+      <button class="pt-zone-btn" onclick="event.stopPropagation();ptOpenZone('${viewUid}','commandZone')">⭐ ${czLen}</button>
+      <button class="pt-zone-btn" onclick="event.stopPropagation();ptOpenZone('${viewUid}','graveyard')">GY ${gvLen}</button>
+      <button class="pt-zone-btn" onclick="event.stopPropagation();ptOpenZone('${viewUid}','exile')">EX ${exLen}</button>
+      ${isMyBoard ? `<button class="pt-zone-btn" onclick="event.stopPropagation();ptAdjustLife(1)" style="color:var(--tier-b-text)">♥+</button>
+      <button class="pt-zone-btn" onclick="event.stopPropagation();ptAdjustLife(-1)" style="color:var(--tier-s-text)">♥−</button>` : ''}
+    </div>
+    ${bf.length===0 ? `<div class="pt-bf-empty">Battlefield is empty</div>` : ''}
+    <div class="pt-bf-cards">
+      ${bf.map(card => {
+        const menuOpen = state.playtestCardMenu?.cardId === card.cardId;
+        const img = card.imageUrl
+          ? `<img src="${escHtml(card.imageUrl)}" style="width:72px;border-radius:5px;display:block;pointer-events:none" loading="lazy">`
+          : `<div class="pt-card-back">${escHtml(card.name.slice(0,14))}</div>`;
+        return `<div class="pt-bf-card${card.tapped?' pt-tapped':''}${menuOpen?' pt-card-selected':''}"
+          onclick="${isMyBoard?`event.stopPropagation();ptOpenMenu('${card.cardId}','battlefield')`:''}">
+          ${img}
+          ${card.counters?`<div class="pt-counter">${card.counters}</div>`:''}
+          ${card.isCommander?`<div class="pt-cmd-badge">⭐</div>`:''}
+        </div>`;
+      }).join('')}
+    </div>
+    ${state.playtestCardMenu ? renderPTCardMenu() : ''}
+  </div>`;
+
+  // Action bar (own board only)
+  const mullCount = myPlayer?.mulliganCount || 0;
+  const actionBar = isMyBoard ? `<div class="pt-action-bar">
+    <button class="pt-action-btn" onclick="ptDraw()">Draw</button>
+    <button class="pt-action-btn" onclick="ptUntapAll()">Untap All</button>
+    <button class="pt-action-btn" onclick="ptMulligan()">Mulligan${mullCount>0?` (→${Math.max(7-mullCount,0)})`:''}</button>
+    <button class="pt-action-btn" onclick="ptShuffle()">Shuffle</button>
+    <button class="pt-action-btn" onclick="ptNextTurn()">Next Turn</button>
+    <button class="pt-action-btn pt-action-danger" onclick="if(confirm('Concede?'))ptConcede()">Concede</button>
+  </div>` : '';
+
+  // Hand (own board only)
+  const hand = state.playtestPrivate?.hand || [];
+  const handHtml = isMyBoard ? `<div class="pt-hand">
+    ${hand.length===0?`<div style="color:var(--text-muted);font-size:12px;display:flex;align-items:center;padding:0 4px">Empty hand</div>`:''}
+    ${hand.map(card => {
+      const img = card.imageUrl
+        ? `<img src="${escHtml(card.imageUrl)}" style="width:90px;border-radius:6px;display:block;pointer-events:none" loading="lazy">`
+        : `<div class="pt-hand-card-back">${escHtml(card.name.slice(0,16))}</div>`;
+      return `<div class="pt-hand-card" onclick="ptOpenMenu('${card.cardId}','hand')">${img}</div>`;
+    }).join('')}
+  </div>` : '';
+
+  // Zone overlay
+  const overlayHtml = state.playtestZoneOverlay ? renderPTZoneOverlay() : '';
+
+  return `<div class="pt-playmat">${tabsHtml}${deckBar}${battlefieldHtml}${actionBar}${handHtml}${overlayHtml}</div>`;
+}
+
+function renderPTCardMenu() {
+  const { cardId, zone } = state.playtestCardMenu;
+  const uid = state.currentUser?.uid;
+  const player = state.playtestGame?.players?.[uid];
+  const priv = state.playtestPrivate;
+  let card;
+  if (zone==='hand') card=(priv?.hand||[]).find(c=>c.cardId===cardId);
+  else card=(player?.[zone]||[]).find(c=>c.cardId===cardId);
+  if (!card) return '';
+  const actions = [];
+  if (zone==='hand') {
+    actions.push({label:'▶ Play to Battlefield', fn:`ptPlayCard('${cardId}')`});
+    actions.push({label:'→ Graveyard', fn:`ptMoveCard('${cardId}','hand','graveyard')`});
+    actions.push({label:'→ Exile', fn:`ptMoveCard('${cardId}','hand','exile')`});
+    actions.push({label:'→ Top of Library', fn:`ptMoveCard('${cardId}','hand','library')`});
+  } else if (zone==='battlefield') {
+    actions.push({label:card.tapped?'↺ Untap':'⤵ Tap', fn:`ptTapCard('${cardId}')`});
+    actions.push({label:'➕ Add Counter', fn:`ptAddCounter('${cardId}','battlefield',1)`});
+    if(card.counters>0) actions.push({label:'➖ Remove Counter', fn:`ptAddCounter('${cardId}','battlefield',-1)`});
+    actions.push({label:'→ Hand', fn:`ptMoveCard('${cardId}','battlefield','hand')`});
+    actions.push({label:'→ Graveyard', fn:`ptMoveCard('${cardId}','battlefield','graveyard')`});
+    actions.push({label:'→ Exile', fn:`ptMoveCard('${cardId}','battlefield','exile')`});
+    actions.push({label:'→ Command Zone', fn:`ptMoveCard('${cardId}','battlefield','commandZone')`});
+  } else {
+    actions.push({label:'→ Battlefield', fn:`ptMoveCard('${cardId}','${zone}','battlefield')`});
+    actions.push({label:'→ Hand', fn:`ptMoveCard('${cardId}','${zone}','hand')`});
+    if(zone!=='graveyard') actions.push({label:'→ Graveyard', fn:`ptMoveCard('${cardId}','${zone}','graveyard')`});
+    if(zone!=='exile') actions.push({label:'→ Exile', fn:`ptMoveCard('${cardId}','${zone}','exile')`});
+  }
+  return `<div class="pt-card-menu" onclick="event.stopPropagation()">
+    <div class="pt-card-menu-name">${escHtml(card.name)}</div>
+    ${actions.map(a=>`<button class="pt-menu-btn" onclick="${a.fn}">${a.label}</button>`).join('')}
+    <button class="pt-menu-btn pt-menu-cancel" onclick="ptCloseMenu()">Cancel</button>
+  </div>`;
+}
+
+function renderPTZoneOverlay() {
+  const { uid, zone } = state.playtestZoneOverlay;
+  const myUid = state.currentUser?.uid;
+  const isOwn = uid === myUid;
+  const player = state.playtestGame?.players?.[uid];
+  const ZONE_NAMES = { graveyard:'Graveyard', exile:'Exile', commandZone:'Command Zone', hand:'Hand', library:'Library' };
+  const cards = (zone==='hand'||zone==='library') ? (state.playtestPrivate?.[zone]||[]) : (player?.[zone]||[]);
+  return `<div class="pt-overlay-bg" onclick="ptCloseZone()">
+    <div class="pt-overlay" onclick="event.stopPropagation()">
+      <div class="pt-overlay-header">
+        <span class="pt-overlay-title">${escHtml(player?.displayName||'')} · ${ZONE_NAMES[zone]||zone} (${cards.length})</span>
+        <button onclick="ptCloseZone()" style="font-size:20px;padding:4px 10px;background:none;border:none;color:var(--text-muted)">✕</button>
+      </div>
+      <div class="pt-overlay-cards">
+        ${cards.length===0?`<div style="color:var(--text-muted);font-size:13px;padding:20px;width:100%;text-align:center">Empty</div>`:''}
+        ${cards.map(card=>{
+          const img = card.imageUrl
+            ? `<img src="${escHtml(card.imageUrl)}" style="width:100px;border-radius:6px;display:block" loading="lazy">`
+            : `<div style="width:100px;height:140px;background:var(--bg-surface);border:1px solid var(--border);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--text-muted);text-align:center;padding:6px">${escHtml(card.name)}</div>`;
+          return `<div class="pt-overlay-card">
+            ${img}
+            <div style="font-size:9px;color:var(--text-muted);text-align:center;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(card.name)}</div>
+            ${isOwn&&zone!=='library'?`<button class="pt-overlay-card-btn" onclick="ptMoveCard('${card.cardId}','${zone}','battlefield');ptCloseZone()">→ BF</button>`:''}
+            ${isOwn&&zone!=='hand'?`<button class="pt-overlay-card-btn" onclick="ptMoveCard('${card.cardId}','${zone}','hand');ptCloseZone()">→ Hand</button>`:''}
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+
 // ===== META ANALYSIS =====
 const STRATEGY_TAGS = [
   { key: 'combo',        label: 'Combo',        emoji: '🔄', keywords: ['combo', 'infinite', 'consultation', 'oracle', 'dualcaster', 'ad nauseam', 'food chain', 'breach', 'storm'] },
@@ -2519,6 +3092,25 @@ window.closeChangelogModal = closeChangelogModal;
 window.saveChangelogEntry = saveChangelogEntry;
 window.removeChangelogEntry = removeChangelogEntry;
 window.renderDeckStats = renderDeckStats;
+window.ptCreate = ptCreate;
+window.ptJoin = ptJoin;
+window.ptStart = ptStart;
+window.ptLeave = ptLeave;
+window.ptDraw = ptDraw;
+window.ptUntapAll = ptUntapAll;
+window.ptMulligan = ptMulligan;
+window.ptShuffle = ptShuffle;
+window.ptNextTurn = ptNextTurn;
+window.ptAdjustLife = ptAdjustLife;
+window.ptConcede = ptConcede;
+window.ptPlayCard = ptPlayCard;
+window.ptTapCard = ptTapCard;
+window.ptMoveCard = ptMoveCard;
+window.ptAddCounter = ptAddCounter;
+window.ptOpenMenu = ptOpenMenu;
+window.ptCloseMenu = ptCloseMenu;
+window.ptOpenZone = ptOpenZone;
+window.ptCloseZone = ptCloseZone;
 window.openAvatarModal = openAvatarModal;
 window.closeAvatarModal = closeAvatarModal;
 window.saveAvatar = saveAvatar;
