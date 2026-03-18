@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Commander Tier List</title>
+<title>Commander Hub</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -240,6 +240,39 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
   .modal { padding: 20px; }
   .modal-row { grid-template-columns: 1fr; }
 }
+
+/* ===== TABS ===== */
+.tab-bar { position: fixed; bottom: 0; left: 0; right: 0; height: 58px; background: var(--bg-card); border-top: 1px solid var(--border); display: flex; z-index: 50; max-width: 100%; }
+.tab-btn { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; border: none !important; background: transparent !important; color: var(--text-muted) !important; font-size: 10px; padding: 8px 0; border-radius: 0 !important; }
+.tab-btn.active { color: var(--accent) !important; }
+.tab-btn:hover:not(.active) { background: var(--bg-hover) !important; color: var(--text) !important; }
+.tab-label { font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+
+/* ===== DASHBOARD ===== */
+.dashboard-greeting { margin-bottom: 24px; }
+.greeting-text { font-size: 26px; font-weight: 700; margin-bottom: 4px; letter-spacing: -0.5px; }
+.greeting-sub { font-size: 13px; color: var(--text-secondary); }
+.dash-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 24px; }
+.dash-stat-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+.dash-stat-card:hover { border-color: var(--border-hover); }
+.dash-stat-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+.dash-stat-value { font-size: 22px; font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+.dash-section-title { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 10px; font-weight: 500; }
+.dash-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 20px; }
+.leaderboard-row { display: flex; align-items: center; gap: 12px; padding: 12px 18px; border-bottom: 1px solid var(--border); }
+.leaderboard-row:last-child { border-bottom: none; }
+.lb-rank { font-size: 13px; font-weight: 600; font-family: 'JetBrains Mono', monospace; color: var(--text-muted); width: 18px; flex-shrink: 0; }
+.lb-record { font-size: 11px; color: var(--text-secondary); font-family: 'JetBrains Mono', monospace; }
+.lb-winrate { font-size: 13px; font-weight: 700; font-family: 'JetBrains Mono', monospace; color: var(--accent); }
+.lb-best { font-size: 11px; color: var(--text-muted); margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.activity-entry { display: flex; gap: 10px; padding: 10px 18px; border-bottom: 1px solid var(--border); align-items: center; }
+.activity-entry:last-child { border-bottom: none; }
+.activity-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--tier-b-text); flex-shrink: 0; }
+.activity-text { font-size: 13px; flex: 1; line-height: 1.4; }
+.activity-date { font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
+.quick-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 24px; }
+.quick-action-btn { padding: 14px !important; text-align: center; font-size: 13px !important; font-weight: 500; border-radius: var(--radius) !important; }
+@media (max-width: 600px) { .dash-stats { grid-template-columns: repeat(3,1fr); gap: 6px; } .dash-stat-value { font-size: 18px; } .greeting-text { font-size: 22px; } }
 </style>
 </head>
 <body>
@@ -354,6 +387,7 @@ let state = {
   loggingGame: null,
   logForm: { query: '', opponentId: '' },
   loaded: false,
+  tab: 'home',
   decklistView: null,
   decklistMode: "text",
   decklistEditing: false,
@@ -474,112 +508,14 @@ function render() {
     state.decklistView = null;
   }
 
-  const decks = state.decks;
-  const filtered = state.playerFilter === "All" ? decks : decks.filter(d => d.player === state.playerFilter);
-  const sorted = [...filtered].sort((a, b) => {
-    if (state.sortBy === "power") return b.power - a.power || getOverall(b) - getOverall(a);
-    return getOverall(b) - getOverall(a);
-  });
+  const tab = state.tab || 'home';
+  let html = '';
+  if (tab === 'home') html = renderDashboard();
+  else if (tab === 'collection') html = renderCollectionTab();
+  else html = renderPlayTab();
 
-  const players = ["Joost", "Willem", "Josh"];
-  const podStats = players.map(p => {
-    const pd = decks.filter(d => d.player === p);
-    const avg = pd.length ? Math.round((pd.reduce((s, d) => s + getOverall(d), 0) / pd.length) * 10) / 10 : 0;
-    const avgP = pd.length ? Math.round((pd.reduce((s, d) => s + d.power, 0) / pd.length) * 10) / 10 : 0;
-    const allGames = pd.flatMap(d => d.games || []);
-    const totalW = allGames.filter(g => g.result === 'win').length;
-    const totalL = allGames.filter(g => g.result === 'loss').length;
-    return { player: p, count: pd.length, avg, avgPower: avgP, wins: totalW, losses: totalL };
-  });
+  html += renderBottomNav(tab);
 
-  let html = `
-    <div class="user-bar">
-      <span style="color:var(--text-secondary)">${escHtml(currentUserName())}</span>
-      <button onclick="handleSignOut()">Sign out</button>
-    </div>
-    <div class="header">
-      <div class="header-glow"></div>
-      <h1>Commander <span>Tier List</span></h1>
-      <p>${decks.length} decks across ${new Set(decks.map(d=>d.player)).size} builders</p>
-    </div>
-
-    <div class="pod-stats">
-      ${podStats.map(s => {
-        const pc = playerColor(s.player);
-        const hasGames = s.wins + s.losses > 0;
-        const recordStr = hasGames ? ` · ${s.wins}W-${s.losses}L` : '';
-        return `<div class="pod-stat">
-          <div class="pod-stat-name" style="color:${pc.color}">${s.player}</div>
-          <div class="pod-stat-value">${s.avg}</div>
-          <div class="pod-stat-sub">${s.count} decks · ${s.avgPower} avg power${recordStr}</div>
-        </div>`;
-      }).join("")}
-    </div>
-
-    <div class="controls">
-      <div class="control-group">
-        ${PLAYERS.map(p => `<button class="${state.playerFilter===p?'active':''}" onclick="setFilter('${p}')">${p}</button>`).join("")}
-      </div>
-      <div class="spacer"></div>
-      <div class="control-group">
-        <button class="${state.view==='tiers'?'active':''}" onclick="setView('tiers')">By tier</button>
-        <button class="${state.view==='list'?'active':''}" onclick="setView('list')">Ranked</button>
-      </div>
-      <div class="control-group">
-        <button class="${state.sortBy==='power'?'active':''}" onclick="setSort('power')">Power</button>
-        <button class="${state.sortBy==='overall'?'active':''}" onclick="setSort('overall')">Overall</button>
-      </div>
-      <button onclick="openAddModal()" style="padding:5px 14px;font-size:12px;background:var(--accent-dim);color:#fff;border-color:var(--accent)">+ Add deck</button>
-    </div>
-
-    <div class="tier-bar">
-      ${TIERS.map(t => {
-        const count = filtered.filter(d => getTier(d.power) === t.label).length;
-        return `<div class="tier-bar-seg" style="background:${t.bg};color:${t.text}">${t.label} <span style="font-weight:400;font-size:11px">(${count})</span></div>`;
-      }).join("")}
-    </div>
-  `;
-
-  if (decks.length === 0) {
-    html += `<div class="empty">
-      <h3>No decks yet</h3>
-      <p style="color:var(--text-secondary);font-size:13px;margin-bottom:8px">Seed the database with the default pod decks to get started.</p>
-      <button class="btn-primary" onclick="seedDecks()">Seed default decks</button>
-    </div>`;
-  } else if (filtered.length === 0) {
-    html += `<div class="empty"><h3>No decks match filter</h3><p style="color:var(--text-secondary);font-size:13px">Try a different filter</p><button onclick="setFilter('All')">Show all</button></div>`;
-  } else if (state.view === "tiers") {
-    TIERS.forEach(tier => {
-      const td = sorted.filter(d => getTier(d.power) === tier.label);
-      if (!td.length) return;
-      html += `<div class="tier-section">
-        <div class="tier-header">
-          <div class="tier-badge" style="background:${tier.bg};color:${tier.text}">${tier.label}</div>
-          <span class="tier-label" style="color:${tier.text}">${tier.desc}</span>
-          <span class="tier-count">(${td.length})</span>
-        </div>
-        <div class="deck-list">${td.map((d,i) => renderDeckCard(d, tier, i)).join("")}</div>
-      </div>`;
-    });
-  } else {
-    html += `<div class="deck-list">${sorted.map((d,i) => {
-      const tier = getTierInfo(getTier(d.power));
-      return renderDeckCard(d, tier, i);
-    }).join("")}</div>`;
-  }
-
-  if (decks.length > 0) {
-    html += `
-      <div class="footer">
-        <div class="footer-info">
-          <strong>Add decks:</strong> Click "+ Add deck" above.
-        </div>
-        <button onclick="resetData()" style="color:var(--text-muted)">Reset to defaults</button>
-      </div>
-    `;
-  }
-
-  // Modal
   if (state.showAddModal) {
     const e = state.editDeck;
     const players = ["Joost", "Willem", "Josh"];
@@ -624,6 +560,242 @@ function render() {
   }
 
   app.innerHTML = html;
+}
+
+function renderBottomNav(active) {
+  const tabs = [
+    { id: 'home', label: 'Home', icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>' },
+    { id: 'collection', label: 'Decks', icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg>' },
+    { id: 'play', label: 'Play', icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>' },
+  ];
+  return `<nav class="tab-bar">${tabs.map(t => `<button class="tab-btn${t.id===active?' active':''}" onclick="setTab('${t.id}')">${t.icon}<span class="tab-label">${t.label}</span></button>`).join('')}</nav>`;
+}
+
+function setTab(tab) {
+  state.tab = tab;
+  window.scrollTo(0, 0);
+  render();
+}
+
+function getLeaderboardData() {
+  return ["Joost", "Willem", "Josh"].map(p => {
+    const pd = state.decks.filter(d => d.player === p);
+    const allGames = pd.flatMap(d => d.games || []);
+    const wins = allGames.filter(g => g.result === 'win').length;
+    const losses = allGames.filter(g => g.result === 'loss').length;
+    const total = wins + losses;
+    const winRate = total > 0 ? Math.round((wins / total) * 100) : null;
+    const bestDeck = [...pd].sort((a, b) => getOverall(b) - getOverall(a))[0] || null;
+    return { player: p, wins, losses, total, winRate, bestDeck, deckCount: pd.length };
+  }).sort((a, b) => {
+    if (a.winRate === null && b.winRate === null) return 0;
+    if (a.winRate === null) return 1;
+    if (b.winRate === null) return -1;
+    return b.winRate - a.winRate;
+  });
+}
+
+function getRecentGames(limit = 10) {
+  const games = [];
+  state.decks.forEach(deck => {
+    (deck.games || []).forEach(g => {
+      if (g.result === 'win') {
+        games.push({ date: g.date || '', winnerDeck: deck, loserDeck: state.decks.find(d => d.id === g.opponentId) || null });
+      }
+    });
+  });
+  return games.sort((a, b) => b.date.localeCompare(a.date)).slice(0, limit);
+}
+
+function renderDashboard() {
+  const name = currentUserName();
+  const pc = playerColor(name);
+  const allDecks = state.decks;
+  const userDecks = allDecks.filter(d => d.player === name);
+  const userGames = userDecks.flatMap(d => d.games || []);
+  const userWins = userGames.filter(g => g.result === 'win').length;
+  const userTotal = userGames.length;
+  const userWinRate = userTotal > 0 ? Math.round((userWins / userTotal) * 100) : null;
+  const totalGames = allDecks.flatMap(d => d.games || []).filter(g => g.result === 'win').length;
+  const leaderboard = getLeaderboardData();
+  const recentGames = getRecentGames(10);
+
+  return `
+    <div class="user-bar">
+      <span style="color:var(--text-secondary);font-size:12px">${escHtml(state.currentUser?.email || '')}</span>
+      <button onclick="handleSignOut()">Sign out</button>
+    </div>
+    <div class="header" style="margin-bottom:20px">
+      <div class="header-glow"></div>
+      <h1>Commander <span>Hub</span></h1>
+    </div>
+    <div class="dashboard-greeting">
+      <div class="greeting-text">Hey, <span style="color:${pc.color}">${escHtml(name)}</span> 👋</div>
+      <div class="greeting-sub">${allDecks.length} decks in the pod · ${totalGames} game${totalGames !== 1 ? 's' : ''} logged</div>
+    </div>
+    <div class="dash-stats">
+      <div class="dash-stat-card">
+        <div class="dash-stat-label">Your decks</div>
+        <div class="dash-stat-value" style="color:${pc.color}">${userDecks.length}</div>
+      </div>
+      <div class="dash-stat-card">
+        <div class="dash-stat-label">Games played</div>
+        <div class="dash-stat-value">${userTotal}</div>
+      </div>
+      <div class="dash-stat-card">
+        <div class="dash-stat-label">Win rate</div>
+        <div class="dash-stat-value">${userWinRate !== null ? userWinRate + '%' : '—'}</div>
+      </div>
+    </div>
+    <div class="dash-section-title">Pod Leaderboard</div>
+    <div class="dash-card">
+      ${leaderboard.map((p, i) => {
+        const lpc = playerColor(p.player);
+        return `<div class="leaderboard-row">
+          <span class="lb-rank">${i + 1}</span>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <span style="font-weight:600;font-size:14px;color:${lpc.color}">${escHtml(p.player)}</span>
+              <span style="font-size:11px;color:var(--text-muted)">${p.deckCount} deck${p.deckCount !== 1 ? 's' : ''}</span>
+              ${p.total > 0 ? `<span class="lb-record">${p.wins}W-${p.losses}L</span>` : ''}
+            </div>
+            ${p.bestDeck ? `<div class="lb-best">${escHtml(p.bestDeck.commander)}</div>` : ''}
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            ${p.winRate !== null ? `<div class="lb-winrate">${p.winRate}%</div>` : '<div style="font-size:11px;color:var(--text-muted)">No games</div>'}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+    <div class="dash-section-title">Recent Games</div>
+    <div class="dash-card">
+      ${recentGames.length === 0
+        ? '<div style="padding:16px 18px"><p style="color:var(--text-muted);font-size:13px">No games logged yet. Go to <strong style="color:var(--text)">Decks</strong>, expand any deck and click <strong style="color:var(--text)">Log game</strong>.</p></div>'
+        : recentGames.map(g => {
+            const wpc = playerColor(g.winnerDeck.player);
+            const lpc = g.loserDeck ? playerColor(g.loserDeck.player) : { color: 'var(--text-muted)' };
+            return `<div class="activity-entry">
+              <div class="activity-dot"></div>
+              <div class="activity-text">
+                <span style="color:${wpc.color};font-weight:500">${escHtml(g.winnerDeck.commander)}</span>
+                <span style="color:var(--text-muted)"> beat </span>
+                <span style="color:${lpc.color};font-weight:500">${g.loserDeck ? escHtml(g.loserDeck.commander) : 'Unknown'}</span>
+              </div>
+              <div class="activity-date">${g.date || ''}</div>
+            </div>`;
+          }).join('')
+      }
+    </div>
+    <div class="dash-section-title">Quick Actions</div>
+    <div class="quick-actions">
+      <button class="quick-action-btn btn-primary" onclick="openAddModal()">+ Add deck</button>
+      <button class="quick-action-btn" onclick="setTab('collection')">Browse decks</button>
+    </div>
+  `;
+}
+
+function renderCollectionTab() {
+  const decks = state.decks;
+  const filtered = state.playerFilter === "All" ? decks : decks.filter(d => d.player === state.playerFilter);
+  const sorted = [...filtered].sort((a, b) => {
+    if (state.sortBy === "power") return b.power - a.power || getOverall(b) - getOverall(a);
+    return getOverall(b) - getOverall(a);
+  });
+
+  let html = `
+    <div class="header">
+      <div class="header-glow"></div>
+      <h1>Commander <span>Hub</span></h1>
+      <p>${decks.length} decks across ${new Set(decks.map(d => d.player)).size} builders</p>
+    </div>
+    <div class="controls">
+      <div class="control-group">
+        ${PLAYERS.map(p => `<button class="${state.playerFilter===p?'active':''}" onclick="setFilter('${p}')">${p}</button>`).join("")}
+      </div>
+      <div class="spacer"></div>
+      <div class="control-group">
+        <button class="${state.view==='tiers'?'active':''}" onclick="setView('tiers')">By tier</button>
+        <button class="${state.view==='list'?'active':''}" onclick="setView('list')">Ranked</button>
+      </div>
+      <div class="control-group">
+        <button class="${state.sortBy==='power'?'active':''}" onclick="setSort('power')">Power</button>
+        <button class="${state.sortBy==='overall'?'active':''}" onclick="setSort('overall')">Overall</button>
+      </div>
+      <button onclick="openAddModal()" style="padding:5px 14px;font-size:12px;background:var(--accent-dim);color:#fff;border-color:var(--accent)">+ Add deck</button>
+    </div>
+    <div class="tier-bar">
+      ${TIERS.map(t => {
+        const count = filtered.filter(d => getTier(d.power) === t.label).length;
+        return `<div class="tier-bar-seg" style="background:${t.bg};color:${t.text}">${t.label} <span style="font-weight:400;font-size:11px">(${count})</span></div>`;
+      }).join("")}
+    </div>
+  `;
+
+  if (decks.length === 0) {
+    html += `<div class="empty">
+      <h3>No decks yet</h3>
+      <p style="color:var(--text-secondary);font-size:13px;margin-bottom:8px">Seed the database with the default pod decks to get started.</p>
+      <button class="btn-primary" onclick="seedDecks()">Seed default decks</button>
+    </div>`;
+  } else if (filtered.length === 0) {
+    html += `<div class="empty"><h3>No decks match filter</h3><p style="color:var(--text-secondary);font-size:13px">Try a different filter</p><button onclick="setFilter('All')">Show all</button></div>`;
+  } else if (state.view === "tiers") {
+    TIERS.forEach(tier => {
+      const td = sorted.filter(d => getTier(d.power) === tier.label);
+      if (!td.length) return;
+      html += `<div class="tier-section">
+        <div class="tier-header">
+          <div class="tier-badge" style="background:${tier.bg};color:${tier.text}">${tier.label}</div>
+          <span class="tier-label" style="color:${tier.text}">${tier.desc}</span>
+          <span class="tier-count">(${td.length})</span>
+        </div>
+        <div class="deck-list">${td.map((d,i) => renderDeckCard(d, tier, i)).join("")}</div>
+      </div>`;
+    });
+  } else {
+    html += `<div class="deck-list">${sorted.map((d,i) => {
+      const tier = getTierInfo(getTier(d.power));
+      return renderDeckCard(d, tier, i);
+    }).join("")}</div>`;
+  }
+
+  return html;
+}
+
+function renderPlayTab() {
+  const allGames = getRecentGames(100);
+  return `
+    <div class="header">
+      <div class="header-glow"></div>
+      <h1>Play <span>Hub</span></h1>
+      <p>Match history for the pod</p>
+    </div>
+    <div class="dash-card" style="padding:16px 18px;margin-bottom:20px">
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">Log a game from the <strong style="color:var(--text)">Decks</strong> tab — expand any deck and click <strong style="color:var(--text)">Log game</strong>.</p>
+      <button onclick="setTab('collection')" style="font-size:13px;padding:8px 18px">Go to Decks →</button>
+    </div>
+    <div class="dash-section-title">All Games (${allGames.length})</div>
+    ${allGames.length === 0
+      ? `<div class="dash-card" style="padding:16px 18px"><p style="color:var(--text-muted);font-size:13px">No games logged yet.</p></div>`
+      : `<div class="dash-card">
+          ${allGames.map(g => {
+            const wpc = playerColor(g.winnerDeck.player);
+            const lpc = g.loserDeck ? playerColor(g.loserDeck.player) : { color: 'var(--text-muted)' };
+            return `<div class="activity-entry">
+              <div class="activity-dot"></div>
+              <div class="activity-text">
+                <span style="color:${wpc.color};font-weight:500">${escHtml(g.winnerDeck.commander)}</span>
+                <span style="color:var(--text-muted);font-size:11px"> ${escHtml(g.winnerDeck.player)}</span>
+                <span style="color:var(--text-muted)"> beat </span>
+                <span style="color:${lpc.color};font-weight:500">${g.loserDeck ? escHtml(g.loserDeck.commander) : 'Unknown'}</span>
+                ${g.loserDeck ? `<span style="color:var(--text-muted);font-size:11px"> ${escHtml(g.loserDeck.player)}</span>` : ''}
+              </div>
+              <div class="activity-date">${g.date || ''}</div>
+            </div>`;
+          }).join('')}
+        </div>`
+    }
+  `;
 }
 
 function renderDeckCard(deck, tier, index) {
@@ -1245,6 +1417,7 @@ window.saveDecklistText = saveDecklistText;
 window.importFromUrl = importFromUrl;
 window.handleLogin = handleLogin;
 window.handleSignOut = handleSignOut;
+window.setTab = setTab;
 
 // ===== ADMIN HELPERS (run from browser console) =====
 // createPodUser("willem@example.com", "password123")

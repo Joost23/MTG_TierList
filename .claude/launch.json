@@ -2,9 +2,9 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "Static file server",
+      "name": "MTG Tier List",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "3000"],
+      "runtimeArgs": ["-m", "http.server", "3000", "--directory", "D:\\Github\\TierListMTG\\MTG_TierList"],
       "port": 3000
     }
   ]
