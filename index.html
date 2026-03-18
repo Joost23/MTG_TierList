@@ -838,11 +838,11 @@ function getRecentGames(limit = 10) {
   state.decks.forEach(deck => {
     (deck.games || []).forEach(g => {
       if (g.result === 'win') {
-        games.push({ date: g.date || '', winnerDeck: deck, loserDeck: state.decks.find(d => d.id === g.opponentId) || null });
+        games.push({ date: g.date || '', ts: g.ts || 0, winnerDeck: deck, loserDeck: state.decks.find(d => d.id === g.opponentId) || null });
       }
     });
   });
-  return games.sort((a, b) => b.date.localeCompare(a.date)).slice(0, limit);
+  return games.sort((a, b) => (b.ts - a.ts) || b.date.localeCompare(a.date)).slice(0, limit);
 }
 
 function renderDashboard() {
@@ -3376,9 +3376,10 @@ async function endGame(winnerId) {
       // Check if the player using this deck is actually its owner
       const sessionPlayer = session.players.find(p => p.id === d.id);
       const isLoaned = sessionPlayer && d.player !== sessionPlayer.name;
+      const ts = Date.now();
       const newGames = isWinner
-        ? others.map(o => ({ opponentId: o.id, result: 'win', date, ...(isLoaned ? { loaned: true, loanedBy: sessionPlayer.name } : {}) }))
-        : [{ opponentId: winnerId, result: 'loss', date, ...(isLoaned ? { loaned: true, loanedBy: sessionPlayer.name } : {}) }];
+        ? others.map(o => ({ opponentId: o.id, result: 'win', date, ts, ...(isLoaned ? { loaned: true, loanedBy: sessionPlayer.name } : {}) }))
+        : [{ opponentId: winnerId, result: 'loss', date, ts, ...(isLoaned ? { loaned: true, loanedBy: sessionPlayer.name } : {}) }];
       return { ...d, games: [...(d.games || []), ...newGames] };
     });
     const batch = writeBatch(db);
