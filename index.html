@@ -1135,12 +1135,12 @@ async function seedDecks() {
 // ===== DECKLIST =====
 function openDeckDetail(id) {
   state.decklistView = id;
-  state.decklistMode = "text";
+  state.decklistMode = "images";
   state.decklistEditing = false;
   state.decklistImportUrl = "";
   state.decklistImportStatus = "";
   window.scrollTo(0, 0);
-  render();
+  loadAndRenderImages(id);
 }
 function closeDeckDetail() {
   state.decklistView = null;
@@ -1231,24 +1231,33 @@ function renderTextList(cards, deck) {
   return html;
 }
 
-function renderImageGrid(cards) {
+function renderImageGrid(cards, deck) {
   if (!cards.length) return `<p style="color:var(--text-muted);font-size:13px">No cards in decklist yet.</p>`;
   if (state.decklistImportStatus === "loading-images") {
     return `<p style="color:var(--text-muted);font-size:13px">Fetching card images…</p>`;
   }
-  let html = '<div class="dl-image-grid">';
-  cards.forEach(c => {
-    const cached = scryfallCache[c.name.toLowerCase()];
-    html += `<div class="dl-card-img-wrap">`;
-    if (cached && cached.imageUrl) {
-      html += `<img src="${escHtml(cached.imageUrl)}" alt="${escHtml(c.name)}" loading="lazy" title="${escHtml(c.name)}">`;
-    } else {
-      html += `<div class="dl-card-placeholder">${escHtml(c.name)}</div>`;
-    }
-    if (c.qty > 1) html += `<span class="dl-card-qty-badge">${c.qty}</span>`;
-    html += `</div>`;
+  const commanderName = deck?.commander || '';
+  const groups = groupCardsByType(cards, commanderName);
+  let html = '';
+  TYPE_ORDER.forEach(type => {
+    const group = groups[type];
+    if (!group.length) return;
+    const total = group.reduce((s, c) => s + c.qty, 0);
+    html += `<div class="dl-group-header" style="margin:18px 0 8px">${escHtml(type)} <span class="dl-group-count">(${total})</span></div>`;
+    html += '<div class="dl-image-grid">';
+    group.forEach(c => {
+      const cached = scryfallCache[c.name.toLowerCase()];
+      html += `<div class="dl-card-img-wrap">`;
+      if (cached && cached.imageUrl) {
+        html += `<img src="${escHtml(cached.imageUrl)}" alt="${escHtml(c.name)}" loading="lazy" title="${escHtml(c.name)}">`;
+      } else {
+        html += `<div class="dl-card-placeholder">${escHtml(c.name)}</div>`;
+      }
+      if (c.qty > 1) html += `<span class="dl-card-qty-badge">${c.qty}</span>`;
+      html += `</div>`;
+    });
+    html += '</div>';
   });
-  html += '</div>';
   return html;
 }
 
@@ -1260,10 +1269,12 @@ async function fetchScryfallBatch(names) {
   for (let i = 0; i < batches.length; i++) {
     if (i > 0) await new Promise(r => setTimeout(r, 100));
     try {
+      // For DFCs like "Bloodline Keeper // Lord of Lineage", send only the front-face name
+      const identifiers = batches[i].map(n => ({ name: n.includes(' // ') ? n.split(' // ')[0].trim() : n }));
       const res = await fetch("https://api.scryfall.com/cards/collection", {
         method: "POST",
         headers: { "Content-Type": "application/json", "User-Agent": "MTGTierList/1.0" },
-        body: JSON.stringify({ identifiers: batches[i].map(n => ({ name: n })) }),
+        body: JSON.stringify({ identifiers }),
       });
       const data = await res.json();
       (data.data || []).forEach(card => {
@@ -1285,6 +1296,14 @@ async function fetchScryfallBatch(names) {
       });
       (data.not_found || []).forEach(id => {
         if (id.name) scryfallCache[id.name.toLowerCase()] = null;
+      });
+      // Back-fill original DFC names (e.g. "Bloodline Keeper // Lord of Lineage") from front-face cache
+      batches[i].forEach(origName => {
+        const key = origName.toLowerCase();
+        if (!(key in scryfallCache) && origName.includes(' // ')) {
+          const frontKey = origName.split(' // ')[0].trim().toLowerCase();
+          if (scryfallCache[frontKey]) scryfallCache[key] = scryfallCache[frontKey];
+        }
       });
     } catch (e) { /* network error — leave uncached */ }
   }
@@ -1514,7 +1533,7 @@ function renderDeckDetail(deck) {
 
   let displayHtml = '';
   if (state.decklistMode === "images") {
-    displayHtml = renderImageGrid(cards);
+    displayHtml = renderImageGrid(cards, deck);
   } else if (state.decklistMode === "stats") {
     displayHtml = renderDeckStats(cards, deck);
   } else {
