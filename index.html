@@ -1359,11 +1359,14 @@ function saveDecklistText(text) {
 }
 
 function parseCardLine(line) {
-  // Strip Moxfield copy format: " (SET) COLLECTORNUM" suffix + foil markers (*F*, ★)
-  const cleaned = line.replace(/\s+\([A-Z0-9]{2,7}\)\s+\S+.*$/, '').trim();
-  const m = cleaned.match(/^(\d+)x?\s+(.+?)\s*$/);
+  // Moxfield / MTGA format: QTY CARDNAME (SET) COLLNUM [optional foil markers]
+  // Collector number: alphanumeric + dash (strips ★ *F* etc.)
+  const mFull = line.match(/^(\d+)x?\s+(.+?)\s+\(([A-Z0-9]{2,7})\)\s+([A-Za-z0-9*-]+)/);
+  if (mFull) return { qty: parseInt(mFull[1], 10), name: mFull[2].trim(), set: mFull[3].toLowerCase(), collectorNumber: mFull[4] };
+  // Basic format: QTY CARDNAME
+  const m = line.match(/^(\d+)x?\s+(.+?)\s*$/);
   if (m) return { qty: parseInt(m[1], 10), name: m[2].trim() };
-  const name = cleaned.replace(/^\d+x?\s+/, '').trim();
+  const name = line.replace(/^\d+x?\s+/, '').trim();
   return name ? { qty: 1, name } : null;
 }
 
@@ -1525,16 +1528,22 @@ function renderImageGrid(sections, deck) {
   return html;
 }
 
-async function fetchScryfallBatch(names) {
-  const uncached = [...new Set(names)].filter(n => !(n.toLowerCase() in scryfallCache));
+async function fetchScryfallBatch(cards) {
+  // Accept array of card objects {name, set?, collectorNumber?} or plain name strings
+  const normalized = cards.map(c => typeof c === 'string' ? { name: c } : c);
+  const uncached = normalized.filter(c => !(c.name.toLowerCase() in scryfallCache));
   if (!uncached.length) return;
   const batches = [];
   for (let i = 0; i < uncached.length; i += 75) batches.push(uncached.slice(i, i + 75));
   for (let i = 0; i < batches.length; i++) {
     if (i > 0) await new Promise(r => setTimeout(r, 100));
     try {
-      // For DFCs like "Bloodline Keeper // Lord of Lineage", send only the front-face name
-      const identifiers = batches[i].map(n => ({ name: n.includes(' // ') ? n.split(' // ')[0].trim() : n }));
+      // Use set+collectorNumber when available for exact printing; fall back to name
+      const identifiers = batches[i].map(c => {
+        if (c.set && c.collectorNumber) return { set: c.set.toLowerCase(), collector_number: String(c.collectorNumber) };
+        const name = c.name.includes(' // ') ? c.name.split(' // ')[0].trim() : c.name;
+        return { name };
+      });
       const res = await fetch("https://api.scryfall.com/cards/collection", {
         method: "POST",
         headers: { "Content-Type": "application/json", "User-Agent": "MTGTierList/1.0" },
@@ -1553,19 +1562,19 @@ async function fetchScryfallBatch(names) {
           colors: card.colors || card.card_faces?.[0]?.colors || []
         };
         scryfallCache[card.name.toLowerCase()] = cacheEntry;
-        // Also index by front-face name so "Bloodline Keeper" hits "Bloodline Keeper // Lord of Lineage"
         if (card.card_faces?.[0]?.name) {
           scryfallCache[card.card_faces[0].name.toLowerCase()] = cacheEntry;
         }
       });
-      (data.not_found || []).forEach(id => {
-        if (id.name) scryfallCache[id.name.toLowerCase()] = null;
+      // Mark any still-uncached cards as null (not found / invalid set+collnum)
+      batches[i].forEach(c => {
+        if (!(c.name.toLowerCase() in scryfallCache)) scryfallCache[c.name.toLowerCase()] = null;
       });
-      // Back-fill original DFC names (e.g. "Bloodline Keeper // Lord of Lineage") from front-face cache
-      batches[i].forEach(origName => {
-        const key = origName.toLowerCase();
-        if (!(key in scryfallCache) && origName.includes(' // ')) {
-          const frontKey = origName.split(' // ')[0].trim().toLowerCase();
+      // Back-fill DFC names (e.g. "Bloodline Keeper // Lord of Lineage") from front-face cache
+      batches[i].forEach(c => {
+        const key = c.name.toLowerCase();
+        if (scryfallCache[key] === null && c.name.includes(' // ')) {
+          const frontKey = c.name.split(' // ')[0].trim().toLowerCase();
           if (scryfallCache[frontKey]) scryfallCache[key] = scryfallCache[frontKey];
         }
       });
@@ -1579,12 +1588,11 @@ async function loadAndRenderImages(deckId) {
   const sects = parseDecklistSections(deck.decklist);
   const cards = [...sects.main, ...sects.sideboard, ...sects.maybeboard];
   if (!cards.length) { render(); return; }
-  const names = cards.map(c => c.name);
-  const hasUncached = names.some(n => !(n.toLowerCase() in scryfallCache));
+  const hasUncached = cards.some(c => !(c.name.toLowerCase() in scryfallCache));
   if (hasUncached) {
     state.decklistImportStatus = "loading-images";
     render();
-    await fetchScryfallBatch(names);
+    await fetchScryfallBatch(cards); // pass full objects for set-specific art
     state.decklistImportStatus = "";
   }
   render();
@@ -1638,7 +1646,10 @@ async function importFromUrl() {
       (data.cards || []).forEach(c => {
         const name = c.card?.oracleCard?.name || c.card?.name || '';
         if (!name) return;
-        const line = `${c.quantity} ${name}`;
+        const edCode = (c.card?.edition?.editioncode || '').toUpperCase();
+        const cn = c.card?.collectorNumber || '';
+        const suffix = edCode && cn ? ` (${edCode}) ${cn}` : '';
+        const line = `${c.quantity} ${name}${suffix}`;
         const cats = (c.categories || []).map(s => s.toLowerCase());
         if (cats.some(s => s.includes('maybeboard') || s.includes('maybe'))) maybe.push(line);
         else if (cats.some(s => s.includes('sideboard') || s === 'side')) side.push(line);
@@ -1656,7 +1667,9 @@ async function importFromUrl() {
       const cmdLines = [];
       const cmdBoard = boards['commanders'];
       if (cmdBoard) Object.entries(cmdBoard.cards || {}).forEach(([, e]) => {
-        if (e.card?.name) cmdLines.push(`${e.quantity} ${e.card.name}`);
+        if (!e.card?.name) return;
+        const s = (e.card.set || '').toUpperCase(); const cn = e.card.cn || '';
+        cmdLines.push(`${e.quantity} ${e.card.name}${s && cn ? ` (${s}) ${cn}` : ''}`);
       });
       if (cmdLines.length) {
         parts.push('// Commander\n' + cmdLines.join('\n'));
@@ -1672,7 +1685,9 @@ async function importFromUrl() {
         const board = boards[b];
         if (!board) return;
         Object.entries(board.cards || {}).forEach(([, e]) => {
-          if (e.card?.name) mainLines.push(`${e.quantity} ${e.card.name}`);
+          if (!e.card?.name) return;
+          const s = (e.card.set || '').toUpperCase(); const cn = e.card.cn || '';
+          mainLines.push(`${e.quantity} ${e.card.name}${s && cn ? ` (${s}) ${cn}` : ''}`);
         });
       });
       if (mainLines.length) parts.push('// Deck\n' + mainLines.join('\n'));
@@ -1680,14 +1695,18 @@ async function importFromUrl() {
       const sideLines = [];
       const sb = boards['sideboard'];
       if (sb) Object.entries(sb.cards || {}).forEach(([, e]) => {
-        if (e.card?.name) sideLines.push(`${e.quantity} ${e.card.name}`);
+        if (!e.card?.name) return;
+        const s = (e.card.set || '').toUpperCase(); const cn = e.card.cn || '';
+        sideLines.push(`${e.quantity} ${e.card.name}${s && cn ? ` (${s}) ${cn}` : ''}`);
       });
       if (sideLines.length) parts.push('// Sideboard\n' + sideLines.join('\n'));
       // Maybeboard
       const maybeLines = [];
       const mb = boards['maybeboard'];
       if (mb) Object.entries(mb.cards || {}).forEach(([, e]) => {
-        if (e.card?.name) maybeLines.push(`${e.quantity} ${e.card.name}`);
+        if (!e.card?.name) return;
+        const s = (e.card.set || '').toUpperCase(); const cn = e.card.cn || '';
+        maybeLines.push(`${e.quantity} ${e.card.name}${s && cn ? ` (${s}) ${cn}` : ''}`);
       });
       if (maybeLines.length) parts.push('// Maybeboard\n' + maybeLines.join('\n'));
       text = parts.filter(Boolean).join('\n\n');
