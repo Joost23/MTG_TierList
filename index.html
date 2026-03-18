@@ -170,8 +170,8 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 .deck-detail-back { font-size: 13px; padding: 6px 14px; flex-shrink: 0; }
 .deck-detail-title { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; flex-wrap: wrap; }
 .deck-detail-title h2 { font-size: 20px; font-weight: 600; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.deck-detail-import { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
-.deck-detail-import input[type="text"] { flex: 1; min-width: 200px; font-size: 13px; }
+.deck-detail-import-panel { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-bottom: 14px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.deck-detail-import-panel input[type="text"] { flex: 1; min-width: 200px; font-size: 13px; }
 .dl-import-status { font-size: 12px; color: var(--text-muted); font-style: italic; }
 .dl-import-success { color: var(--tier-b-text) !important; font-style: normal !important; font-weight: 500; }
 .dl-import-error { color: var(--tier-s-text) !important; font-style: normal !important; }
@@ -531,6 +531,7 @@ let state = {
   decklistEditing: false,
   decklistImportUrl: "",
   decklistImportStatus: "",
+  showImportPanel: false,
   showChangelogModal: false,
   changelogDraft: { cardsIn: '', cardsOut: '', notes: '' },
   activeSessionId: null,
@@ -1325,6 +1326,7 @@ function openDeckDetail(id) {
   state.decklistEditing = false;
   state.decklistImportUrl = "";
   state.decklistImportStatus = "";
+  state.showImportPanel = false;
   window.scrollTo(0, 0);
   loadAndRenderImages(id);
 }
@@ -1768,6 +1770,7 @@ async function importFromUrl() {
   saveDecklistText(text);
   state.decklistImportStatus = "success";
   state.decklistEditing = false;
+  state.showImportPanel = false;
   state.decklistMode = "images";
   loadAndRenderImages(state.decklistView);
   // Auto-fetch card images after import
@@ -1939,19 +1942,26 @@ function renderDeckDetail(deck) {
       </div>
     </div>
 
-    <div class="deck-detail-import">
+    <div style="display:flex;gap:8px;margin-bottom:${state.showImportPanel ? '0' : '14px'}">
+      <button class="dl-edit-toggle" onclick="state.showImportPanel=!state.showImportPanel;render()">
+        ${state.showImportPanel ? '▲ Import' : '▼ Import'}
+      </button>
+      <button class="dl-edit-toggle" onclick="toggleDecklistEditor()">
+        ${state.decklistEditing ? '▲ Edit decklist' : '▼ Edit decklist'}
+      </button>
+    </div>
+
+    ${state.showImportPanel ? `<div class="deck-detail-import-panel">
       <input type="text" id="dl-import-url" placeholder="Paste Archidekt or Moxfield URL…"
         value="${escHtml(state.decklistImportUrl)}"
         oninput="state.decklistImportUrl=this.value"
-        onkeydown="if(event.key==='Enter')importFromUrl()">
+        onkeydown="if(event.key==='Enter')importFromUrl()"
+        autofocus>
       <button onclick="importFromUrl()">Import</button>
       ${importStatusHtml}
-    </div>
+    </div>` : (importStatusHtml ? `<div style="margin-bottom:14px">${importStatusHtml}</div>` : '')}
 
     <div class="deck-detail-editor-wrap">
-      <button class="dl-edit-toggle" onclick="toggleDecklistEditor()">
-        ${state.decklistEditing ? '▲ Hide editor' : '▼ Edit decklist'}
-      </button>
       ${editorHtml}
     </div>
 
