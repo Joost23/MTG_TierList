@@ -1662,11 +1662,12 @@ function parseDecklistSections(text) {
   return sections;
 }
 
-const TYPE_ORDER = ["Commander", "Planeswalker", "Creature", "Instant", "Sorcery", "Artifact", "Enchantment", "Land", "Other"];
+const TYPE_ORDER = ["Commander", "Planeswalker", "Creature", "Instant", "Sorcery", "Artifact", "Enchantment", "Land", "Token", "Other"];
 
 function getCardGroup(name, typeLine, commanderName) {
   if (name === commanderName) return "Commander";
   if (!typeLine) return "Other";
+  if (typeLine.startsWith("Token") || typeLine.startsWith("Legendary Token") || typeLine.includes("// Token")) return "Token";
   if (typeLine.includes("Planeswalker")) return "Planeswalker";
   if (typeLine.includes("Creature")) return "Creature";
   if (typeLine.includes("Instant")) return "Instant";
@@ -1696,8 +1697,9 @@ function renderTypeGroupText(cards, commanderName) {
     const group = groups[type];
     if (!group.length) return;
     const total = group.reduce((s, c) => s + c.qty, 0);
+    const typeLabel = type === 'Token' ? 'Tokens <span style="font-size:10px;font-weight:400;color:var(--text-muted);text-transform:none;letter-spacing:0">(not counted)</span>' : escHtml(type);
     html += `<div class="dl-group">
-      <div class="dl-group-header">${escHtml(type)} <span class="dl-group-count">(${total})</span></div>
+      <div class="dl-group-header">${typeLabel} <span class="dl-group-count">(${total})</span></div>
       <div class="dl-group-entries">`;
     group.forEach(c => {
       const cached = scryfallCache[c.name.toLowerCase()];
@@ -1738,7 +1740,8 @@ function renderTypeGroupImages(cards, commanderName) {
     const group = groups[type];
     if (!group.length) return;
     const total = group.reduce((s, c) => s + c.qty, 0);
-    html += `<div class="dl-group-header" style="margin:18px 0 8px">${escHtml(type)} <span class="dl-group-count">(${total})</span></div>`;
+    const label = type === 'Token' ? 'Tokens <span style="font-size:10px;font-weight:400;color:var(--text-muted);text-transform:none;letter-spacing:0">(not counted in deck total)</span>' : escHtml(type);
+    html += `<div class="dl-group-header" style="margin:18px 0 8px">${label} <span class="dl-group-count">(${total})</span></div>`;
     html += '<div class="dl-image-grid">';
     group.forEach(c => {
       const cached = scryfallCache[c.name.toLowerCase()];
@@ -2123,7 +2126,10 @@ function renderDeckDetail(deck) {
   const losses = games.filter(g => g.result === 'loss').length;
   const sections = parseDecklistSections(deck.decklist);
   const cards = sections.main; // used for stats
-  const totalCards = sections.main.reduce((s, c) => s + c.qty, 0);
+  const totalCards = sections.main.reduce((s, c) => {
+    const tl = scryfallCache[c.name.toLowerCase()]?.typeLine || '';
+    return tl.startsWith('Token') ? s : s + c.qty;
+  }, 0);
 
   const importStatusHtml = state.decklistImportStatus
     ? `<span class="dl-import-status ${state.decklistImportStatus === 'success' ? 'dl-import-success' : state.decklistImportStatus.startsWith('error') ? 'dl-import-error' : ''}">${
