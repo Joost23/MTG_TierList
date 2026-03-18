@@ -816,9 +816,10 @@ function setTab(tab) {
 }
 
 function getLeaderboardData() {
-  return ["Joost", "Willem", "Josh"].map(p => {
+  const players = [...new Set(state.decks.map(d => d.player))].filter(Boolean);
+  return players.map(p => {
     const pd = state.decks.filter(d => d.player === p);
-    const allGames = pd.flatMap(d => d.games || []);
+    const allGames = pd.flatMap(d => d.games || []).filter(g => !g.loaned);
     const wins = allGames.filter(g => g.result === 'win').length;
     const losses = allGames.filter(g => g.result === 'loss').length;
     const total = wins + losses;
@@ -826,11 +827,11 @@ function getLeaderboardData() {
     const bestDeck = [...pd].sort((a, b) => getOverall(b) - getOverall(a))[0] || null;
     return { player: p, wins, losses, total, winRate, bestDeck, deckCount: pd.length };
   }).sort((a, b) => {
-    if (a.winRate === null && b.winRate === null) return 0;
+    if (a.winRate === null && b.winRate === null) return b.deckCount - a.deckCount;
     if (a.winRate === null) return 1;
     if (b.winRate === null) return -1;
     return b.winRate - a.winRate;
-  });
+  }).slice(0, 10);
 }
 
 function getRecentGames(limit = 10) {
