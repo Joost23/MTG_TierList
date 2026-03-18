@@ -721,6 +721,7 @@ function render() {
   if (tab === 'home') html = renderDashboard();
   else if (tab === 'collection') html = renderCollectionTab();
   else if (tab === 'meta') html = renderMetaTab();
+  else if (tab === 'account') html = renderAccountTab();
   else html = renderPlayTab();
 
   html += renderBottomNav(tab);
@@ -783,6 +784,7 @@ function renderBottomNav(active) {
     { id: 'collection', label: 'Decks', icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg>' },
     { id: 'play', label: 'Play', icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>' },
     { id: 'meta', label: 'Meta', icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>' },
+    { id: 'account', label: 'Account', icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>' },
   ];
   return `<nav class="tab-bar">${tabs.map(t => `<button class="tab-btn${t.id===active?' active':''}" onclick="setTab('${t.id}')">${t.icon}<span class="tab-label">${t.label}</span></button>`).join('')}</nav>`;
 }
@@ -837,11 +839,6 @@ function renderDashboard() {
   const recentGames = getRecentGames(10);
 
   return `
-    <div class="user-bar">
-      <span style="color:var(--text-secondary);font-size:12px">${escHtml(state.currentUser?.email || '')}</span>
-      <button onclick="state.showChangePassword=true;render()" style="margin-right:6px">🔑 Password</button>
-      <button onclick="handleSignOut()">Sign out</button>
-    </div>
     <div class="header" style="margin-bottom:20px">
       <div class="header-glow"></div>
       <h1>Commander <span>Hub</span></h1>
@@ -1006,6 +1003,80 @@ function renderCollectionTab() {
   }
 
   return html;
+}
+
+// ===== ACCOUNT TAB =====
+function renderAccountTab() {
+  const name = currentUserName();
+  const email = state.currentUser?.email || '';
+  const pc = playerColor(name);
+  const avatar = state.playerAvatars?.[name] || '🧙';
+  const myDecks = state.decks.filter(d => d.player === name);
+  const myGames = myDecks.flatMap(d => d.games || []);
+  const wins = myGames.filter(g => g.result === 'win').length;
+  const winRate = myGames.length ? Math.round(wins / myGames.length * 100) : null;
+
+  const row = (icon, label, value, onclick) => `
+    <div onclick="${onclick}" style="display:flex;align-items:center;gap:14px;padding:14px 20px;cursor:${onclick?'pointer':'default'};transition:background 0.15s${onclick?';hover:background:var(--bg-hover)':''}">
+      <span style="font-size:18px;width:24px;text-align:center">${icon}</span>
+      <span style="flex:1;font-size:14px;color:var(--text-primary)">${label}</span>
+      ${value ? `<span style="font-size:13px;color:var(--text-muted)">${escHtml(value)}</span>` : ''}
+      ${onclick ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>` : ''}
+    </div>`;
+
+  const divider = `<div style="height:1px;background:var(--border);margin:0 20px"></div>`;
+  const sectionLabel = (t) => `<div style="font-size:11px;font-weight:600;letter-spacing:0.8px;text-transform:uppercase;color:var(--text-muted);padding:20px 20px 8px">${t}</div>`;
+
+  return `
+    <div style="padding-bottom:90px">
+      <!-- Profile header -->
+      <div style="background:var(--bg-card);padding:32px 20px 24px;text-align:center;border-bottom:1px solid var(--border)">
+        <div onclick="openAvatarModal('${escHtml(name)}')" style="cursor:pointer;display:inline-flex;align-items:center;justify-content:center;width:72px;height:72px;border-radius:50%;background:${pc.bg};border:3px solid ${pc.color};font-size:32px;margin-bottom:12px;position:relative">
+          ${avatar}
+          <div style="position:absolute;bottom:0;right:0;width:22px;height:22px;border-radius:50%;background:var(--bg-card);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px">✏️</div>
+        </div>
+        <div style="font-size:20px;font-weight:700;color:${pc.color};margin-bottom:4px">${escHtml(name)}</div>
+        <div style="font-size:13px;color:var(--text-muted)">${escHtml(email)}</div>
+        <div style="display:flex;justify-content:center;gap:24px;margin-top:16px">
+          <div style="text-align:center">
+            <div style="font-size:18px;font-weight:700;color:var(--text-primary)">${myDecks.length}</div>
+            <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Decks</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:18px;font-weight:700;color:var(--text-primary)">${myGames.length}</div>
+            <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Games</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:18px;font-weight:700;color:var(--text-primary)">${winRate !== null ? winRate + '%' : '—'}</div>
+            <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Win rate</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Profile settings -->
+      <div style="background:var(--bg-card);margin:16px 0 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
+        ${sectionLabel('Profile')}
+        ${row('✏️', 'Display name', name, "state.showNameModal=true;render()")}
+        ${divider}
+        ${row('🎭', 'Avatar', avatar, `openAvatarModal('${escHtml(name)}')`)}
+      </div>
+
+      <!-- Security -->
+      <div style="background:var(--bg-card);margin:16px 0 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
+        ${sectionLabel('Security')}
+        ${row('🔑', 'Change password', '', "state.showChangePassword=true;render()")}
+      </div>
+
+      <!-- Sign out -->
+      <div style="background:var(--bg-card);margin:16px 0 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
+        <div onclick="handleSignOut()" style="display:flex;align-items:center;gap:14px;padding:14px 20px;cursor:pointer">
+          <span style="font-size:18px;width:24px;text-align:center">🚪</span>
+          <span style="flex:1;font-size:14px;color:var(--tier-s-text);font-weight:600">Sign out</span>
+        </div>
+      </div>
+
+      <div style="text-align:center;padding:24px;font-size:11px;color:var(--text-muted)">Commander Hub · Pod Edition</div>
+    </div>`;
 }
 
 function renderPlayTab() {
