@@ -430,7 +430,7 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
 import { getFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, writeBatch }
   from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut }
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, updatePassword, reauthenticateWithCredential, EmailAuthProvider }
   from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
 
 const firebaseConfig = {
@@ -511,6 +511,8 @@ function playerColor(p) {
   return { bg: "var(--player-josh-bg)", color: "var(--player-josh)" };
 }
 function currentUserName() {
+  if (state.userProfile?.displayName) return state.userProfile.displayName;
+  if (state.currentUser?.displayName) return state.currentUser.displayName;
   const email = state.currentUser?.email || '';
   const prefix = email.split('@')[0];
   return prefix.charAt(0).toUpperCase() + prefix.slice(1);
@@ -544,6 +546,12 @@ let state = {
   decklistImportUrl: "",
   decklistImportStatus: "",
   showImportPanel: false,
+  userProfile: null,
+  showNameModal: false,
+  showChangePassword: false,
+  nameModalError: '',
+  cpError: '',
+  cpSuccess: false,
   showChangelogModal: false,
   changelogDraft: { cardsIn: '', cardsOut: '', notes: '' },
   activeSessionId: null,
@@ -643,6 +651,15 @@ function setupFirestoreListener() {
     state.playerAvatars = avatars;
     render();
   });
+  // Load current user's profile (displayName etc)
+  const uid = state.currentUser?.uid;
+  if (uid) {
+    onSnapshot(doc(db, 'userProfiles', uid), snap => {
+      state.userProfile = snap.exists() ? snap.data() : null;
+      if (!state.userProfile?.displayName) state.showNameModal = true;
+      render();
+    });
+  }
   unsubscribeDecks = onSnapshot(collection(db, 'decks'), snapshot => {
     state.decks = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
     state.loaded = true;
@@ -708,7 +725,8 @@ function render() {
 
   if (state.showAddModal) {
     const e = state.editDeck;
-    const players = ["Joost", "Willem", "Josh"];
+    const me = currentUserName();
+    const players = [...new Set([me, ...state.decks.map(d => d.player)])].filter(Boolean);
     html += `
     <div class="modal-overlay" onclick="closeModal(event)">
       <div class="modal" onclick="event.stopPropagation()">
@@ -721,7 +739,7 @@ function render() {
           <div class="modal-field">
             <label>Player</label>
             <select id="m-player">
-              ${players.map(p => `<option value="${p}" ${e && e.player===p ? 'selected' : ''}>${p}</option>`).join("")}
+              ${players.map(p => `<option value="${p}" ${(e ? e.player===p : p===me) ? 'selected' : ''}>${p}</option>`).join("")}
             </select>
           </div>
           <div class="modal-field">
@@ -752,6 +770,8 @@ function render() {
   if (state.showNewGameModal) html += renderNewGameModal();
   if (state.showEndGameModal && state.gameSession) html += renderEndGameModal(state.gameSession);
   if (state.showAvatarModal) html += renderAvatarModal(state.showAvatarModal);
+  if (state.showNameModal) html += renderNameModal();
+  if (state.showChangePassword) html += renderChangePasswordModal();
   app.innerHTML = html;
 }
 
@@ -817,6 +837,7 @@ function renderDashboard() {
   return `
     <div class="user-bar">
       <span style="color:var(--text-secondary);font-size:12px">${escHtml(state.currentUser?.email || '')}</span>
+      <button onclick="state.showChangePassword=true;render()" style="margin-right:6px">🔑 Password</button>
       <button onclick="handleSignOut()">Sign out</button>
     </div>
     <div class="header" style="margin-bottom:20px">
@@ -2962,6 +2983,92 @@ async function saveAvatar(playerName, emoji) {
   } catch(e) { console.error('saveAvatar:', e); }
 }
 
+// ===== DISPLAY NAME MODAL =====
+function renderNameModal() {
+  return `
+  <div class="modal-overlay">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width:340px">
+      <h2 style="margin-bottom:6px">Welcome! 👋</h2>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px">Choose a display name that your pod will see.</p>
+      <div class="modal-field">
+        <label>Your name</label>
+        <input id="name-input" placeholder="e.g. Jeya" maxlength="20"
+          value="${escHtml(state.userProfile?.displayName || '')}"
+          onkeydown="if(event.key==='Enter')saveDisplayName()">
+      </div>
+      ${state.nameModalError ? `<p style="font-size:12px;color:var(--tier-s-text);margin-bottom:12px">${escHtml(state.nameModalError)}</p>` : ''}
+      <div class="modal-actions">
+        <button class="btn-primary" onclick="saveDisplayName()" style="width:100%;padding:10px">Save name</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function saveDisplayName() {
+  const name = document.getElementById('name-input')?.value.trim();
+  if (!name) { state.nameModalError = 'Please enter a name'; render(); return; }
+  if (name.length < 2) { state.nameModalError = 'Name must be at least 2 characters'; render(); return; }
+  const uid = state.currentUser?.uid;
+  if (!uid) return;
+  await setDoc(doc(db, 'userProfiles', uid), { displayName: name, email: state.currentUser.email }, { merge: true });
+  state.showNameModal = false;
+  state.nameModalError = '';
+  render();
+}
+
+// ===== CHANGE PASSWORD MODAL =====
+function renderChangePasswordModal() {
+  return `
+  <div class="modal-overlay" onclick="closeChangePassword()">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width:340px">
+      <h2 style="margin-bottom:6px">Change Password</h2>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px">Signed in as <strong>${escHtml(state.currentUser?.email || '')}</strong></p>
+      <div class="modal-field">
+        <label>Current password</label>
+        <input id="cp-current" type="password" placeholder="••••••••">
+      </div>
+      <div class="modal-field">
+        <label>New password</label>
+        <input id="cp-new" type="password" placeholder="••••••••">
+      </div>
+      <div class="modal-field">
+        <label>Confirm new password</label>
+        <input id="cp-confirm" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doChangePassword()">
+      </div>
+      ${state.cpError ? `<p style="font-size:12px;color:var(--tier-s-text);margin-bottom:12px">${escHtml(state.cpError)}</p>` : ''}
+      ${state.cpSuccess ? `<p style="font-size:12px;color:#34D399;margin-bottom:12px">Password updated successfully!</p>` : ''}
+      <div class="modal-actions">
+        <button onclick="closeChangePassword()">Cancel</button>
+        <button class="btn-primary" onclick="doChangePassword()">Update Password</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function closeChangePassword() { state.showChangePassword = false; state.cpError = ''; state.cpSuccess = false; render(); }
+
+async function doChangePassword() {
+  const current = document.getElementById('cp-current')?.value;
+  const newPw = document.getElementById('cp-new')?.value;
+  const confirm = document.getElementById('cp-confirm')?.value;
+  if (!current || !newPw || !confirm) { state.cpError = 'Please fill in all fields'; render(); return; }
+  if (newPw.length < 6) { state.cpError = 'New password must be at least 6 characters'; render(); return; }
+  if (newPw !== confirm) { state.cpError = 'New passwords do not match'; render(); return; }
+  try {
+    const credential = EmailAuthProvider.credential(state.currentUser.email, current);
+    await reauthenticateWithCredential(state.currentUser, credential);
+    await updatePassword(state.currentUser, newPw);
+    state.cpError = '';
+    state.cpSuccess = true;
+    render();
+    setTimeout(() => { state.showChangePassword = false; state.cpSuccess = false; render(); }, 2000);
+  } catch (e) {
+    state.cpError = e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential'
+      ? 'Current password is incorrect' : e.message;
+    render();
+  }
+}
+
 function renderAvatarModal(playerName) {
   const current = state.playerAvatars?.[playerName];
   const pc = playerColor(playerName);
@@ -3275,6 +3382,9 @@ window.saveDecklistText = saveDecklistText;
 window.importFromUrl = importFromUrl;
 window.handleLogin = handleLogin;
 window.handleSignOut = handleSignOut;
+window.saveDisplayName = saveDisplayName;
+window.doChangePassword = doChangePassword;
+window.closeChangePassword = closeChangePassword;
 window.setTab = setTab;
 window.openChangelogModal = openChangelogModal;
 window.closeChangelogModal = closeChangelogModal;
