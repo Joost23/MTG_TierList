@@ -273,6 +273,40 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 .quick-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 24px; }
 .quick-action-btn { padding: 14px !important; text-align: center; font-size: 13px !important; font-weight: 500; border-radius: var(--radius) !important; }
 @media (max-width: 600px) { .dash-stats { grid-template-columns: repeat(3,1fr); gap: 6px; } .dash-stat-value { font-size: 18px; } .greeting-text { font-size: 22px; } }
+
+/* ===== PHASE 3: STATS ===== */
+.dl-stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+@media (max-width: 520px) { .dl-stats-grid { grid-template-columns: 1fr; } }
+.dl-stat-box { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+.dl-stat-box-title { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 12px; font-weight: 500; }
+.mana-curve { display: flex; align-items: flex-end; gap: 3px; height: 64px; }
+.mana-col { display: flex; flex-direction: column; align-items: center; flex: 1; }
+.mana-bar-count { font-size: 9px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; height: 12px; display: flex; align-items: flex-end; }
+.mana-bar { width: 100%; border-radius: 3px 3px 0 0; background: var(--accent-dim); min-height: 2px; }
+.mana-bar-cmc { font-size: 9px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; margin-top: 3px; }
+.type-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+.type-row:last-child { margin-bottom: 0; }
+.type-row-label { font-size: 11px; color: var(--text-secondary); width: 75px; flex-shrink: 0; }
+.type-bar-track { flex: 1; height: 6px; background: var(--bg); border-radius: 3px; overflow: hidden; }
+.type-bar-fill { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+.type-row-count { font-size: 10px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; width: 18px; text-align: right; }
+.color-pips { display: flex; gap: 8px; flex-wrap: wrap; }
+.color-pip { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.color-pip-dot { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #fff; }
+.color-pip-val { font-size: 10px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+/* Changelog */
+.changelog-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.changelog-list { display: flex; flex-direction: column; gap: 0; }
+.changelog-entry { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.changelog-entry:last-child { border-bottom: none; }
+.changelog-date { font-size: 11px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; width: 82px; flex-shrink: 0; padding-top: 1px; }
+.changelog-body { flex: 1; min-width: 0; }
+.changelog-in { font-size: 12px; color: var(--tier-b-text); line-height: 1.5; }
+.changelog-out { font-size: 12px; color: var(--tier-s-text); line-height: 1.5; }
+.changelog-note { font-size: 12px; color: var(--text-secondary); font-style: italic; margin-top: 3px; }
+.changelog-remove { font-size: 12px; color: var(--text-muted); background: none !important; border: none !important; padding: 2px 4px !important; flex-shrink: 0; }
+.changelog-remove:hover { color: var(--tier-s-text) !important; }
+.changelog-empty { font-size: 13px; color: var(--text-muted); padding: 8px 0; }
 </style>
 </head>
 <body>
@@ -393,6 +427,8 @@ let state = {
   decklistEditing: false,
   decklistImportUrl: "",
   decklistImportStatus: "",
+  showChangelogModal: false,
+  changelogDraft: { cardsIn: '', cardsOut: '', notes: '' },
 };
 
 const scryfallCache = {};
@@ -1112,7 +1148,7 @@ function closeDeckDetail() {
 }
 function setDecklistMode(mode) {
   state.decklistMode = mode;
-  if (mode === "images") {
+  if (mode === "images" || mode === "stats") {
     loadAndRenderImages(state.decklistView);
   } else {
     render();
@@ -1232,7 +1268,14 @@ async function fetchScryfallBatch(names) {
       const data = await res.json();
       (data.data || []).forEach(card => {
         const imageUrl = card.image_uris?.normal ?? card.card_faces?.[0]?.image_uris?.normal ?? null;
-        scryfallCache[card.name.toLowerCase()] = { name: card.name, imageUrl, typeLine: card.type_line, manaCost: card.mana_cost || '' };
+        scryfallCache[card.name.toLowerCase()] = {
+          name: card.name,
+          imageUrl,
+          typeLine: card.type_line,
+          manaCost: card.mana_cost || '',
+          cmc: card.cmc ?? 0,
+          colors: card.colors || []
+        };
       });
       (data.not_found || []).forEach(id => {
         if (id.name) scryfallCache[id.name.toLowerCase()] = null;
@@ -1324,6 +1367,122 @@ async function importFromUrl() {
   render();
 }
 
+function getManaDistribution(cards, commanderName) {
+  const buckets = { '0': 0, '1': 0, '2': 0, '3': 0, '4': 0, '5': 0, '6': 0, '7+': 0 };
+  cards.forEach(c => {
+    if (c.name === commanderName) return;
+    const cached = scryfallCache[c.name.toLowerCase()];
+    if (!cached) return;
+    if ((cached.typeLine || '').includes('Land')) return;
+    const cmc = Math.floor(cached.cmc ?? 0);
+    const key = cmc >= 7 ? '7+' : String(cmc);
+    buckets[key] = (buckets[key] || 0) + (c.qty || 1);
+  });
+  return buckets;
+}
+
+function getTypeDistribution(cards, commanderName) {
+  const counts = { Creature: 0, Instant: 0, Sorcery: 0, Enchantment: 0, Artifact: 0, Planeswalker: 0, Land: 0, Other: 0 };
+  cards.forEach(c => {
+    if (c.name === commanderName) return;
+    const cached = scryfallCache[c.name.toLowerCase()];
+    const tl = cached?.typeLine || '';
+    const qty = c.qty || 1;
+    if (tl.includes('Creature')) counts.Creature += qty;
+    else if (tl.includes('Instant')) counts.Instant += qty;
+    else if (tl.includes('Sorcery')) counts.Sorcery += qty;
+    else if (tl.includes('Enchantment')) counts.Enchantment += qty;
+    else if (tl.includes('Artifact')) counts.Artifact += qty;
+    else if (tl.includes('Planeswalker')) counts.Planeswalker += qty;
+    else if (tl.includes('Land')) counts.Land += qty;
+    else if (cached) counts.Other += qty;
+  });
+  return counts;
+}
+
+function getColorDistribution(cards, commanderName) {
+  const counts = { W: 0, U: 0, B: 0, R: 0, G: 0, C: 0 };
+  cards.forEach(c => {
+    if (c.name === commanderName) return;
+    const cached = scryfallCache[c.name.toLowerCase()];
+    if (!cached) return;
+    if ((cached.typeLine || '').includes('Land')) return;
+    const colors = cached.colors || [];
+    const qty = c.qty || 1;
+    if (colors.length === 0) counts.C += qty;
+    else colors.forEach(col => { if (col in counts) counts[col] += qty; });
+  });
+  return counts;
+}
+
+function renderDeckStats(cards, deck) {
+  const hasData = cards.some(c => scryfallCache[c.name.toLowerCase()]);
+  if (!hasData) {
+    return `<div style="text-align:center;padding:32px 20px;color:var(--text-muted);font-size:13px">
+      No card data yet — import a decklist first, then switch to Images view to load stats.
+      <br><br><button onclick="setDecklistMode('images')" style="font-size:12px;padding:6px 16px">Load card data</button>
+    </div>`;
+  }
+
+  const manaDist = getManaDistribution(cards, deck.commander);
+  const typeDist = getTypeDistribution(cards, deck.commander);
+  const colorDist = getColorDistribution(cards, deck.commander);
+
+  // Mana curve
+  const cmcKeys = ['0','1','2','3','4','5','6','7+'];
+  const maxMana = Math.max(...Object.values(manaDist), 1);
+  const manaHtml = `<div class="dl-stat-box">
+    <div class="dl-stat-box-title">Mana Curve</div>
+    <div class="mana-curve">
+      ${cmcKeys.map(k => {
+        const count = manaDist[k] || 0;
+        const heightPct = Math.round((count / maxMana) * 52);
+        return `<div class="mana-col">
+          <div class="mana-bar-count">${count > 0 ? count : ''}</div>
+          <div class="mana-bar" style="height:${Math.max(heightPct, count > 0 ? 4 : 0)}px"></div>
+          <div class="mana-bar-cmc">${k}</div>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>`;
+
+  // Type breakdown
+  const typeColors = { Creature: 'var(--tier-a)', Instant: 'var(--tier-b)', Sorcery: 'var(--tier-c)', Enchantment: 'var(--accent)', Artifact: '#888', Planeswalker: '#F5D08A', Land: '#8B6914', Other: 'var(--text-muted)' };
+  const typeTotal = Object.values(typeDist).reduce((s, v) => s + v, 0) || 1;
+  const typeHtml = `<div class="dl-stat-box">
+    <div class="dl-stat-box-title">Card Types</div>
+    ${Object.entries(typeDist).filter(([,v]) => v > 0).sort((a,b) => b[1]-a[1]).map(([type, count]) => `
+      <div class="type-row">
+        <span class="type-row-label">${type}</span>
+        <div class="type-bar-track"><div class="type-bar-fill" style="width:${Math.round((count/typeTotal)*100)}%;background:${typeColors[type]}"></div></div>
+        <span class="type-row-count">${count}</span>
+      </div>`).join('')}
+  </div>`;
+
+  // Color distribution
+  const colorMeta = {
+    W: { label: 'W', bg: '#C8A84B', title: 'White' },
+    U: { label: 'U', bg: '#1070C8', title: 'Blue' },
+    B: { label: 'B', bg: '#3D3D3D', title: 'Black' },
+    R: { label: 'R', bg: '#D0392A', title: 'Red' },
+    G: { label: 'G', bg: '#1A7A3C', title: 'Green' },
+    C: { label: 'C', bg: '#8B8B8B', title: 'Colorless' },
+  };
+  const colorHtml = `<div class="dl-stat-box">
+    <div class="dl-stat-box-title">Color Distribution</div>
+    <div class="color-pips">
+      ${Object.entries(colorDist).filter(([,v]) => v > 0).map(([col, count]) => `
+        <div class="color-pip" title="${colorMeta[col].title}">
+          <div class="color-pip-dot" style="background:${colorMeta[col].bg}">${colorMeta[col].label}</div>
+          <div class="color-pip-val">${count}</div>
+        </div>`).join('')}
+    </div>
+  </div>`;
+
+  return `<div class="dl-stats-grid">${manaHtml}${typeHtml}</div>
+  <div style="margin-bottom:20px">${colorHtml}</div>`;
+}
+
 function renderDeckDetail(deck) {
   const tier = getTier(getOverall(deck));
   const games = deck.games || [];
@@ -1350,6 +1509,8 @@ function renderDeckDetail(deck) {
   let displayHtml = '';
   if (state.decklistMode === "images") {
     displayHtml = renderImageGrid(cards);
+  } else if (state.decklistMode === "stats") {
+    displayHtml = renderDeckStats(cards, deck);
   } else {
     displayHtml = renderTextList(cards, deck);
   }
@@ -1366,6 +1527,7 @@ function renderDeckDetail(deck) {
       <div class="control-group">
         <button class="${state.decklistMode === 'text' ? 'active' : ''}" onclick="setDecklistMode('text')">List</button>
         <button class="${state.decklistMode === 'images' ? 'active' : ''}" onclick="setDecklistMode('images')">Images</button>
+        <button class="${state.decklistMode === 'stats' ? 'active' : ''}" onclick="setDecklistMode('stats')">Stats</button>
       </div>
     </div>
 
@@ -1386,7 +1548,91 @@ function renderDeckDetail(deck) {
     </div>
 
     <div class="dl-display">${displayHtml}</div>
+
+    <div class="changelog-section" style="margin-top:24px;padding-top:20px;border-top:1px solid var(--border)">
+      <div class="changelog-header">
+        <span class="dl-stat-box-title" style="margin-bottom:0">Changelog</span>
+        <button style="font-size:12px;padding:5px 14px" onclick="openChangelogModal('${deck.id}')">+ Log upgrade</button>
+      </div>
+      ${(() => {
+        const cl = deck.changelog || [];
+        if (!cl.length) return '<div class="changelog-empty">No upgrades logged yet.</div>';
+        return `<div class="changelog-list">${cl.slice().reverse().map((entry, ri) => {
+          const origIdx = cl.length - 1 - ri;
+          return `<div class="changelog-entry">
+            <div class="changelog-date">${escHtml(entry.date || '')}</div>
+            <div class="changelog-body">
+              ${entry.cardsIn?.length ? `<div class="changelog-in">+ ${entry.cardsIn.map(escHtml).join(', ')}</div>` : ''}
+              ${entry.cardsOut?.length ? `<div class="changelog-out">− ${entry.cardsOut.map(escHtml).join(', ')}</div>` : ''}
+              ${entry.notes ? `<div class="changelog-note">${escHtml(entry.notes)}</div>` : ''}
+            </div>
+            <button class="changelog-remove" onclick="removeChangelogEntry('${deck.id}', ${origIdx})" title="Remove">×</button>
+          </div>`;
+        }).join('')}</div>`;
+      })()}
+    </div>
+  ${state.showChangelogModal === deck.id ? `
+  <div class="modal-overlay" onclick="closeChangelogModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <h2>Log Upgrade</h2>
+      <div class="modal-field">
+        <label>Cards In</label>
+        <textarea id="cl-in" placeholder="Sol Ring&#10;Command Tower&#10;..." style="min-height:80px" oninput="state.changelogDraft.cardsIn=this.value">${escHtml(state.changelogDraft.cardsIn)}</textarea>
+      </div>
+      <div class="modal-field">
+        <label>Cards Out</label>
+        <textarea id="cl-out" placeholder="Colossal Dreadmaw&#10;..." style="min-height:80px" oninput="state.changelogDraft.cardsOut=this.value">${escHtml(state.changelogDraft.cardsOut)}</textarea>
+      </div>
+      <div class="modal-field">
+        <label>Notes</label>
+        <input id="cl-notes" placeholder="Brief description of changes…" oninput="state.changelogDraft.notes=this.value" value="${escHtml(state.changelogDraft.notes)}">
+      </div>
+      <div class="modal-actions">
+        <button onclick="closeChangelogModal()">Cancel</button>
+        <button class="btn-primary" onclick="saveChangelogEntry()">Save</button>
+      </div>
+    </div>
+  </div>` : ''}
   </div>`;
+}
+
+function openChangelogModal(deckId) {
+  state.showChangelogModal = deckId;
+  state.changelogDraft = { cardsIn: '', cardsOut: '', notes: '' };
+  render();
+}
+function closeChangelogModal() {
+  state.showChangelogModal = false;
+  render();
+}
+function saveChangelogEntry() {
+  const deckId = state.showChangelogModal;
+  if (!deckId) return;
+  const draft = state.changelogDraft;
+  if (!draft.cardsIn.trim() && !draft.cardsOut.trim() && !draft.notes.trim()) return;
+  const entry = {
+    date: new Date().toISOString().split('T')[0],
+    cardsIn: draft.cardsIn.split('\n').map(s => s.trim()).filter(Boolean),
+    cardsOut: draft.cardsOut.split('\n').map(s => s.trim()).filter(Boolean),
+    notes: draft.notes.trim(),
+  };
+  state.decks = state.decks.map(d => {
+    if (d.id !== deckId) return d;
+    const changelog = [...(d.changelog || []), entry];
+    fbUpdateDeck(d.id, { changelog }).catch(console.error);
+    return { ...d, changelog };
+  });
+  state.showChangelogModal = false;
+  render();
+}
+function removeChangelogEntry(deckId, idx) {
+  state.decks = state.decks.map(d => {
+    if (d.id !== deckId) return d;
+    const changelog = (d.changelog || []).filter((_, i) => i !== idx);
+    fbUpdateDeck(d.id, { changelog }).catch(console.error);
+    return { ...d, changelog };
+  });
+  render();
 }
 
 // ===== WINDOW EXPORTS (needed because this is a module) =====
@@ -1418,6 +1664,11 @@ window.importFromUrl = importFromUrl;
 window.handleLogin = handleLogin;
 window.handleSignOut = handleSignOut;
 window.setTab = setTab;
+window.openChangelogModal = openChangelogModal;
+window.closeChangelogModal = closeChangelogModal;
+window.saveChangelogEntry = saveChangelogEntry;
+window.removeChangelogEntry = removeChangelogEntry;
+window.renderDeckStats = renderDeckStats;
 
 // ===== ADMIN HELPERS (run from browser console) =====
 // createPodUser("willem@example.com", "password123")
