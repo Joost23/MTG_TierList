@@ -117,10 +117,16 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 .deck-card > *:not(.deck-card-art) { position: relative; z-index: 1; }
 .deck-row-compact { display: flex; align-items: center; gap: 10px; padding: 0 12px; min-height: 44px; }
 .deck-tier-mini { width: 22px; height: 22px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; font-family: 'JetBrains Mono', monospace; flex-shrink: 0; }
-.deck-commander { flex: 1; font-size: 14px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.deck-commander { font-size: 14px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.deck-name-stack { display: flex; flex-direction: column; flex: 1; min-width: 0; overflow: hidden; justify-content: center; }
+.deck-card-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; }
+.deck-commander-sub { font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; }
+.gallery-card-deckname { font-size: 11px; font-weight: 500; color: rgba(255,255,255,0.55); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mana-symbols { display: inline-flex; align-items: center; gap: 1px; vertical-align: middle; }
+.mana-sym { display: inline-block; vertical-align: middle; flex-shrink: 0; }
 .deck-player { padding: 1px 7px; border-radius: 4px; font-size: 11px; font-weight: 500; flex-shrink: 0; }
 .deck-row-score { font-size: 14px; font-weight: 600; font-family: 'JetBrains Mono', monospace; flex-shrink: 0; width: 34px; text-align: right; color: var(--text-secondary); }
-.deck-colors { font-size: 12px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; letter-spacing: 1px; }
+.deck-colors { display: inline-flex; align-items: center; gap: 2px; }
 .deck-record-badge { font-size: 11px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
 /* Legacy compat */
 .deck-top { display: none; }
@@ -553,6 +559,16 @@ function getTier(power) {
 function getOverall(d) {
   return Math.round(((d.power + d.synergy + d.theme + d.optimization) / 4) * 10) / 10;
 }
+const MANA_ORDER = ['W','U','B','R','G','C'];
+function renderManaSymbols(colorsStr, size = 16) {
+  if (!colorsStr) return '';
+  const symbols = (colorsStr.toUpperCase().match(/[WUBRGC]/g) || []);
+  const sorted = MANA_ORDER.filter(c => symbols.includes(c));
+  if (sorted.length === 0) return '';
+  return `<span class="mana-symbols">${sorted.map(c =>
+    `<img src="https://svgs.scryfall.io/card-symbols/${c}.svg" alt="${c}" title="${c}" class="mana-sym" style="width:${size}px;height:${size}px" loading="lazy">`
+  ).join('')}</span>`;
+}
 function getTierInfo(label) {
   return TIERS.find(t => t.label === label) || TIERS[4];
 }
@@ -815,6 +831,10 @@ function render() {
         <div class="modal-field">
           <label>Commander</label>
           <input id="m-commander" value="${e ? escHtml(e.commander) : ''}" placeholder="e.g. Edgar Markov">
+        </div>
+        <div class="modal-field">
+          <label>Deck name <span style="color:var(--text-muted);font-size:11px;font-weight:400">(optional)</span></label>
+          <input id="m-deckname" value="${e ? escHtml(e.deckName||'') : ''}" placeholder="e.g. Vampire Wedding, Dinosaur Stampede…">
         </div>
         <div class="modal-row">
           <div class="modal-field">
@@ -1310,7 +1330,10 @@ function renderDeckCard(deck, tier, index) {
     <div class="deck-card-art${artUrl ? ' loaded' : ''}" style="${artUrl ? `background-image:url('${escHtml(artUrl)}')` : ''}" data-art-commander="${artUrl ? '' : escHtml(deck.commander)}"></div>
     <div class="deck-row-compact">
       <div class="deck-tier-mini" style="background:${tier.bg};color:${tier.text}">${tier.label}</div>
-      <span class="deck-commander">${escHtml(deck.commander)}</span>
+      <div class="deck-name-stack">
+        ${deck.deckName ? `<span class="deck-card-name">${escHtml(deck.deckName)}</span>` : ''}
+        <span class="deck-commander${deck.deckName ? ' deck-commander-sub' : ''}">${escHtml(deck.commander)}</span>
+      </div>
       <span class="deck-player" style="background:${pc.bg};color:${pc.color}">${escHtml(deck.player)}</span>
       <span class="deck-row-score">${overall}</span>
     </div>`;
@@ -1319,7 +1342,7 @@ function renderDeckCard(deck, tier, index) {
     const winRate = total > 0 ? Math.round((wins / total) * 100) : null;
     card += `<div class="deck-expanded">
       ${(deck.colors || total > 0) ? `<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
-        ${deck.colors ? `<span class="deck-colors">${escHtml(deck.colors)}</span>` : ''}
+        ${deck.colors ? `<span class="deck-colors">${renderManaSymbols(deck.colors, 15)}</span>` : ''}
         ${total > 0 ? `<span class="deck-record-badge">${wins}W-${losses}L</span>` : ''}
       </div>` : ''}
       ${renderStat("Power", deck.power, tier.color)}
@@ -1446,8 +1469,10 @@ function editDeck(id) {
 function saveDeck() {
   const commander = document.getElementById("m-commander").value.trim();
   if (!commander) return;
+  const deckNameVal = document.getElementById("m-deckname")?.value.trim() || '';
   const data = {
     commander,
+    deckName: deckNameVal || null,
     player: document.getElementById("m-player").value,
     colors: document.getElementById("m-colors").value.trim().toUpperCase(),
     power: parseFloat(document.getElementById("m-power").value) || 7,
@@ -1989,7 +2014,9 @@ async function importFromUrl() {
         if (cmdName) {
           const deckId = state.decklistView;
           const deck = state.decks.find(d => d.id === deckId);
-          const nameUpdate = (!deck?.name || deck.name === 'New Deck') ? { commander: cmdName, name: cmdName } : { commander: cmdName };
+          const importedDeckName = data.name || null;
+          const nameUpdate = { commander: cmdName };
+          if (importedDeckName && importedDeckName !== cmdName) nameUpdate.deckName = importedDeckName;
           state.decks = state.decks.map(d => d.id === deckId ? { ...d, ...nameUpdate } : d);
           fbUpdateDeck(deckId, nameUpdate).catch(console.error);
         }
@@ -2015,8 +2042,10 @@ async function importFromUrl() {
         // Auto-populate the commander field — use raw card name (no set suffix)
         const cmdName = parseCardLine(cmdLines[0])?.name || cmdLines[0].replace(/^\d+\s+/, '').trim();
         const deckId = state.decklistView;
-        state.decks = state.decks.map(d => d.id === deckId ? { ...d, commander: cmdName } : d);
-        fbUpdateDeck(deckId, { commander: cmdName }).catch(console.error);
+        const moxUpdate = { commander: cmdName };
+        if (data.name && data.name !== cmdName) moxUpdate.deckName = data.name;
+        state.decks = state.decks.map(d => d.id === deckId ? { ...d, ...moxUpdate } : d);
+        fbUpdateDeck(deckId, moxUpdate).catch(console.error);
       }
       // Main deck boards (commanders excluded — tracked separately above)
       const mainLines = [];
@@ -2231,8 +2260,15 @@ function renderDeckDetail(deck) {
       <button class="deck-detail-back" onclick="closeDeckDetail()">← Back</button>
       <div class="deck-detail-title">
         <span class="tier-badge" style="background:${tier.color}">${escHtml(tier.label)}</span>
-        <h2>${escHtml(deck.commander)}</h2>
+        <div style="flex:1;min-width:0">
+          ${deck.deckName
+            ? `<h2 style="margin:0;font-size:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(deck.deckName)}</h2>
+               <div style="font-size:11px;color:var(--text-muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(deck.commander)}</div>`
+            : `<h2 style="margin:0">${escHtml(deck.commander)}</h2>`
+          }
+        </div>
         <span class="player-tag" style="background:var(--player-${deck.player.toLowerCase()}-bg);color:var(--player-${deck.player.toLowerCase()})">${escHtml(deck.player)}</span>
+        ${deck.colors ? renderManaSymbols(deck.colors, 18) : ''}
         ${totalCards ? `<span style="font-size:12px;color:var(--text-muted)">${totalCards} cards</span>` : ''}
       </div>
       <div class="control-group">
@@ -3672,10 +3708,12 @@ function renderMyDecksGallery() {
       ${imgHtml}
       <div class="gallery-card-overlay"></div>
       <div class="gallery-card-footer">
+        ${deck.deckName ? `<div class="gallery-card-deckname">${escHtml(deck.deckName)}</div>` : ''}
         <div class="gallery-card-name">${escHtml(deck.commander)}</div>
         <div class="gallery-card-meta">
           <span class="gallery-card-tier" style="background:${tierInfo.bg};color:${tierInfo.text}">${tier}</span>
           <span class="gallery-card-score">${overall}</span>
+          ${deck.colors ? `<span style="margin-left:2px">${renderManaSymbols(deck.colors, 11)}</span>` : ''}
           ${recordStr ? `<span class="gallery-card-record">${recordStr}</span>` : ''}
         </div>
       </div>
