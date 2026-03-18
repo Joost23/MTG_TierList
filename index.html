@@ -2367,7 +2367,7 @@ async function ptStart() {
     const allDecks = players.map(([, p]) => state.decks.find(d => d.id === p.deckId)).filter(Boolean);
     const allCardNames = allDecks.flatMap(deck => {
       const sections = parseDecklistSections(deck.decklist || '');
-      return [...sections.main, ...sections.commanders].map(c => c);
+      return [...sections.main, ...sections.sideboard, ...sections.maybeboard];
     });
     const uncached = allCardNames.filter(c => !(c.name.toLowerCase() in scryfallCache));
     if (uncached.length) {
