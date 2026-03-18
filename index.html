@@ -3020,24 +3020,33 @@ async function saveDisplayName() {
 function renderChangePasswordModal() {
   return `
   <div class="modal-overlay" onclick="closeChangePassword()">
-    <div class="modal" onclick="event.stopPropagation()" style="max-width:340px">
-      <h2 style="margin-bottom:6px">Change Password</h2>
+    <div class="modal" onclick="event.stopPropagation()" style="max-width:360px">
+      <h2 style="margin-bottom:8px">Change Password</h2>
       <p style="font-size:13px;color:var(--text-muted);margin-bottom:4px">Signed in as <strong>${escHtml(state.currentUser?.email || '')}</strong></p>
-      <p style="font-size:12px;color:var(--text-muted);margin-bottom:20px;opacity:0.7">⚠️ Use a unique password — don't reuse one from another account.</p>
-      <div class="modal-field">
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:24px;opacity:0.7">⚠️ Use a unique password — don't reuse one from another account.</p>
+      <div class="modal-field" style="margin-bottom:16px">
         <label>Current password</label>
-        <input id="cp-current" type="password" placeholder="••••••••">
+        <div style="position:relative">
+          <input id="cp-current" type="password" placeholder="••••••••" style="padding-right:44px;width:100%">
+          <button type="button" onclick="togglePwVis('cp-current',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:16px;padding:0">👁</button>
+        </div>
       </div>
-      <div class="modal-field">
+      <div class="modal-field" style="margin-bottom:16px">
         <label>New password</label>
-        <input id="cp-new" type="password" placeholder="••••••••">
+        <div style="position:relative">
+          <input id="cp-new" type="password" placeholder="••••••••" style="padding-right:44px;width:100%">
+          <button type="button" onclick="togglePwVis('cp-new',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:16px;padding:0">👁</button>
+        </div>
       </div>
-      <div class="modal-field">
+      <div class="modal-field" style="margin-bottom:20px">
         <label>Confirm new password</label>
-        <input id="cp-confirm" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doChangePassword()">
+        <div style="position:relative">
+          <input id="cp-confirm" type="password" placeholder="••••••••" style="padding-right:44px;width:100%" onkeydown="if(event.key==='Enter')doChangePassword()">
+          <button type="button" onclick="togglePwVis('cp-confirm',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:16px;padding:0">👁</button>
+        </div>
       </div>
-      ${state.cpError ? `<p style="font-size:12px;color:var(--tier-s-text);margin-bottom:12px">${escHtml(state.cpError)}</p>` : ''}
-      ${state.cpSuccess ? `<p style="font-size:12px;color:#34D399;margin-bottom:12px">Password updated successfully!</p>` : ''}
+      ${state.cpError ? `<p style="font-size:12px;color:var(--tier-s-text);margin-bottom:14px">${escHtml(state.cpError)}</p>` : ''}
+      ${state.cpSuccess ? `<p style="font-size:12px;color:#34D399;margin-bottom:14px">✅ Password updated successfully!</p>` : ''}
       <div class="modal-actions">
         <button onclick="closeChangePassword()">Cancel</button>
         <button class="btn-primary" onclick="doChangePassword()">Update Password</button>
@@ -3047,6 +3056,13 @@ function renderChangePasswordModal() {
 }
 
 function closeChangePassword() { state.showChangePassword = false; state.cpError = ''; state.cpSuccess = false; render(); }
+function togglePwVis(inputId, btn) {
+  const inp = document.getElementById(inputId);
+  if (!inp) return;
+  const show = inp.type === 'password';
+  inp.type = show ? 'text' : 'password';
+  btn.textContent = show ? '🙈' : '👁';
+}
 
 async function doChangePassword() {
   const current = document.getElementById('cp-current')?.value;
@@ -3386,6 +3402,7 @@ window.handleSignOut = handleSignOut;
 window.saveDisplayName = saveDisplayName;
 window.doChangePassword = doChangePassword;
 window.closeChangePassword = closeChangePassword;
+window.togglePwVis = togglePwVis;
 window.setTab = setTab;
 window.openChangelogModal = openChangelogModal;
 window.closeChangelogModal = closeChangelogModal;
