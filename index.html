@@ -1267,15 +1267,21 @@ async function fetchScryfallBatch(names) {
       });
       const data = await res.json();
       (data.data || []).forEach(card => {
-        const imageUrl = card.image_uris?.normal ?? card.card_faces?.[0]?.image_uris?.normal ?? null;
-        scryfallCache[card.name.toLowerCase()] = {
+        const iuris = card.image_uris || card.card_faces?.[0]?.image_uris;
+        const imageUrl = iuris?.normal ?? iuris?.large ?? iuris?.small ?? null;
+        const cacheEntry = {
           name: card.name,
           imageUrl,
-          typeLine: card.type_line,
-          manaCost: card.mana_cost || '',
+          typeLine: card.type_line || card.card_faces?.[0]?.type_line || '',
+          manaCost: card.mana_cost || card.card_faces?.[0]?.mana_cost || '',
           cmc: card.cmc ?? 0,
-          colors: card.colors || []
+          colors: card.colors || card.card_faces?.[0]?.colors || []
         };
+        scryfallCache[card.name.toLowerCase()] = cacheEntry;
+        // Also index by front-face name so "Bloodline Keeper" hits "Bloodline Keeper // Lord of Lineage"
+        if (card.card_faces?.[0]?.name) {
+          scryfallCache[card.card_faces[0].name.toLowerCase()] = cacheEntry;
+        }
       });
       (data.not_found || []).forEach(id => {
         if (id.name) scryfallCache[id.name.toLowerCase()] = null;
