@@ -857,7 +857,11 @@ function renderDashboard() {
   const userWinRate = userTotal > 0 ? Math.round((userWins / userTotal) * 100) : null;
   const totalGames = allDecks.flatMap(d => d.games || []).filter(g => g.result === 'win').length;
   const leaderboard = getLeaderboardData();
-  const recentGames = getRecentGames(10);
+  const recentGames = getRecentGames(15);
+  const recentDecks = [...state.decks]
+    .filter(d => d.decklistUpdatedAt || d.createdAt)
+    .sort((a, b) => (b.decklistUpdatedAt || b.createdAt || 0) - (a.decklistUpdatedAt || a.createdAt || 0))
+    .slice(0, 3);
 
   return `
     <div class="header" style="margin-bottom:20px">
@@ -938,6 +942,30 @@ function renderDashboard() {
           }).join('')
       }
     </div>
+    ${recentDecks.length ? `
+    <div class="dash-section-title">Recently Updated</div>
+    <div class="dash-card">
+      ${recentDecks.map(d => {
+        const pc = playerColor(d.player);
+        const ts = d.decklistUpdatedAt || d.createdAt;
+        const daysAgo = ts ? Math.floor((Date.now() - ts) / 86400000) : null;
+        const timeLabel = daysAgo === null ? '' : daysAgo === 0 ? 'Today' : daysAgo === 1 ? 'Yesterday' : `${daysAgo}d ago`;
+        const cardCount = (() => { try { return parseDecklistSections(d.decklist || '').main.length; } catch(e) { return 0; } })();
+        return `<div class="activity-entry" onclick="openDeckDetail('${d.id}')" style="cursor:pointer">
+          <div style="width:36px;height:36px;border-radius:8px;background:${pc.bg};border:1px solid ${pc.color}33;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">
+            ${state.playerAvatars?.[d.player] || '🧙'}
+          </div>
+          <div class="activity-text">
+            <div style="font-weight:500;font-size:13px">${escHtml(d.commander)}</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:2px">
+              <span style="color:${pc.color}">${escHtml(d.player)}</span>
+              ${cardCount ? ` · ${cardCount} cards` : ''}
+            </div>
+          </div>
+          <div class="activity-date">${timeLabel}</div>
+        </div>`;
+      }).join('')}
+    </div>` : ''}
     <div class="dash-section-title">Quick Actions</div>
     <div class="quick-actions">
       <button class="quick-action-btn btn-primary" onclick="openAddModal()">+ Add deck</button>
@@ -1363,6 +1391,8 @@ function saveDeck() {
     data.id = commander.toLowerCase().replace(/[^a-z0-9]/g,'-') + '-' + Date.now();
     data.games = [];
     data.ownerUid = state.currentUser?.uid || null;
+    data.createdAt = Date.now();
+    data.decklistUpdatedAt = Date.now();
     state.decks.push(data);
     fbSaveDeck(data).catch(console.error);
   }
@@ -1569,6 +1599,7 @@ function saveDecklistText(text) {
       }
     }
   }
+  updates.decklistUpdatedAt = Date.now();
   state.decks = state.decks.map(d => d.id === id ? { ...d, ...updates } : d);
   fbUpdateDeck(id, updates).catch(console.error);
 }
