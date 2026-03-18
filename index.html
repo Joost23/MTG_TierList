@@ -477,6 +477,22 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 .lb-chevron.open { transform: rotate(180deg); }
 .leaderboard-row { cursor: pointer; }
 .leaderboard-row:hover { background: var(--bg-hover); }
+
+/* ===== DFC FLIP ===== */
+.card-flip-wrap { position: relative; width: 100%; height: 100%; }
+.card-flip-inner { width: 100%; height: 100%; position: relative; transition: transform 0.45s ease; transform-style: preserve-3d; }
+.card-flip-inner.flipped { transform: rotateY(180deg); }
+.card-flip-front, .card-flip-back { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.card-flip-back { transform: rotateY(180deg); }
+.card-flip-btn { position: absolute; bottom: 6px; right: 6px; width: 28px; height: 28px; border-radius: 50%; background: rgba(0,0,0,0.72); border: 1px solid rgba(255,255,255,0.2); color: #fff; font-size: 14px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 10; transition: background 0.15s; padding: 0; line-height: 1; }
+.card-flip-btn:hover { background: rgba(60,60,60,0.9); }
+
+/* ===== MOOD TAGS ===== */
+.mood-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.mood-tag { font-size: 11px; padding: 2px 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.12); background: var(--bg-surface); color: var(--text-secondary); cursor: default; white-space: nowrap; line-height: 1.5; }
+.mood-tag-selector { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.mood-tag-option { font-size: 11px; padding: 3px 10px; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-surface); color: var(--text-secondary); cursor: pointer; white-space: nowrap; transition: border-color 0.15s, background 0.15s; }
+.mood-tag-option.selected { border-color: var(--accent); color: var(--accent); background: var(--accent-muted, rgba(139,92,246,0.12)); }
 </style>
 </head>
 <body>
@@ -560,6 +576,15 @@ function getOverall(d) {
   return Math.round(((d.power + d.synergy + d.theme + d.optimization) / 4) * 10) / 10;
 }
 const MANA_ORDER = ['W','U','B','R','G','C'];
+const MOOD_TAGS = ['Aggro','Combo','Control','Stax','Aristocrats','Tokens','Tribal','Voltron','Group Hug','Mill','Reanimator','Superfriends','Jank','Chaos','Storm','Infect','Lands','Spellslinger'];
+const TAG_COLORS = {
+  'Aggro': '#b34a00', 'Storm': '#b34a00', 'Infect': '#7a1a1a', 'Voltron': '#8b3a00',
+  'Combo': '#1a4a7a', 'Spellslinger': '#1a3a6a', 'Mill': '#2a3a6a',
+  'Control': '#1a4a3a', 'Stax': '#3a3a1a', 'Lands': '#2a4a1a',
+  'Aristocrats': '#5a1a5a', 'Reanimator': '#4a1a4a', 'Superfriends': '#4a3a1a',
+  'Tokens': '#2a4a2a', 'Tribal': '#3a4a2a', 'Group Hug': '#1a4a4a',
+  'Jank': '#4a4a4a', 'Chaos': '#5a2a5a',
+};
 function renderManaSymbols(colorsStr, size = 16) {
   if (!colorsStr) return '';
   const symbols = (colorsStr.toUpperCase().match(/[WUBRGC]/g) || []);
@@ -568,6 +593,16 @@ function renderManaSymbols(colorsStr, size = 16) {
   return `<span class="mana-symbols">${sorted.map(c =>
     `<img src="https://svgs.scryfall.io/card-symbols/${c}.svg" alt="${c}" title="${c}" class="mana-sym" style="width:${size}px;height:${size}px" loading="lazy">`
   ).join('')}</span>`;
+}
+function renderTags(tags, size = 'normal') {
+  if (!tags || tags.length === 0) return '';
+  const show = size === 'compact' ? tags.slice(0, 2) : tags;
+  return `<div class="mood-tags">${show.map(t => {
+    const bg = TAG_COLORS[t] ? TAG_COLORS[t] + '44' : '';
+    const border = TAG_COLORS[t] ? TAG_COLORS[t] + '88' : '';
+    const style = bg ? `style="background:${bg};border-color:${border}"` : '';
+    return `<span class="mood-tag" ${style}>${escHtml(t)}</span>`;
+  }).join('')}${size === 'compact' && tags.length > 2 ? `<span class="mood-tag" style="color:var(--text-muted)">+${tags.length - 2}</span>` : ''}</div>`;
 }
 function getTierInfo(label) {
   return TIERS.find(t => t.label === label) || TIERS[4];
@@ -836,6 +871,15 @@ function render() {
           <label>Deck name <span style="color:var(--text-muted);font-size:11px;font-weight:400">(optional)</span></label>
           <input id="m-deckname" value="${e ? escHtml(e.deckName||'') : ''}" placeholder="e.g. Vampire Wedding, Dinosaur Stampede…">
         </div>
+        <div class="modal-field">
+          <label>Playstyle tags <span style="color:var(--text-muted);font-size:11px;font-weight:400">(optional)</span></label>
+          <div class="mood-tag-selector" id="m-tags-wrap">
+            ${MOOD_TAGS.map(t => {
+              const sel = (e?.tags || []).includes(t);
+              return `<button type="button" class="mood-tag-option${sel ? ' selected' : ''}" onclick="this.classList.toggle('selected')">${t}</button>`;
+            }).join('')}
+          </div>
+        </div>
         <div class="modal-row">
           <div class="modal-field">
             <label>Player</label>
@@ -1077,7 +1121,8 @@ function renderCollectionTab() {
       (d.commander||'').toLowerCase().includes(q) ||
       (d.player||'').toLowerCase().includes(q) ||
       (d.colors||'').toUpperCase().includes(norm) ||
-      (d.notes||'').toLowerCase().includes(q)
+      (d.notes||'').toLowerCase().includes(q) ||
+      (d.tags || []).some(t => t.toLowerCase().includes(q))
     );
   }
   const sorted = [...filtered].sort((a, b) =>
@@ -1345,6 +1390,7 @@ function renderDeckCard(deck, tier, index) {
         ${deck.colors ? `<span class="deck-colors">${renderManaSymbols(deck.colors, 15)}</span>` : ''}
         ${total > 0 ? `<span class="deck-record-badge">${wins}W-${losses}L</span>` : ''}
       </div>` : ''}
+      ${deck.tags && deck.tags.length ? renderTags(deck.tags, 'compact') + '<div style="margin-bottom:8px"></div>' : ''}
       ${renderStat("Power", deck.power, tier.color)}
       ${renderStat("Synergy", deck.synergy, tier.color)}
       ${renderStat("Theme", deck.theme, tier.color)}
@@ -1470,9 +1516,11 @@ function saveDeck() {
   const commander = document.getElementById("m-commander").value.trim();
   if (!commander) return;
   const deckNameVal = document.getElementById("m-deckname")?.value.trim() || '';
+  const selectedTags = [...document.querySelectorAll('#m-tags-wrap .mood-tag-option.selected')].map(b => b.textContent.trim());
   const data = {
     commander,
     deckName: deckNameVal || null,
+    tags: selectedTags,
     player: document.getElementById("m-player").value,
     colors: document.getElementById("m-colors").value.trim().toUpperCase(),
     power: parseFloat(document.getElementById("m-power").value) || 7,
@@ -1841,15 +1889,26 @@ function renderTypeGroupImages(cards, commanderName) {
     html += '<div class="dl-image-grid">';
     group.forEach(c => {
       const cached = scryfallCache[c.name.toLowerCase()];
-      const imgUrl = cached?.imageUrl || '';
+      const imgFront = cached?.imageUrl || null;
+      const imgBack = cached?.imageUrlBack || null;
+      const isDFC = !!(cached?.isDoubleFaced && imgBack);
       const nameJs = escHtml(c.name).replace(/'/g, "\\'");
-      const imgJs = imgUrl.replace(/'/g, "\\'");
-      html += `<div class="dl-card-img-wrap" onclick="showCardPopup('${nameJs}','${imgJs}')">`;
-      if (imgUrl) {
-        html += `<img src="${escHtml(imgUrl)}" alt="${escHtml(c.name)}" loading="lazy" title="${escHtml(c.name)}">`;
+      const imgFrontJs = (imgFront || '').replace(/'/g, "\\'");
+      const imgBackJs = (imgBack || '').replace(/'/g, "\\'");
+      let cardImgHtml;
+      if (isDFC) {
+        cardImgHtml = `<div class="card-flip-wrap" style="perspective:600px">
+    <div class="card-flip-inner">
+      <div class="card-flip-front"><img src="${escHtml(imgFront)}" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block"></div>
+      <div class="card-flip-back"><img src="${escHtml(imgBack)}" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block"></div>
+    </div>
+    <button class="card-flip-btn" onclick="event.stopPropagation();toggleCardFlip(this)" title="Transform">⟳</button>
+  </div>`;
       } else {
-        html += `<div class="dl-card-placeholder">${escHtml(c.name)}</div>`;
+        cardImgHtml = imgFront ? `<img src="${escHtml(imgFront)}" alt="${escHtml(c.name)}" loading="lazy" title="${escHtml(c.name)}" style="width:100%;height:100%;object-fit:cover;display:block">` : `<div class="dl-card-placeholder">${escHtml(c.name)}</div>`;
       }
+      html += `<div class="dl-card-img-wrap" onclick="showCardPopup('${nameJs}','${imgFrontJs}','${imgBackJs}')">`;
+      html += cardImgHtml;
       if (c.qty > 1) html += `<span class="dl-card-qty-badge">${c.qty}</span>`;
       html += `</div>`;
     });
@@ -1909,7 +1968,10 @@ async function fetchScryfallBatch(cards) {
           typeLine: card.type_line || card.card_faces?.[0]?.type_line || '',
           manaCost: card.mana_cost || card.card_faces?.[0]?.mana_cost || '',
           cmc: card.cmc ?? 0,
-          colors: card.colors || card.card_faces?.[0]?.colors || []
+          colors: card.colors || card.card_faces?.[0]?.colors || [],
+          imageUrlBack: card.card_faces?.[1]?.image_uris?.normal ?? null,
+          isDoubleFaced: ['transform','modal_dfc','double_faced_token','reversible_card'].includes(card.layout),
+          backFaceName: card.card_faces?.[1]?.name ?? null,
         };
         scryfallCache[card.name.toLowerCase()] = cacheEntry;
         if (card.card_faces?.[0]?.name) {
@@ -2270,6 +2332,7 @@ function renderDeckDetail(deck) {
         <span class="player-tag" style="background:var(--player-${deck.player.toLowerCase()}-bg);color:var(--player-${deck.player.toLowerCase()})">${escHtml(deck.player)}</span>
         ${deck.colors ? renderManaSymbols(deck.colors, 18) : ''}
         ${totalCards ? `<span style="font-size:12px;color:var(--text-muted)">${totalCards} cards</span>` : ''}
+        ${deck.tags && deck.tags.length ? `<div style="margin-top:8px;width:100%">${renderTags(deck.tags)}</div>` : ''}
       </div>
       <div class="control-group">
         <button class="${state.decklistMode === 'text' ? 'active' : ''}" onclick="setDecklistMode('text')">List</button>
@@ -3256,17 +3319,26 @@ function renderAvatar(playerName, size = 36) {
 function openAvatarModal(playerName) { state.showAvatarModal = playerName; render(); }
 function closeAvatarModal() { state.showAvatarModal = null; render(); }
 
-function showCardPopup(name, imageUrl) {
+function showCardPopup(name, imageUrl, imageUrlBack) {
   // Inject directly into body — bypasses render() so Firestore snapshots can't wipe it
   document.getElementById('card-popup-root')?.remove();
   const div = document.createElement('div');
   div.id = 'card-popup-root';
+  const imgContent = imageUrlBack
+    ? `<div class="card-flip-wrap" style="perspective:600px;max-width:300px;margin:0 auto;aspect-ratio:63/88">
+      <div class="card-flip-inner" id="popup-flip-inner">
+        <div class="card-flip-front"><img src="${escHtml(imageUrl)}" style="width:100%;border-radius:8px;display:block"></div>
+        <div class="card-flip-back"><img src="${escHtml(imageUrlBack)}" style="width:100%;border-radius:8px;display:block"></div>
+      </div>
+      <button class="card-flip-btn" onclick="toggleCardFlip(this)" title="Transform">⟳</button>
+    </div>`
+    : (imageUrl
+        ? `<img src="${escHtml(imageUrl)}" alt="${escHtml(name)}">`
+        : `<div style="background:var(--bg-card);border-radius:16px;aspect-ratio:63/88;display:flex;align-items:center;justify-content:center;padding:20px;font-size:14px;color:var(--text-muted)">${escHtml(name)}</div>`);
   div.innerHTML = `<div class="card-popup-overlay" onclick="closeCardPopup()">
     <div class="card-popup-inner" onclick="event.stopPropagation()">
       <div class="card-popup-close" onclick="closeCardPopup()">×</div>
-      ${imageUrl
-        ? `<img src="${escHtml(imageUrl)}" alt="${escHtml(name)}">`
-        : `<div style="background:var(--bg-card);border-radius:16px;aspect-ratio:63/88;display:flex;align-items:center;justify-content:center;padding:20px;font-size:14px;color:var(--text-muted)">${escHtml(name)}</div>`}
+      ${imgContent}
       <div class="card-popup-name">${escHtml(name)}</div>
     </div>
   </div>`;
@@ -3716,6 +3788,7 @@ function renderMyDecksGallery() {
           ${deck.colors ? `<span style="margin-left:2px">${renderManaSymbols(deck.colors, 11)}</span>` : ''}
           ${recordStr ? `<span class="gallery-card-record">${recordStr}</span>` : ''}
         </div>
+        ${deck.tags && deck.tags.length ? renderTags(deck.tags.slice(0, 1), 'normal') : ''}
       </div>
     </div>`;
   }).join('');
@@ -3920,6 +3993,12 @@ function renderLeaderboardExpanded(playerName) {
   </div>`;
 }
 
+function toggleCardFlip(el) {
+  // el is the flip button; find the nearest .card-flip-inner ancestor
+  const inner = el.closest('.card-flip-wrap')?.querySelector('.card-flip-inner');
+  if (inner) inner.classList.toggle('flipped');
+}
+
 // ===== WINDOW EXPORTS (needed because this is a module) =====
 window.render = render;
 window.state = state;
@@ -3995,6 +4074,7 @@ window.closeGamesHistory = closeGamesHistory;
 window.toggleLeaderboardExpand = toggleLeaderboardExpand;
 window.showCardPopup = showCardPopup;
 window.closeCardPopup = closeCardPopup;
+window.toggleCardFlip = toggleCardFlip;
 window.saveAvatar = saveAvatar;
 window.openNewGameModal = openNewGameModal;
 window.closeNewGameModal = closeNewGameModal;
