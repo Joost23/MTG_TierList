@@ -3022,7 +3022,8 @@ function renderChangePasswordModal() {
   <div class="modal-overlay" onclick="closeChangePassword()">
     <div class="modal" onclick="event.stopPropagation()" style="max-width:340px">
       <h2 style="margin-bottom:6px">Change Password</h2>
-      <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px">Signed in as <strong>${escHtml(state.currentUser?.email || '')}</strong></p>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:4px">Signed in as <strong>${escHtml(state.currentUser?.email || '')}</strong></p>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:20px;opacity:0.7">⚠️ Use a unique password — don't reuse one from another account.</p>
       <div class="modal-field">
         <label>Current password</label>
         <input id="cp-current" type="password" placeholder="••••••••">
