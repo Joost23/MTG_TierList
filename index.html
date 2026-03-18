@@ -1673,8 +1673,8 @@ async function importFromUrl() {
       });
       if (cmdLines.length) {
         parts.push('// Commander\n' + cmdLines.join('\n'));
-        // Auto-populate the commander field (first commander name, strip quantity)
-        const cmdName = cmdLines[0].replace(/^\d+\s+/, '').trim();
+        // Auto-populate the commander field — use raw card name (no set suffix)
+        const cmdName = parseCardLine(cmdLines[0])?.name || cmdLines[0].replace(/^\d+\s+/, '').trim();
         const deckId = state.decklistView;
         state.decks = state.decks.map(d => d.id === deckId ? { ...d, commander: cmdName } : d);
         fbUpdateDeck(deckId, { commander: cmdName }).catch(console.error);
