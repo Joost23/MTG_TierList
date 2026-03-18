@@ -434,7 +434,15 @@ function setupFirestoreListener() {
     state.decks = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
     state.loaded = true;
     render();
-  }, err => console.error('Firestore error:', err));
+  }, err => {
+    console.error('Firestore error:', err);
+    document.getElementById('app').innerHTML = `
+      <div style="text-align:center;padding:80px 20px">
+        <p style="color:var(--tier-s-text);font-size:14px;margin-bottom:8px">Could not connect to Firestore</p>
+        <p style="color:var(--text-muted);font-size:12px;max-width:400px;margin:0 auto">Make sure Firestore is enabled in the Firebase console (Build → Firestore Database → Create database) and set to test mode.</p>
+        <p style="color:var(--text-muted);font-size:11px;margin-top:12px;font-family:monospace">${err.code || err.message}</p>
+      </div>`;
+  });
 }
 
 // ===== AUTH LISTENER =====
