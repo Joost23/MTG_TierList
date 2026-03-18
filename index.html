@@ -181,9 +181,15 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 .dl-display { margin-top: 4px; }
 /* Image grid */
 .dl-image-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(146px, 1fr)); gap: 10px; }
-.dl-card-img-wrap { position: relative; border-radius: 8px; overflow: hidden; background: var(--bg-card); border: 1px solid var(--border); aspect-ratio: 63 / 88; }
+.dl-card-img-wrap { position: relative; border-radius: 8px; overflow: hidden; background: var(--bg-card); border: 1px solid var(--border); aspect-ratio: 63 / 88; cursor: pointer; }
 .dl-card-img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.2s ease; }
 .dl-card-img-wrap:hover img { transform: scale(1.04); }
+/* Card popup */
+.card-popup-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 500; display: flex; align-items: center; justify-content: center; padding: 20px; animation: fadeIn 0.15s ease; }
+.card-popup-inner { position: relative; max-width: min(380px, 90vw); width: 100%; }
+.card-popup-inner img { width: 100%; border-radius: 16px; box-shadow: 0 24px 64px rgba(0,0,0,0.8); display: block; }
+.card-popup-name { text-align: center; color: #fff; font-size: 15px; font-weight: 600; margin-top: 12px; text-shadow: 0 1px 4px rgba(0,0,0,0.8); }
+.card-popup-close { position: absolute; top: -12px; right: -12px; width: 32px; height: 32px; border-radius: 50%; background: var(--bg-card); border: 1px solid var(--border); color: var(--text); font-size: 18px; line-height: 32px; text-align: center; cursor: pointer; }
 .dl-card-qty-badge { position: absolute; top: 5px; left: 5px; background: rgba(0,0,0,0.8); color: #fff; font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 700; padding: 1px 5px; border-radius: 4px; }
 .dl-card-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--text-muted); text-align: center; padding: 8px; }
 /* Text list */
@@ -541,6 +547,7 @@ let state = {
   playtestCardMenu: null,
   playtestZoneOverlay: null,
   showPlaytester: false,
+  cardPopup: null,
   playerAvatars: {},
   showAvatarModal: null,
 };
@@ -733,6 +740,7 @@ function render() {
   if (state.showNewGameModal) html += renderNewGameModal();
   if (state.showEndGameModal && state.gameSession) html += renderEndGameModal(state.gameSession);
   if (state.showAvatarModal) html += renderAvatarModal(state.showAvatarModal);
+  if (state.cardPopup) html += renderCardPopup();
 
   app.innerHTML = html;
 }
@@ -1512,9 +1520,12 @@ function renderTypeGroupImages(cards, commanderName) {
     html += '<div class="dl-image-grid">';
     group.forEach(c => {
       const cached = scryfallCache[c.name.toLowerCase()];
-      html += `<div class="dl-card-img-wrap">`;
-      if (cached && cached.imageUrl) {
-        html += `<img src="${escHtml(cached.imageUrl)}" alt="${escHtml(c.name)}" loading="lazy" title="${escHtml(c.name)}">`;
+      const imgUrl = cached?.imageUrl || '';
+      const nameJs = escHtml(c.name).replace(/'/g, "\\'");
+      const imgJs = imgUrl.replace(/'/g, "\\'");
+      html += `<div class="dl-card-img-wrap" onclick="showCardPopup('${nameJs}','${imgJs}')">`;
+      if (imgUrl) {
+        html += `<img src="${escHtml(imgUrl)}" alt="${escHtml(c.name)}" loading="lazy" title="${escHtml(c.name)}">`;
       } else {
         html += `<div class="dl-card-placeholder">${escHtml(c.name)}</div>`;
       }
@@ -2877,6 +2888,21 @@ function renderAvatar(playerName, size = 36) {
 function openAvatarModal(playerName) { state.showAvatarModal = playerName; render(); }
 function closeAvatarModal() { state.showAvatarModal = null; render(); }
 
+function showCardPopup(name, imageUrl) { state.cardPopup = { name, imageUrl }; render(); }
+function closeCardPopup() { state.cardPopup = null; render(); }
+function renderCardPopup() {
+  const { name, imageUrl } = state.cardPopup;
+  return `<div class="card-popup-overlay" onclick="closeCardPopup()">
+    <div class="card-popup-inner" onclick="event.stopPropagation()">
+      <div class="card-popup-close" onclick="closeCardPopup()">×</div>
+      ${imageUrl
+        ? `<img src="${escHtml(imageUrl)}" alt="${escHtml(name)}">`
+        : `<div style="background:var(--bg-card);border-radius:16px;aspect-ratio:63/88;display:flex;align-items:center;justify-content:center;padding:20px;font-size:14px;color:var(--text)">${escHtml(name)}</div>`}
+      <div class="card-popup-name">${escHtml(name)}</div>
+    </div>
+  </div>`;
+}
+
 async function saveAvatar(playerName, emoji) {
   state.playerAvatars = { ...state.playerAvatars, [playerName]: emoji };
   state.showAvatarModal = null;
@@ -3223,6 +3249,8 @@ window.ptCloseZone = ptCloseZone;
 window.openPlaytester = openPlaytester;
 window.openAvatarModal = openAvatarModal;
 window.closeAvatarModal = closeAvatarModal;
+window.showCardPopup = showCardPopup;
+window.closeCardPopup = closeCardPopup;
 window.saveAvatar = saveAvatar;
 window.openNewGameModal = openNewGameModal;
 window.closeNewGameModal = closeNewGameModal;
