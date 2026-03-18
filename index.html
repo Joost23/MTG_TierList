@@ -3698,9 +3698,9 @@ async function loadGalleryImages() {
   for (const deck of myDecks) {
     const key = (deck.commander || '').toLowerCase();
     if (!key) continue;
-    // If we already have a string URL, skip
+    // If we already have a result in cache (string URL or null=not found), skip
     const existing = scryfallCache[key];
-    if (typeof existing === 'string') continue;
+    if (key in scryfallCache && typeof existing !== 'object') continue; // string URL or null
     // If we have an object with imageUrl, use that immediately (no refetch needed)
     if (existing?.imageUrl) {
       scryfallCache[key] = existing.imageUrl;
@@ -3708,15 +3708,15 @@ async function loadGalleryImages() {
       continue;
     }
     try {
-      const resp = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(deck.commander)}&format=json`);
-      if (!resp.ok) continue;
+      // For DFCs stored as "Front // Back", only search the front face name
+      const searchName = deck.commander.includes(' // ') ? deck.commander.split(' // ')[0].trim() : deck.commander;
+      const resp = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(searchName)}&format=json`);
+      if (!resp.ok) { scryfallCache[key] = null; continue; } // cache miss to skip future retries
       const data = await resp.json();
       const iuris = data.image_uris || data.card_faces?.[0]?.image_uris;
       const imgUrl = iuris?.art_crop || iuris?.normal || null;
-      if (imgUrl) {
-        scryfallCache[key] = imgUrl;
-        needsRender = true;
-      }
+      scryfallCache[key] = imgUrl; // cache result (null if not found)
+      if (imgUrl) needsRender = true;
     } catch (e) {
       // ignore fetch errors
     }
@@ -3745,13 +3745,14 @@ async function loadDeckCardArts() {
       scryfallCache[key] = imgUrl;
     } else {
       try {
-        const resp = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(commander)}&format=json`);
+        const searchName = commander.includes(' // ') ? commander.split(' // ')[0].trim() : commander;
+        const resp = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(searchName)}&format=json`);
         if (resp.ok) {
           const data = await resp.json();
           const iuris = data.image_uris || data.card_faces?.[0]?.image_uris;
           imgUrl = iuris?.art_crop || iuris?.normal || null;
-          if (imgUrl) scryfallCache[key] = imgUrl;
         }
+        scryfallCache[key] = imgUrl; // cache result (null if not found)
       } catch(e) {}
       await new Promise(r => setTimeout(r, 80));
     }
