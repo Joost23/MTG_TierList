@@ -2034,6 +2034,7 @@ async function ptCreate() {
   state.playtestGameId = sessionId;
   state.playtestViewUid = myUid;
   ptListen(sessionId);
+  render();
 }
 
 async function ptJoin(sessionId) {
@@ -2047,6 +2048,7 @@ async function ptJoin(sessionId) {
   state.playtestGameId = sessionId;
   state.playtestViewUid = myUid;
   ptListen(sessionId);
+  render();
 }
 
 async function ptStart() {
@@ -2294,8 +2296,8 @@ function renderPTLobby() {
         }).join('')}
       </div>
       ${isHost
-        ? `<button class="btn-primary" onclick="ptStart()" ${players.length < 2?'disabled':''} style="width:100%;padding:13px;font-size:14px">
-            ${players.length < 2 ? 'Waiting for players to join…' : `▶ Start Game (${players.length} players)`}
+        ? `<button class="btn-primary" onclick="ptStart()" style="width:100%;padding:13px;font-size:14px">
+            ▶ Start Game (${players.length} player${players.length!==1?'s':''})
            </button>`
         : `<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px">Waiting for host to start the game…</div>`}
     </div>
@@ -3059,6 +3061,7 @@ function renderActiveSession() {
 }
 
 // ===== WINDOW EXPORTS (needed because this is a module) =====
+window.render = render;
 window.state = state;
 window.setFilter = setFilter;
 window.setView = setView;
