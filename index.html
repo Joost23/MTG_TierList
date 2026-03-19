@@ -3812,9 +3812,8 @@ async function loadGalleryImages() {
     // If we already have a result in cache (string URL or null=not found), skip
     const existing = scryfallCache[key];
     if (key in scryfallCache && typeof existing !== 'object') continue; // string URL or null
-    // If we have an object with imageUrl, use that immediately (no refetch needed)
+    // If we have an object with imageUrl, read it without overwriting the rich cache entry
     if (existing?.imageUrl) {
-      scryfallCache[key] = existing.imageUrl;
       needsRender = true;
       continue;
     }
@@ -3826,7 +3825,15 @@ async function loadGalleryImages() {
       const data = await resp.json();
       const iuris = data.image_uris || data.card_faces?.[0]?.image_uris;
       const imgUrl = iuris?.art_crop || iuris?.normal || null;
-      scryfallCache[key] = imgUrl; // cache result (null if not found)
+      const backIuris = data.card_faces?.[1]?.image_uris;
+      const isDF = ['transform','modal_dfc','double_faced_token','reversible_card'].includes(data.layout);
+      // Store as object so imageUrlBack/isDoubleFaced survive later reads
+      scryfallCache[key] = imgUrl ? {
+        imageUrl: imgUrl,
+        imageUrlBack: backIuris?.normal ?? null,
+        isDoubleFaced: isDF,
+        backFaceName: data.card_faces?.[1]?.name ?? null,
+      } : null;
       if (imgUrl) needsRender = true;
     } catch (e) {
       // ignore fetch errors
@@ -3853,7 +3860,7 @@ async function loadDeckCardArts() {
       imgUrl = existing;
     } else if (existing?.imageUrl) {
       imgUrl = existing.imageUrl;
-      scryfallCache[key] = imgUrl;
+      // Don't overwrite the rich cache object with a plain string — preserves imageUrlBack etc.
     } else {
       try {
         const searchName = commander.includes(' // ') ? commander.split(' // ')[0].trim() : commander;
@@ -3862,8 +3869,13 @@ async function loadDeckCardArts() {
           const data = await resp.json();
           const iuris = data.image_uris || data.card_faces?.[0]?.image_uris;
           imgUrl = iuris?.art_crop || iuris?.normal || null;
+          const backIuris = data.card_faces?.[1]?.image_uris;
+          const isDF = ['transform','modal_dfc','double_faced_token','reversible_card'].includes(data.layout);
+          // Store object so imageUrlBack survives later reads (never overwrite existing full objects)
+          if (!(scryfallCache[key]?.imageUrlBack)) {
+            scryfallCache[key] = imgUrl ? { imageUrl: imgUrl, imageUrlBack: backIuris?.normal ?? null, isDoubleFaced: isDF, backFaceName: data.card_faces?.[1]?.name ?? null } : null;
+          }
         }
-        scryfallCache[key] = imgUrl; // cache result (null if not found)
       } catch(e) {}
       await new Promise(r => setTimeout(r, 80));
     }
