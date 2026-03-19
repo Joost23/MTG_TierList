@@ -397,11 +397,39 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 .pt-action-bar::-webkit-scrollbar { display:none; }
 .pt-action-btn { font-size:12px;padding:7px 14px;white-space:nowrap;flex-shrink:0;border-radius:var(--radius-sm); }
 .pt-action-danger { color:var(--tier-s-text) !important;border-color:rgba(226,75,74,0.5) !important; }
+.pt-hand-wrap { position:relative;flex-shrink:0; }
 .pt-hand { display:flex;gap:3px;padding:6px 8px 8px;background:transparent;border:none;overflow-x:auto;flex-shrink:0;min-height:110px;max-height:130px;scrollbar-width:none; }
 .pt-hand::-webkit-scrollbar { display:none; }
-.pt-hand-card { flex-shrink:0;cursor:grab;border-radius:6px;transition:transform 0.12s ease;touch-action:none;user-select:none;position:relative; }
-.pt-hand-card.pt-hand-active { transform:translateY(-10px);z-index:50; }
+.pt-hand.fan-mode { overflow:visible;gap:0; }
+.pt-hand-card { flex-shrink:0;cursor:grab;border-radius:6px;transition:transform 0.12s ease,margin-left 0.12s ease;touch-action:none;user-select:none;position:relative; }
+.pt-hand-card.pt-hand-active { transform:translateY(-14px) scale(1.06);z-index:60; }
+.pt-hand.fan-mode .pt-hand-card.pt-hand-active { margin-left:8px !important;margin-right:8px; }
 .pt-hand-card.pt-dragging-src { opacity:0.3; }
+.pt-hand-badge { position:absolute;top:-8px;left:8px;background:var(--accent);color:#fff;font-size:10px;font-weight:700;padding:1px 7px;border-radius:99px;font-family:'JetBrains Mono',monospace;z-index:10;pointer-events:none; }
+.pt-hand-expand-btn { position:absolute;top:-22px;right:6px;font-size:10px;padding:2px 8px;background:rgba(0,0,0,0.7);border:1px solid var(--border);border-radius:99px;color:var(--text-muted);cursor:pointer;z-index:10; }
+/* Hand expanded overlay */
+.pt-hand-overlay { position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:550;display:flex;flex-direction:column;overscroll-behavior:contain; }
+.pt-hand-overlay-header { display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:var(--bg-card);border-bottom:1px solid var(--border);flex-shrink:0; }
+.pt-hand-overlay-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;padding:16px;overflow-y:auto;flex:1; }
+.pt-hand-overlay-card { cursor:pointer;border-radius:8px;overflow:hidden;position:relative;border:2px solid transparent;transition:border-color 0.12s,transform 0.12s;background:var(--bg-surface); }
+.pt-hand-overlay-card:hover,.pt-hand-overlay-card:active { border-color:var(--accent);transform:scale(1.04); }
+/* Token badge on battlefield */
+.pt-token-badge { position:absolute;top:-4px;right:-4px;background:var(--tier-a);color:#fff;font-size:8px;font-weight:700;width:14px;height:14px;border-radius:50%;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:5;border:1px solid var(--bg-card); }
+/* Token panel */
+.pt-token-panel { position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:550;display:flex;align-items:flex-end; }
+.pt-token-panel-inner { width:100%;max-height:82vh;background:var(--bg-card);border-radius:18px 18px 0 0;display:flex;flex-direction:column; }
+.pt-token-panel-header { display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);flex-shrink:0; }
+.pt-token-panel-body { overflow-y:auto;flex:1; }
+.pt-token-panel-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px;padding:14px; }
+.pt-token-tile { cursor:pointer;border-radius:8px;overflow:hidden;border:2px solid transparent;transition:border-color 0.12s;background:var(--bg-surface); }
+.pt-token-tile:hover,.pt-token-tile:active { border-color:var(--accent); }
+.pt-token-tile-label { font-size:10px;color:var(--text-secondary);text-align:center;padding:4px 2px 5px;line-height:1.3; }
+.pt-token-custom { padding:12px 14px;border-top:1px solid var(--border);flex-shrink:0; }
+.pt-token-custom-title { font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px; }
+.pt-token-custom-row { display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px; }
+.pt-token-qty-row { display:flex;gap:6px;align-items:center; }
+.pt-token-qty-btn { font-size:12px;padding:5px 10px;border-radius:var(--radius-sm); }
+.pt-token-qty-btn.active { background:var(--accent);color:#fff;border-color:var(--accent); }
 .pt-card-menu { position:fixed;background:var(--bg-card);border:1px solid var(--border-hover);border-radius:var(--radius);padding:8px;z-index:500;min-width:210px;max-width:280px;box-shadow:0 8px 32px rgba(0,0,0,0.6); }
 .pt-card-menu-name { font-size:11px;color:var(--text-muted);padding:0 6px 8px;border-bottom:1px solid var(--border);margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-style:italic; }
 .pt-menu-btn { display:block;width:100%;text-align:left;padding:8px 10px;font-size:13px;border:none;background:transparent;color:var(--text);border-radius:var(--radius-sm);cursor:pointer; }
@@ -752,6 +780,10 @@ let state = {
   snapToGrid: true,
   ptCardSize: localStorage.getItem('ptCardSize') || 'M',
   playtestSettings: false,
+  playtestHandExpanded: false,
+  playtestTokenPanel: false,
+  ptTokenQty: 1,
+  ptTokenDraft: { name: '', pt: '', color: 'G' },
   showPlaytester: false,
   playerAvatars: {},
   showAvatarModal: null,
@@ -765,6 +797,7 @@ let state = {
 };
 
 const scryfallCache = {};
+const tokenDataCache = {}; // scryfallId → { scryfallId, name, imageUrl, power, toughness, typeLine, colors, oracleText }
 let ptDrag = null; // active drag: { cardId, fromZone, ghost, startX, startY, originEl }
 
 // ===== FIRESTORE HELPERS =====
@@ -2206,7 +2239,8 @@ async function fetchScryfallBatch(cards) {
           typeLine: card.type_line || card.card_faces?.[0]?.type_line || '',
           manaCost: card.mana_cost || card.card_faces?.[0]?.mana_cost || '',
           cmc: card.cmc ?? 0,
-          colors: card.colors || card.card_faces?.[0]?.colors || []
+          colors: card.colors || card.card_faces?.[0]?.colors || [],
+          tokenIds: (card.all_parts || []).filter(p => p.component === 'token').map(p => p.id),
         };
         scryfallCache[card.name.toLowerCase()] = cacheEntry;
         if (card.card_faces?.[0]?.name) {
@@ -2225,6 +2259,39 @@ async function fetchScryfallBatch(cards) {
           if (scryfallCache[frontKey]) scryfallCache[key] = scryfallCache[frontKey];
         }
       });
+      // Collect token IDs from all_parts and fetch into tokenDataCache
+      const newTokenIds = [];
+      (data.data || []).forEach(card => {
+        (card.all_parts || []).forEach(part => {
+          if (part.component === 'token' && part.id && !(part.id in tokenDataCache)) newTokenIds.push(part.id);
+        });
+      });
+      if (newTokenIds.length) {
+        await new Promise(r => setTimeout(r, 100));
+        try {
+          const tokenBatches = [];
+          for (let j = 0; j < newTokenIds.length; j += 75) tokenBatches.push(newTokenIds.slice(j, j + 75));
+          for (const tb of tokenBatches) {
+            const tr = await fetch("https://api.scryfall.com/cards/collection", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "User-Agent": "MTGTierList/1.0" },
+              body: JSON.stringify({ identifiers: tb.map(id => ({ id })) }),
+            });
+            const td = await tr.json();
+            (td.data || []).forEach(tk => {
+              const tiuris = tk.image_uris || tk.card_faces?.[0]?.image_uris;
+              tokenDataCache[tk.id] = {
+                scryfallId: tk.id, name: tk.name,
+                imageUrl: tiuris?.normal ?? tiuris?.large ?? null,
+                power: tk.power ?? null, toughness: tk.toughness ?? null,
+                typeLine: tk.type_line || '', colors: tk.colors || [],
+                oracleText: tk.oracle_text || '',
+              };
+            });
+            tb.forEach(id => { if (!(id in tokenDataCache)) tokenDataCache[id] = null; });
+          }
+        } catch(e) { /* skip */ }
+      }
     } catch (e) { /* network error — leave uncached */ }
   }
 }
@@ -2243,6 +2310,36 @@ async function loadAndRenderImages(deckId) {
     state.decklistImportStatus = "";
   }
   render();
+}
+
+function getDeckTokens(deckId) {
+  const deck = state.decks.find(d => d.id === deckId);
+  if (!deck) return [];
+  const sects = parseDecklistSections(deck.decklist || '');
+  const cards = [...sects.main];
+  const tokenIds = new Set();
+  const sourceMap = {}; // tokenId → [cardName, ...]
+  cards.forEach(c => {
+    const cached = scryfallCache[c.name.toLowerCase()];
+    if (!cached) return;
+    (cached.tokenIds || []).forEach(id => {
+      tokenIds.add(id);
+      if (!sourceMap[id]) sourceMap[id] = [];
+      if (!sourceMap[id].includes(c.name)) sourceMap[id].push(c.name);
+    });
+  });
+  const results = [];
+  const seen = new Set();
+  tokenIds.forEach(id => {
+    const td = tokenDataCache[id];
+    if (!td) return;
+    // Deduplicate by name+P/T+typeLine
+    const key = `${td.name}|${td.power}|${td.toughness}|${td.typeLine}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    results.push({ ...td, sourceCards: sourceMap[id] || [] });
+  });
+  return results.sort((a, b) => a.name.localeCompare(b.name));
 }
 
 // Deployed Cloudflare Worker URL — update this after deploying moxfield-proxy/worker.js
@@ -2978,6 +3075,14 @@ async function ptMoveCard(cardId, fromZone, toZone) {
     pubUp[`players.${uid}.${fromZone}`] = arr;
   }
   card = { ...card, zone: toZone, tapped: false };
+  // Tokens cease to exist when leaving the battlefield
+  if (card.isToken && toZone !== 'battlefield') {
+    if (PRIV.includes(fromZone) || PRIV.includes(toZone)) await ptPriv(newPriv);
+    if (Object.keys(pubUp).length) await ptPub(pubUp);
+    ptCloseMenu();
+    showToast(`${card.name} token removed (tokens cease to exist off battlefield)`);
+    return;
+  }
   if (toZone === 'battlefield') {
     const existingBf = pubUp[`players.${uid}.battlefield`] || [...(player.battlefield || [])];
     card = { ...card, ...ptDefaultPos(existingBf) };
@@ -3159,6 +3264,7 @@ function renderPTGame() {
           ${img}
           ${card.counters?`<div class="pt-counter">${card.counters}</div>`:''}
           ${card.isCommander?`<div class="pt-cmd-badge">⭐</div>`:''}
+          ${card.isToken?`<div class="pt-token-badge">T</div>`:''}
         </div>`;
       }).join('')}
     </div>
@@ -3174,6 +3280,7 @@ function renderPTGame() {
     <button class="pt-action-btn" onclick="ptPromptMill()">Mill</button>
     <button class="pt-action-btn" onclick="ptShuffle()">Shuffle</button>
     <button class="pt-action-btn" onclick="ptNextTurn()">Next Turn</button>
+    <button class="pt-action-btn${state.playtestTokenPanel?' active':''}" onclick="event.stopPropagation();state.playtestTokenPanel=!state.playtestTokenPanel;state.playtestSettings=false;render()">Token</button>
     <button class="pt-action-btn${state.playtestSettings?' active':''}" onclick="event.stopPropagation();ptToggleSettings()" style="padding:7px 10px">⚙</button>
   </div>${settingsHtml}` : '';
 
@@ -3184,17 +3291,38 @@ function renderPTGame() {
 
   // Hand (own board only)
   const hand = state.playtestPrivate?.hand || [];
-  const handHtml = isMyBoard ? `<div class="pt-hand">
-    ${hand.length===0?`<div style="color:var(--text-muted);font-size:12px;display:flex;align-items:center;padding:0 4px">Empty hand</div>`:''}
-    ${hand.map(card => {
-      const hw = ptHandW();
-      const hh = Math.round(hw * 88 / 63);
-      const img = card.imageUrl
-        ? `<img src="${escHtml(card.imageUrl)}" style="width:${hw}px;border-radius:6px;display:block;pointer-events:none" loading="lazy">`
-        : `<div class="pt-hand-card-back" style="width:${hw}px;height:${hh}px">${escHtml(card.name.slice(0,16))}</div>`;
-      return `<div class="pt-hand-card" data-hand-card-id="${card.cardId}"
-        onpointerdown="ptHandPointerDown(event,'${card.cardId}')">${img}</div>`;
-    }).join('')}
+  const FAN_THRESHOLD = 8;
+  const isFan = hand.length >= FAN_THRESHOLD;
+  const hw = ptHandW();
+  let fanMargin = 3;
+  if (isFan && hand.length > 1) {
+    const containerW = Math.min(window.innerWidth, 600) - 20;
+    const availableW = containerW - hw;
+    const overlapPerCard = availableW / (hand.length - 1);
+    const margin = overlapPerCard - hw;
+    const minPeek = hw * 0.2;
+    fanMargin = Math.max(margin, -(hw - minPeek));
+  }
+  const handExpandedOverlay = (isMyBoard && state.playtestHandExpanded) ? renderPTHandOverlay(hand) : '';
+  const tokenPanelHtml = (isMyBoard && state.playtestTokenPanel) ? renderPTTokenPanel() : '';
+  const handHtml = isMyBoard ? `<div class="pt-hand-wrap">
+    ${hand.length > 0 ? `<span class="pt-hand-badge">${hand.length}</span>` : ''}
+    ${isFan ? `<button class="pt-hand-expand-btn" onclick="state.playtestHandExpanded=true;render()">⤢ All</button>` : ''}
+    <div class="pt-hand${isFan?' fan-mode':''}">
+      ${hand.length===0?`<div style="color:var(--text-muted);font-size:12px;display:flex;align-items:center;padding:0 4px">Empty hand</div>`:''}
+      ${hand.map((card, idx) => {
+        const hh = Math.round(hw * 88 / 63);
+        const img = card.imageUrl
+          ? `<img src="${escHtml(card.imageUrl)}" style="width:${hw}px;border-radius:6px;display:block;pointer-events:none" loading="lazy">`
+          : `<div class="pt-hand-card-back" style="width:${hw}px;height:${hh}px">${escHtml(card.name.slice(0,16))}</div>`;
+        const marginStyle = isFan && idx > 0 ? `margin-left:${Math.round(fanMargin)}px;` : '';
+        return `<div class="pt-hand-card" data-hand-card-id="${card.cardId}" data-hand-idx="${idx}"
+          style="${marginStyle}"
+          onpointerdown="ptHandPointerDown(event,'${card.cardId}')">${img}</div>`;
+      }).join('')}
+    </div>
+    ${handExpandedOverlay}
+    ${tokenPanelHtml}
   </div>` : '';
 
   // Zone overlay
@@ -3518,35 +3646,40 @@ function ptHideHandPreview() {
 function ptInitHandHover() {
   const hand = document.querySelector('.pt-hand');
   if (!hand) return;
-  // Re-attach every render since .pt-hand is recreated
+  const wrap = hand.closest('.pt-hand-wrap') || hand;
   hand.addEventListener('pointermove', function(e) {
-    // Skip if dragging
     if (ptHandDrag || ptDrag) return;
     const cards = Array.from(this.querySelectorAll('.pt-hand-card'));
     if (!cards.length) return;
     const hw = ptHandW();
-    const gap = 3;
-    const containerRect = this.getBoundingClientRect();
-    const relX = e.clientX - containerRect.left + this.scrollLeft;
-    const idx = Math.max(0, Math.min(Math.floor(relX / (hw + gap)), cards.length - 1));
-
-    // Highlight original card
+    const isFan = this.classList.contains('fan-mode');
+    let idx;
+    if (isFan) {
+      // Use actual rendered positions — rightmost card whose left edge is ≤ cursor
+      idx = 0;
+      for (let i = 0; i < cards.length; i++) {
+        const cr = cards[i].getBoundingClientRect();
+        if (e.clientX >= cr.left - 2) idx = i;
+        else break;
+      }
+    } else {
+      const containerRect = this.getBoundingClientRect();
+      const relX = e.clientX - containerRect.left + this.scrollLeft;
+      idx = Math.max(0, Math.min(Math.floor(relX / (hw + 3)), cards.length - 1));
+    }
     cards.forEach((c, i) => c.classList.toggle('pt-hand-active', i === idx));
-
-    // Show fixed preview above the hand
     const card = cards[idx];
     const img = card.querySelector('img');
     if (!img || !img.src || img.src === window.location.href) return;
-
     const previewW = Math.round(hw * 2.8);
     const previewH = Math.round(previewW * 88 / 63);
     const cardRect = card.getBoundingClientRect();
+    const wrapRect = wrap.getBoundingClientRect();
     const vw = window.innerWidth;
     let left = cardRect.left + cardRect.width / 2 - previewW / 2;
-    let top = containerRect.top - previewH - 10;
+    let top = wrapRect.top - previewH - 10;
     left = Math.max(8, Math.min(left, vw - previewW - 8));
     top = Math.max(8, top);
-
     const el = ptGetOrCreatePreview();
     const previewImg = el.querySelector('img');
     if (previewImg.src !== img.src) previewImg.src = img.src;
@@ -3557,6 +3690,113 @@ function ptInitHandHover() {
     requestAnimationFrame(() => { if (el) el.style.opacity = '1'; });
   });
   hand.addEventListener('pointerleave', ptHideHandPreview);
+}
+
+// ── Hand expanded overlay ──────────────────────────────
+function renderPTHandOverlay(hand) {
+  return `<div class="pt-hand-overlay" onclick="state.playtestHandExpanded=false;render()">
+    <div class="pt-hand-overlay-header" onclick="event.stopPropagation()">
+      <span style="font-weight:600;font-size:14px">Your Hand <span style="color:var(--text-muted);font-weight:400">(${hand.length} cards)</span></span>
+      <button onclick="state.playtestHandExpanded=false;render()" style="padding:5px 14px;font-size:13px">✕</button>
+    </div>
+    <div class="pt-hand-overlay-grid" onclick="event.stopPropagation()">
+      ${hand.map(card => {
+        const img = card.imageUrl
+          ? `<img src="${escHtml(card.imageUrl)}" style="width:100%;border-radius:6px;display:block" loading="lazy">`
+          : `<div style="aspect-ratio:63/88;background:var(--bg-surface);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-muted);padding:8px;text-align:center">${escHtml(card.name)}</div>`;
+        return `<div class="pt-hand-overlay-card" onclick="state.playtestHandExpanded=false;ptOpenMenu('${card.cardId}','hand',event)">
+          ${img}
+          <div style="font-size:10px;color:var(--text-muted);padding:3px 4px;text-align:center;background:rgba(0,0,0,0.7);position:absolute;bottom:0;left:0;right:0;border-radius:0 0 6px 6px">${escHtml(card.name.slice(0,20))}</div>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>`;
+}
+
+// ── Token creation panel ───────────────────────────────
+function renderPTTokenPanel() {
+  const deck = state.decks.find(d => d.id === (state.playtestGame?.players?.[state.currentUser?.uid]?.deckId));
+  const tokens = deck ? getDeckTokens(deck.id) : [];
+  const qty = state.ptTokenQty || 1;
+  const draft = state.ptTokenDraft || { name: '', pt: '', color: 'G' };
+  const TOKEN_COLORS = { W:'#C8A84B', U:'#1070C8', B:'#4B4B4B', R:'#D0392A', G:'#1A7A3C', C:'#888' };
+  return `<div class="pt-token-panel" onclick="state.playtestTokenPanel=false;render()">
+    <div class="pt-token-panel-inner" onclick="event.stopPropagation()">
+      <div class="pt-token-panel-header">
+        <span style="font-weight:600;font-size:14px">Create Token</span>
+        <button onclick="state.playtestTokenPanel=false;render()" style="padding:5px 14px;font-size:13px">✕</button>
+      </div>
+      <div class="pt-token-panel-body">
+        ${tokens.length ? `
+        <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;padding:10px 14px 4px">Deck Tokens</div>
+        <div class="pt-token-panel-grid">
+          ${tokens.map(tk => `
+            <div class="pt-token-tile" onclick="ptCreateTokenById('${escHtml(tk.scryfallId)}',${qty})">
+              ${tk.imageUrl ? `<img src="${escHtml(tk.imageUrl)}" class="pt-token-tile-img" loading="lazy" alt="${escHtml(tk.name)}">` : `<div style="aspect-ratio:63/88;background:var(--bg-surface);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-muted);padding:6px;text-align:center">${escHtml(tk.name)}</div>`}
+              <div class="pt-token-tile-label">${escHtml(tk.name)}${tk.power!=null?` (${tk.power}/${tk.toughness})`:''}</div>
+            </div>`).join('')}
+        </div>` : `<div style="padding:16px;font-size:13px;color:var(--text-muted)">No tokens found — import a decklist and view images first to load token data.</div>`}
+        <div class="pt-token-custom">
+          <div class="pt-token-custom-title">Custom Token</div>
+          <div class="pt-token-custom-row">
+            <input style="flex:2;min-width:80px;font-size:12px" placeholder="Token name" value="${escHtml(draft.name)}" oninput="state.ptTokenDraft.name=this.value">
+            <input style="flex:1;min-width:48px;font-size:12px" placeholder="P/T" value="${escHtml(draft.pt)}" oninput="state.ptTokenDraft.pt=this.value">
+            <select style="font-size:12px;padding:6px 8px" onchange="state.ptTokenDraft.color=this.value">
+              ${Object.entries(TOKEN_COLORS).map(([c,_]) => `<option value="${c}" ${draft.color===c?'selected':''}>${c}</option>`).join('')}
+            </select>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            <span style="font-size:12px;color:var(--text-muted)">Qty:</span>
+            <div class="pt-token-qty-row">
+              ${[1,2,3,5,10].map(n => `<button class="pt-token-qty-btn${qty===n?' active':''}" onclick="state.ptTokenQty=${n};render()">${n}</button>`).join('')}
+            </div>
+          </div>
+          <button class="btn-primary" style="width:100%;font-size:13px;padding:8px" onclick="ptCreateCustomToken()" ${!draft.name.trim()?'disabled':''}>Create ${qty > 1 ? qty + '× ' : ''}${escHtml(draft.name||'Token')}</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function ptCreateTokenById(scryfallId, qty = 1) {
+  const tokenData = tokenDataCache[scryfallId];
+  if (tokenData) await ptCreateToken(tokenData, qty);
+}
+
+async function ptCreateToken(tokenData, qty = 1) {
+  const uid = state.currentUser?.uid;
+  const player = state.playtestGame?.players?.[uid];
+  if (!player) return;
+  const existingBf = [...(player.battlefield || [])];
+  const newCards = [];
+  for (let i = 0; i < qty; i++) {
+    const pos = ptDefaultPos([...existingBf, ...newCards]);
+    newCards.push({
+      cardId: genId(), name: tokenData.name,
+      imageUrl: tokenData.imageUrl || null,
+      zone: 'battlefield', tapped: false, counters: 0,
+      isCommander: false, isToken: true,
+      power: tokenData.power || null, toughness: tokenData.toughness || null,
+      x: pos.x, y: pos.y,
+    });
+  }
+  await ptPub({ [`players.${uid}.battlefield`]: [...existingBf, ...newCards] });
+  state.playtestTokenPanel = false;
+  render();
+}
+
+async function ptCreateCustomToken() {
+  const draft = state.ptTokenDraft || { name: '', pt: '', color: 'G' };
+  if (!draft.name.trim()) return;
+  const [power, toughness] = (draft.pt || '').split('/').map(s => s.trim());
+  const tokenData = {
+    name: draft.name.trim(), imageUrl: null,
+    power: power || null, toughness: toughness || null,
+    typeLine: `Token${power ? ' Creature' : ''}`, colors: [draft.color],
+  };
+  await ptCreateToken(tokenData, state.ptTokenQty || 1);
+  state.ptTokenDraft = { name: '', pt: '', color: 'G' };
+  state.ptTokenQty = 1;
 }
 
 // ── Drag-and-drop: pointer events ─────────────────────
@@ -5215,6 +5455,9 @@ window.ptHideHandPreview = ptHideHandPreview;
 window.ptSetSize = ptSetSize;
 window.ptToggleSettings = ptToggleSettings;
 window.ptPlayCardAt = ptPlayCardAt;
+window.ptCreateToken = ptCreateToken;
+window.ptCreateTokenById = ptCreateTokenById;
+window.ptCreateCustomToken = ptCreateCustomToken;
 window.ptPromptScry = ptPromptScry;
 window.ptPromptMill = ptPromptMill;
 window.ptViewLibTop = ptViewLibTop;
