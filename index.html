@@ -1369,7 +1369,8 @@ function renderDeckCard(deck, tier, index) {
 
   const artKey = (deck.commander || '').toLowerCase();
   const artCacheVal = scryfallCache[artKey];
-  const artUrl = typeof artCacheVal === 'string' ? artCacheVal : (artCacheVal?.imageUrl || null);
+  // Prefer art_crop for card backgrounds; fall back to normal
+  const artUrl = typeof artCacheVal === 'string' ? artCacheVal : (artCacheVal?.imageUrlArtCrop || artCacheVal?.imageUrl || null);
 
   let card = `<div class="deck-card" style="border-left-color:${tier.color};animation-delay:${delay}ms" data-art-id="${escHtml(deck.id)}" onclick="toggleExpand('${deck.id}')">
     <div class="deck-card-art${artUrl ? ' loaded' : ''}" style="${artUrl ? `background-image:url('${escHtml(artUrl)}')` : ''}" data-art-commander="${artUrl ? '' : escHtml(deck.commander)}"></div>
@@ -3771,7 +3772,8 @@ function renderMyDecksGallery() {
     const losses = games.filter(g => g.result === 'loss').length;
     const cacheKey = (deck.commander || '').toLowerCase();
     const cacheVal = scryfallCache[cacheKey];
-    const cachedImg = typeof cacheVal === 'string' ? cacheVal : (cacheVal?.imageUrl || null);
+    // Prefer art_crop for the 16:9 gallery cards; fall back to normal card image
+    const cachedImg = typeof cacheVal === 'string' ? cacheVal : (cacheVal?.imageUrlArtCrop || cacheVal?.imageUrl || null);
     const imgHtml = cachedImg
       ? `<img class="gallery-card-img" src="${escHtml(cachedImg)}" alt="" loading="lazy" onerror="this.style.display='none'">`
       : `<div class="gallery-card-placeholder">🧙</div>`;
@@ -3824,17 +3826,19 @@ async function loadGalleryImages() {
       if (!resp.ok) { scryfallCache[key] = null; continue; } // cache miss to skip future retries
       const data = await resp.json();
       const iuris = data.image_uris || data.card_faces?.[0]?.image_uris;
-      const imgUrl = iuris?.art_crop || iuris?.normal || null;
+      const imgNormal = iuris?.normal || iuris?.large || null;
+      const imgArtCrop = iuris?.art_crop || imgNormal;
       const backIuris = data.card_faces?.[1]?.image_uris;
       const isDF = ['transform','modal_dfc','double_faced_token','reversible_card'].includes(data.layout);
-      // Store as object so imageUrlBack/isDoubleFaced survive later reads
-      scryfallCache[key] = imgUrl ? {
-        imageUrl: imgUrl,
+      // imageUrl = normal (for card display); imageUrlArtCrop = art_crop (for gallery/backgrounds)
+      scryfallCache[key] = imgNormal ? {
+        imageUrl: imgNormal,
+        imageUrlArtCrop: imgArtCrop,
         imageUrlBack: backIuris?.normal ?? null,
         isDoubleFaced: isDF,
         backFaceName: data.card_faces?.[1]?.name ?? null,
       } : null;
-      if (imgUrl) needsRender = true;
+      if (imgNormal) needsRender = true;
     } catch (e) {
       // ignore fetch errors
     }
@@ -3859,7 +3863,7 @@ async function loadDeckCardArts() {
     if (typeof existing === 'string') {
       imgUrl = existing;
     } else if (existing?.imageUrl) {
-      imgUrl = existing.imageUrl;
+      imgUrl = existing.imageUrlArtCrop || existing.imageUrl; // prefer art_crop for backgrounds
       // Don't overwrite the rich cache object with a plain string — preserves imageUrlBack etc.
     } else {
       try {
@@ -3868,12 +3872,13 @@ async function loadDeckCardArts() {
         if (resp.ok) {
           const data = await resp.json();
           const iuris = data.image_uris || data.card_faces?.[0]?.image_uris;
-          imgUrl = iuris?.art_crop || iuris?.normal || null;
+          const imgNormal = iuris?.normal || iuris?.large || null;
+          const imgArtCrop = iuris?.art_crop || imgNormal;
+          imgUrl = imgNormal; // use normal for card display
           const backIuris = data.card_faces?.[1]?.image_uris;
           const isDF = ['transform','modal_dfc','double_faced_token','reversible_card'].includes(data.layout);
-          // Store object so imageUrlBack survives later reads (never overwrite existing full objects)
           if (!(scryfallCache[key]?.imageUrlBack)) {
-            scryfallCache[key] = imgUrl ? { imageUrl: imgUrl, imageUrlBack: backIuris?.normal ?? null, isDoubleFaced: isDF, backFaceName: data.card_faces?.[1]?.name ?? null } : null;
+            scryfallCache[key] = imgNormal ? { imageUrl: imgNormal, imageUrlArtCrop: imgArtCrop, imageUrlBack: backIuris?.normal ?? null, isDoubleFaced: isDF, backFaceName: data.card_faces?.[1]?.name ?? null } : null;
           }
         }
       } catch(e) {}
