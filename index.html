@@ -676,6 +676,7 @@ let state = {
   myDecksGallery: false,
   gamesHistoryOpen: false,
   leaderboardExpanded: {},
+  profileView: null,        // player name string while profile page is open, else null
 };
 
 const scryfallCache = {};
@@ -833,6 +834,15 @@ function render() {
   if (state.myDecksGallery) {
     app.innerHTML = renderMyDecksGallery() + renderBottomNav('home');
     return;
+  }
+
+  if (state.profileView) {
+    const allPlayers = [...new Set(state.decks.map(d => d.player))];
+    if (allPlayers.includes(state.profileView)) {
+      app.innerHTML = renderPlayerProfile(state.profileView) + renderBottomNav(state.tab || 'home');
+      return;
+    }
+    state.profileView = null;
   }
 
   if (state.showPlaytester || state.playtestGameId) {
@@ -1038,7 +1048,7 @@ function renderDashboard() {
             ${renderAvatar(p.player, 34)}
             <div style="flex:1;min-width:0;margin-left:6px">
               <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-                <span style="font-weight:600;font-size:14px;color:${lpc.color}">${escHtml(p.player)}</span>
+                <span style="font-weight:600;font-size:14px;color:${lpc.color};cursor:pointer" onclick="event.stopPropagation();openProfile('${escHtml(p.player)}')">${escHtml(p.player)}</span>
                 <span style="font-size:11px;color:var(--text-muted)">${p.deckCount} deck${p.deckCount !== 1 ? 's' : ''}</span>
                 ${p.total > 0 ? `<span class="lb-record">${p.wins}W-${p.losses}L</span>` : ''}
                 ${streak && streak.count >= 2 ? `<span class="streak-badge streak-${streak.type}">${streak.type === 'win' ? '🔥' : '💀'} ${streak.count}${streak.type === 'win' ? 'W' : 'L'}</span>` : ''}
@@ -1070,7 +1080,7 @@ function renderDashboard() {
                   <span style="font-size:14px;flex-shrink:0;margin-top:1px">${state.playerAvatars?.[d.player] || '🧙'}</span>
                   <div style="flex:1;min-width:0">
                     <div style="font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(d.commander)}</div>
-                    <div style="font-size:11px;color:var(--text-muted)"><span style="color:${pc.color}">${escHtml(d.player)}</span>${cardCount ? ` · ${cardCount}c` : ''} · ${timeLabel}</div>
+                    <div style="font-size:11px;color:var(--text-muted)"><span style="color:${pc.color};cursor:pointer" onclick="event.stopPropagation();openProfile('${escHtml(d.player)}')">${escHtml(d.player)}</span>${cardCount ? ` · ${cardCount}c` : ''} · ${timeLabel}</div>
                   </div>
                 </div>`;
               }).join('')
@@ -1087,10 +1097,10 @@ function renderDashboard() {
                 const lpc = g.loserDeck ? playerColor(g.loserDeck.player) : { color: 'var(--text-muted)' };
                 const wav = state.playerAvatars?.[g.winnerDeck.player] || '🧙';
                 return `<div style="display:flex;align-items:flex-start;gap:8px;padding:9px 12px;border-bottom:1px solid var(--border)">
-                  <span style="font-size:14px;flex-shrink:0;margin-top:1px">${wav}</span>
+                  <span style="font-size:14px;flex-shrink:0;margin-top:1px;cursor:pointer" onclick="openProfile('${escHtml(g.winnerDeck.player)}')">${wav}</span>
                   <div style="flex:1;min-width:0">
                     <div style="font-size:12px;font-weight:500;color:${wpc.color};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(g.winnerDeck.commander)}</div>
-                    <div style="font-size:11px;color:var(--text-muted)">beat <span style="color:${lpc.color}">${g.loserDeck ? escHtml(g.loserDeck.commander) : '?'}</span></div>
+                    <div style="font-size:11px;color:var(--text-muted)"><span style="cursor:pointer" onclick="openProfile('${escHtml(g.winnerDeck.player)}')">${escHtml(g.winnerDeck.player)}</span> beat <span style="color:${lpc.color}">${g.loserDeck ? escHtml(g.loserDeck.commander) : '?'}</span></div>
                   </div>
                 </div>`;
               }).join('')
@@ -4016,7 +4026,164 @@ function toggleCardFlip(el) {
   if (inner) inner.classList.toggle('flipped');
 }
 
+function openProfile(playerName) {
+  state.profileView = playerName;
+  state.decklistView = null;
+  state.myDecksGallery = false;
+  window.scrollTo(0, 0);
+  render();
+}
+function closeProfile() {
+  state.profileView = null;
+  render();
+}
+
+function renderPlayerProfile(playerName) {
+  const pc = playerColor(playerName);
+  const myName = currentUserName();
+  const playerDecks = state.decks.filter(d => d.player === playerName);
+  const allGames = playerDecks.flatMap(d => (d.games || []).map(g => ({ ...g, deckCommander: d.commander, deckId: d.id })));
+  const ownedGames = allGames.filter(g => !g.loaned);
+  const wins = ownedGames.filter(g => g.result === 'win').length;
+  const winRate = ownedGames.length ? Math.round(wins / ownedGames.length * 100) : null;
+
+  // Recent form + recent games
+  const sorted = [...ownedGames].sort((a, b) => ((b.ts || 0) - (a.ts || 0)) || (b.date || '').localeCompare(a.date || ''));
+  const last5 = sorted.slice(0, 5);
+  const recentGames = sorted.slice(0, 10);
+  const formDots = last5.map(g => {
+    const isWin = g.result === 'win';
+    return `<span class="lb-form-dot" style="background:${isWin ? 'var(--tier-b)' : 'var(--tier-s)'}" title="${isWin ? 'Win' : 'Loss'}"></span>`;
+  }).join('');
+
+  // Fav + best decks
+  const deckStats = playerDecks.map(d => {
+    const dg = (d.games || []).filter(g => !g.loaned);
+    const w = dg.filter(g => g.result === 'win').length;
+    return { id: d.id, commander: d.commander, deckName: d.deckName, count: dg.length, wins: w, winRate: dg.length >= 3 ? Math.round(w / dg.length * 100) : null };
+  });
+  const favDeck = [...deckStats].sort((a, b) => b.count - a.count).find(d => d.count > 0) || null;
+  const bestDeck = [...deckStats].filter(d => d.winRate !== null).sort((a, b) => b.winRate - a.winRate)[0] || null;
+
+  // H2H vs all other players
+  const h2h = {};
+  playerDecks.forEach(d => {
+    (d.games || []).filter(g => !g.loaned).forEach(g => {
+      const opp = state.decks.find(od => od.id === g.opponentId);
+      if (!opp || opp.player === playerName) return;
+      if (!h2h[opp.player]) h2h[opp.player] = { wins: 0, losses: 0 };
+      if (g.result === 'win') h2h[opp.player].wins++; else h2h[opp.player].losses++;
+    });
+  });
+  const h2hEntries = Object.entries(h2h).filter(([, r]) => r.wins + r.losses > 0).sort(([, a], [, b]) => (b.wins + b.losses) - (a.wins + a.losses));
+
+  return `<div style="padding-bottom:10px">
+    <div style="display:flex;align-items:center;gap:10px;padding:16px 0 16px">
+      <button onclick="closeProfile()" style="padding:6px 12px;font-size:13px">← Back</button>
+    </div>
+
+    <!-- Hero -->
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px 20px;margin-bottom:16px;position:relative;overflow:hidden">
+      <div style="position:absolute;top:-50px;left:-50px;width:200px;height:200px;background:radial-gradient(circle,${pc.bg} 0%,transparent 70%);pointer-events:none"></div>
+      <div style="display:flex;align-items:center;gap:16px;position:relative">
+        ${renderAvatar(playerName, 64)}
+        <div>
+          <div style="font-size:22px;font-weight:700;color:${pc.color}">${escHtml(playerName)}</div>
+          ${last5.length > 0 ? `<div class="lb-form-dots" style="margin-top:6px">${formDots}</div>` : '<div style="font-size:12px;color:var(--text-muted);margin-top:4px">No games yet</div>'}
+        </div>
+      </div>
+      <div style="display:flex;gap:28px;margin-top:20px;flex-wrap:wrap;position:relative">
+        <div style="text-align:center"><div style="font-size:20px;font-weight:700">${playerDecks.length}</div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Decks</div></div>
+        <div style="text-align:center"><div style="font-size:20px;font-weight:700">${ownedGames.length}</div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Games</div></div>
+        <div style="text-align:center"><div style="font-size:20px;font-weight:700;color:${winRate !== null ? pc.color : 'var(--text-muted)'}">${winRate !== null ? winRate + '%' : '—'}</div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Win rate</div></div>
+        <div style="text-align:center"><div style="font-size:20px;font-weight:700;color:var(--tier-b-text)">${wins}</div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Wins</div></div>
+      </div>
+    </div>
+
+    <!-- Decks -->
+    ${playerDecks.length > 0 ? `
+    <div class="dash-section-title">Decks (${playerDecks.length})</div>
+    <div class="dash-card" style="padding:0">
+      ${playerDecks.map(d => {
+        const tier = getTier(d.power);
+        const tierCl = tier.toLowerCase();
+        const dg = (d.games || []).filter(g => !g.loaned);
+        const dw = dg.filter(g => g.result === 'win').length;
+        const dwr = dg.length ? Math.round(dw / dg.length * 100) : null;
+        return `<div onclick="openDeckDetail('${d.id}')" style="display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.15s" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background=''">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--tier-${tierCl}-text);background:var(--tier-${tierCl}-bg);padding:2px 6px;border-radius:4px;flex-shrink:0">${tier}</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(d.deckName || d.commander)}</div>
+            ${d.deckName ? `<div style="font-size:11px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(d.commander)}</div>` : ''}
+          </div>
+          ${d.colors ? renderManaSymbols(d.colors, 13) : ''}
+          ${dwr !== null ? `<span style="font-size:11px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;flex-shrink:0">${dwr}%</span>` : ''}
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>`;
+      }).join('')}
+    </div>` : ''}
+
+    <!-- Highlights -->
+    ${bestDeck || favDeck ? `
+    <div class="dash-section-title" style="margin-top:16px">Highlights</div>
+    <div class="dash-card">
+      ${bestDeck ? `<div style="display:flex;gap:12px;align-items:flex-start;padding-bottom:${favDeck ? '12px' : '0'};${favDeck ? 'border-bottom:1px solid var(--border)' : ''}">
+        <span style="font-size:18px;flex-shrink:0">🏆</span>
+        <div>
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:2px">Best deck (≥3 games)</div>
+          <div style="font-size:13px;font-weight:600;cursor:pointer" onclick="openDeckDetail('${bestDeck.id}')">${escHtml(bestDeck.commander)} <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted)">${bestDeck.winRate}% · ${bestDeck.count}g</span></div>
+        </div>
+      </div>` : ''}
+      ${favDeck ? `<div style="display:flex;gap:12px;align-items:flex-start;${bestDeck ? 'padding-top:12px' : ''}">
+        <span style="font-size:18px;flex-shrink:0">💜</span>
+        <div>
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:2px">Most played</div>
+          <div style="font-size:13px;font-weight:600">${escHtml(favDeck.commander)} <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted)">${favDeck.count} game${favDeck.count !== 1 ? 's' : ''}</span></div>
+        </div>
+      </div>` : ''}
+    </div>` : ''}
+
+    <!-- H2H -->
+    ${h2hEntries.length > 0 ? `
+    <div class="dash-section-title" style="margin-top:16px">Head-to-Head</div>
+    <div class="dash-card" style="padding:0">
+      ${h2hEntries.map(([opp, r]) => {
+        const opc = playerColor(opp);
+        const total = r.wins + r.losses;
+        const wr = Math.round(r.wins / total * 100);
+        const col = r.wins > r.losses ? 'var(--tier-b-text)' : r.wins < r.losses ? 'var(--tier-s-text)' : 'var(--text-secondary)';
+        return `<div style="display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--border)">
+          ${renderAvatar(opp, 28)}
+          <span style="font-size:13px;font-weight:500;color:${opc.color};cursor:pointer;flex:1" onclick="openProfile('${escHtml(opp)}')">${escHtml(opp)}</span>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;color:${col}">${r.wins}W–${r.losses}L</span>
+          <span style="font-size:11px;color:var(--text-muted);min-width:28px;text-align:right">${wr}%</span>
+        </div>`;
+      }).join('')}
+    </div>` : ''}
+
+    <!-- Recent games -->
+    ${recentGames.length > 0 ? `
+    <div class="dash-section-title" style="margin-top:16px">Recent Games</div>
+    <div class="dash-card" style="padding:0">
+      ${recentGames.map(g => {
+        const isWin = g.result === 'win';
+        const oppDeck = g.opponentId ? state.decks.find(d => d.id === g.opponentId) : null;
+        return `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border)">
+          <span style="font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;color:${isWin ? 'var(--tier-b-text)' : 'var(--tier-s-text)'};min-width:32px">${isWin ? 'WIN' : 'LOSS'}</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(g.deckCommander)}</div>
+            ${oppDeck ? `<div style="font-size:11px;color:var(--text-muted)">vs <span style="color:${playerColor(oppDeck.player).color}">${escHtml(oppDeck.commander)}</span></div>` : ''}
+          </div>
+          ${g.date ? `<span style="font-size:11px;color:var(--text-muted);flex-shrink:0">${g.date}</span>` : ''}
+        </div>`;
+      }).join('')}
+    </div>` : ''}
+  </div>`;
+}
+
 // ===== WINDOW EXPORTS (needed because this is a module) =====
+window.openProfile = openProfile;
+window.closeProfile = closeProfile;
 window.render = render;
 window.state = state;
 window.setFilter = setFilter;
