@@ -417,13 +417,16 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 .pt-token-badge { position:absolute;top:-4px;right:-4px;background:var(--tier-a);color:#fff;font-size:8px;font-weight:700;width:14px;height:14px;border-radius:50%;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:5;border:1px solid var(--bg-card); }
 /* Token panel */
 .pt-token-panel { position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:550;display:flex;align-items:flex-end; }
-.pt-token-panel-inner { width:100%;max-height:82vh;background:var(--bg-card);border-radius:18px 18px 0 0;display:flex;flex-direction:column; }
-.pt-token-panel-header { display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);flex-shrink:0; }
+.pt-token-panel-inner { width:100%;max-height:85vh;background:var(--bg-card);border-radius:18px 18px 0 0;display:flex;flex-direction:column; }
+.pt-token-panel-header { display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;border-bottom:1px solid var(--border);flex-shrink:0; }
+.pt-token-panel-qty { display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid var(--border);flex-shrink:0; }
 .pt-token-panel-body { overflow-y:auto;flex:1; }
-.pt-token-panel-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px;padding:14px; }
-.pt-token-tile { cursor:pointer;border-radius:8px;overflow:hidden;border:2px solid transparent;transition:border-color 0.12s;background:var(--bg-surface); }
-.pt-token-tile:hover,.pt-token-tile:active { border-color:var(--accent); }
-.pt-token-tile-label { font-size:10px;color:var(--text-secondary);text-align:center;padding:4px 2px 5px;line-height:1.3; }
+.pt-token-panel-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:10px;padding:14px; }
+.pt-token-tile { cursor:pointer;border-radius:8px;overflow:hidden;border:2px solid transparent;transition:border-color 0.12s,transform 0.12s;background:var(--bg-surface);display:flex;flex-direction:column; }
+.pt-token-tile:hover,.pt-token-tile:active { border-color:var(--accent);transform:scale(1.04); }
+.pt-token-tile img { width:100%;aspect-ratio:63/88;object-fit:cover;display:block; }
+.pt-token-tile-placeholder { width:100%;aspect-ratio:63/88;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--text-muted);padding:6px;text-align:center; }
+.pt-token-tile-label { font-size:10px;color:var(--text-secondary);text-align:center;padding:4px 4px 5px;line-height:1.3;background:var(--bg-surface); }
 .pt-token-custom { padding:12px 14px;border-top:1px solid var(--border);flex-shrink:0; }
 .pt-token-custom-title { font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px; }
 .pt-token-custom-row { display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px; }
@@ -3723,35 +3726,34 @@ function renderPTTokenPanel() {
   return `<div class="pt-token-panel" onclick="state.playtestTokenPanel=false;render()">
     <div class="pt-token-panel-inner" onclick="event.stopPropagation()">
       <div class="pt-token-panel-header">
-        <span style="font-weight:600;font-size:14px">Create Token</span>
+        <span style="font-weight:600;font-size:15px">Create Token</span>
         <button onclick="state.playtestTokenPanel=false;render()" style="padding:5px 14px;font-size:13px">✕</button>
+      </div>
+      <div class="pt-token-panel-qty">
+        <span style="font-size:12px;color:var(--text-muted);flex-shrink:0">Qty:</span>
+        ${[1,2,3,5,10].map(n => `<button class="pt-token-qty-btn${qty===n?' active':''}" onclick="state.ptTokenQty=${n};render()">${n}</button>`).join('')}
       </div>
       <div class="pt-token-panel-body">
         ${tokens.length ? `
-        <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;padding:10px 14px 4px">Deck Tokens</div>
         <div class="pt-token-panel-grid">
           ${tokens.map(tk => `
-            <div class="pt-token-tile" onclick="ptCreateTokenById('${escHtml(tk.scryfallId)}',${qty})">
-              ${tk.imageUrl ? `<img src="${escHtml(tk.imageUrl)}" class="pt-token-tile-img" loading="lazy" alt="${escHtml(tk.name)}">` : `<div style="aspect-ratio:63/88;background:var(--bg-surface);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-muted);padding:6px;text-align:center">${escHtml(tk.name)}</div>`}
-              <div class="pt-token-tile-label">${escHtml(tk.name)}${tk.power!=null?` (${tk.power}/${tk.toughness})`:''}</div>
+            <div class="pt-token-tile" onclick="ptCreateTokenById('${escHtml(tk.scryfallId)}',${qty})" title="${escHtml(tk.name)}${tk.power!=null?' ('+tk.power+'/'+tk.toughness+')':''}">
+              ${tk.imageUrl
+                ? `<img src="${escHtml(tk.imageUrl)}" loading="lazy" alt="${escHtml(tk.name)}">`
+                : `<div class="pt-token-tile-placeholder">${escHtml(tk.name)}</div>`}
+              <div class="pt-token-tile-label">${escHtml(tk.name)}${tk.power!=null?`<br><span style="color:var(--text-muted)">${tk.power}/${tk.toughness}</span>`:''}</div>
             </div>`).join('')}
-        </div>` : `<div style="padding:16px;font-size:13px;color:var(--text-muted)">No tokens found — import a decklist and view images first to load token data.</div>`}
+        </div>` : `<div style="padding:20px 16px;font-size:13px;color:var(--text-muted);text-align:center">No tokens found — view the deck's Images tab first to load card data.</div>`}
         <div class="pt-token-custom">
           <div class="pt-token-custom-title">Custom Token</div>
           <div class="pt-token-custom-row">
-            <input style="flex:2;min-width:80px;font-size:12px" placeholder="Token name" value="${escHtml(draft.name)}" oninput="state.ptTokenDraft.name=this.value">
-            <input style="flex:1;min-width:48px;font-size:12px" placeholder="P/T" value="${escHtml(draft.pt)}" oninput="state.ptTokenDraft.pt=this.value">
+            <input style="flex:2;min-width:80px;font-size:12px" placeholder="Name (e.g. Zombie)" value="${escHtml(draft.name)}" oninput="state.ptTokenDraft.name=this.value">
+            <input style="width:64px;font-size:12px" placeholder="P/T" value="${escHtml(draft.pt)}" oninput="state.ptTokenDraft.pt=this.value">
             <select style="font-size:12px;padding:6px 8px" onchange="state.ptTokenDraft.color=this.value">
-              ${Object.entries(TOKEN_COLORS).map(([c,_]) => `<option value="${c}" ${draft.color===c?'selected':''}>${c}</option>`).join('')}
+              ${Object.entries(TOKEN_COLORS).map(([c]) => `<option value="${c}" ${draft.color===c?'selected':''}>${c}</option>`).join('')}
             </select>
           </div>
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-            <span style="font-size:12px;color:var(--text-muted)">Qty:</span>
-            <div class="pt-token-qty-row">
-              ${[1,2,3,5,10].map(n => `<button class="pt-token-qty-btn${qty===n?' active':''}" onclick="state.ptTokenQty=${n};render()">${n}</button>`).join('')}
-            </div>
-          </div>
-          <button class="btn-primary" style="width:100%;font-size:13px;padding:8px" onclick="ptCreateCustomToken()" ${!draft.name.trim()?'disabled':''}>Create ${qty > 1 ? qty + '× ' : ''}${escHtml(draft.name||'Token')}</button>
+          <button class="btn-primary" style="width:100%;font-size:13px;padding:9px" onclick="ptCreateCustomToken()" ${!draft.name.trim()?'disabled':''}>+ Create ${qty > 1 ? qty + '× ' : ''}${escHtml(draft.name || 'Token')}</button>
         </div>
       </div>
     </div>
