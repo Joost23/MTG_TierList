@@ -380,12 +380,13 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 .pt-zone-btn:hover,.pt-zone-btn.drop-target,.pt-zone-btn.pt-drop-hover { background:var(--accent-dim);color:#fff;border-color:var(--accent);transform:scale(1.1); }
 .pt-battlefield.pt-drop-active .pt-battlefield-canvas { outline:2px dashed var(--accent);outline-offset:-2px;background:rgba(167,139,250,0.04); }
 .pt-bf-empty { position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:13px;pointer-events:none; }
-.pt-bf-card { position:absolute;cursor:grab;border-radius:5px;transition:filter 0.15s,box-shadow 0.15s;touch-action:none;user-select:none; }
+.pt-bf-card { position:absolute;cursor:grab;border-radius:5px;transition:transform 0.12s ease,filter 0.15s,box-shadow 0.15s;touch-action:none;user-select:none;transform-origin:center bottom; }
 .pt-bf-card:active { cursor:grabbing; }
 .pt-bf-card.pt-dragging-src { opacity:0.3; }
-.pt-bf-card:hover { filter:brightness(1.15); }
+.pt-bf-card:hover { transform:scale(2.8);z-index:50;transition:transform 0.12s ease 0.1s,filter 0.15s; }
 .pt-tapped { transform:rotate(90deg); }
 .pt-tapped.pt-bf-card { transform:rotate(90deg) translateY(-10px); }
+.pt-tapped.pt-bf-card:hover { transform:rotate(90deg) translateY(-10px) scale(2.8);z-index:50; }
 .pt-card-selected { outline:2px solid var(--accent);outline-offset:2px; }
 .pt-card-back { width:72px;height:100px;background:linear-gradient(135deg,#1a1535,#0d0b1a);border:1px solid var(--border);border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--text-muted);text-align:center;padding:4px;word-break:break-word; }
 .pt-hand-card-back { width:90px;height:126px;background:linear-gradient(135deg,#1a1535,#0d0b1a);border:1px solid var(--border);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--text-muted);text-align:center;padding:6px;word-break:break-word; }
@@ -396,10 +397,10 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 .pt-action-bar::-webkit-scrollbar { display:none; }
 .pt-action-btn { font-size:12px;padding:7px 14px;white-space:nowrap;flex-shrink:0;border-radius:var(--radius-sm); }
 .pt-action-danger { color:var(--tier-s-text) !important;border-color:rgba(226,75,74,0.5) !important; }
-.pt-hand { display:flex;gap:8px;padding:10px 12px;background:var(--bg-card);border-top:1px solid var(--border);overflow-x:auto;flex-shrink:0;min-height:118px;max-height:140px;scrollbar-width:none; }
+.pt-hand { display:flex;gap:8px;padding:10px 12px;background:var(--bg-card);border-top:1px solid var(--border);overflow-x:auto;flex-shrink:0;min-height:118px;max-height:140px;scrollbar-width:none;overflow-y:visible; }
 .pt-hand::-webkit-scrollbar { display:none; }
-.pt-hand-card { flex-shrink:0;cursor:grab;border-radius:6px;transition:transform 0.15s;touch-action:none;user-select:none;position:relative; }
-.pt-hand-card:hover { transform:translateY(-6px); }
+.pt-hand-card { flex-shrink:0;cursor:grab;border-radius:6px;transition:transform 0.12s ease;touch-action:none;user-select:none;position:relative;transform-origin:bottom center; }
+.pt-hand-card:hover { transform:translateY(-8px) scale(3);z-index:50; }
 .pt-hand-card.pt-dragging-src { opacity:0.3; }
 .pt-card-menu { position:fixed;background:var(--bg-card);border:1px solid var(--border-hover);border-radius:var(--radius);padding:8px;z-index:500;min-width:210px;max-width:280px;box-shadow:0 8px 32px rgba(0,0,0,0.6); }
 .pt-card-menu-name { font-size:11px;color:var(--text-muted);padding:0 6px 8px;border-bottom:1px solid var(--border);margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-style:italic; }
@@ -3028,7 +3029,6 @@ function renderPTGame() {
         const cardY = card.y ?? 20;
         const bfw = ptCardW();
         const bfh = Math.round(bfw * 88 / 63);
-        const zoomArgs = card.imageUrl ? `'${escHtml(card.imageUrl)}','${escHtml(card.name.replace(/'/g,"\\'"))}'` : "null,''";
         const img = card.imageUrl
           ? `<img src="${escHtml(card.imageUrl)}" style="width:${bfw}px;border-radius:5px;display:block;pointer-events:none" loading="lazy">`
           : `<div class="pt-card-back" style="width:${bfw}px;height:${bfh}px;pointer-events:none">${escHtml(card.name.slice(0,14))}</div>`;
@@ -3036,8 +3036,6 @@ function renderPTGame() {
           data-card-id="${card.cardId}"
           style="left:${cardX}px;top:${cardY}px"
           onpointerdown="ptPointerDown(event,'${card.cardId}')"
-          onmouseenter="ptZoomHover(event,${zoomArgs})"
-          onmouseleave="ptZoomHide()"
           onclick="event.stopPropagation()">
           ${img}
           ${card.counters?`<div class="pt-counter">${card.counters}</div>`:''}
@@ -3072,14 +3070,11 @@ function renderPTGame() {
     ${hand.map(card => {
       const hw = ptHandW();
       const hh = Math.round(hw * 88 / 63);
-      const zoomArgs = card.imageUrl ? `'${escHtml(card.imageUrl)}','${escHtml(card.name.replace(/'/g,"\\'"))}'` : "null,''";
       const img = card.imageUrl
         ? `<img src="${escHtml(card.imageUrl)}" style="width:${hw}px;border-radius:6px;display:block;pointer-events:none" loading="lazy">`
         : `<div class="pt-hand-card-back" style="width:${hw}px;height:${hh}px">${escHtml(card.name.slice(0,16))}</div>`;
       return `<div class="pt-hand-card" data-hand-card-id="${card.cardId}"
-        onpointerdown="ptHandPointerDown(event,'${card.cardId}')"
-        onmouseenter="ptZoomHover(event,${zoomArgs})"
-        onmouseleave="ptZoomHide()">${img}</div>`;
+        onpointerdown="ptHandPointerDown(event,'${card.cardId}')">${img}</div>`;
     }).join('')}
   </div>` : '';
 
