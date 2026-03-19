@@ -4,7 +4,7 @@
     {
       "name": "MTG Tier List",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "3000", "--directory", "D:\\Github\\TierListMTG\\MTG_TierList"],
+      "runtimeArgs": ["-m", "http.server", "3000", "--directory", "D:\\Github\\TierListMTG\\MTG_TierList\\.claude\\worktrees\\priceless-lehmann"],
       "port": 3000
     }
   ]
