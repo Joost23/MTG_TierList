@@ -1108,6 +1108,7 @@ function renderDashboard() {
         </div>
       </div>
     </div>
+    ${renderPodFeed()}
     <div class="dash-section-title">Quick Actions</div>
     <div class="quick-actions">
       <button class="quick-action-btn btn-primary" onclick="openAddModal()">+ Add deck</button>
@@ -4024,6 +4025,73 @@ function toggleCardFlip(el) {
   // el is the flip button; find the nearest .card-flip-inner ancestor
   const inner = el.closest('.card-flip-wrap')?.querySelector('.card-flip-inner');
   if (inner) inner.classList.toggle('flipped');
+}
+
+// ===== POD FEED =====
+function getPodFeed(limit = 12) {
+  const events = [];
+  // Win records (log once per win, avoids duplicate with the loser's record)
+  state.decks.forEach(deck => {
+    (deck.games || []).filter(g => !g.loaned && g.result === 'win').forEach(g => {
+      const ts = g.ts || (g.date ? new Date(g.date + 'T12:00:00').getTime() : 0);
+      if (!ts) return;
+      const oppDeck = state.decks.find(d => d.id === g.opponentId);
+      events.push({ type: 'game', ts, player: deck.player, deck: deck.commander, deckId: deck.id, deckName: deck.deckName || null, oppDeck: oppDeck?.commander || null, oppPlayer: oppDeck?.player || null, oppDeckId: oppDeck?.id || null });
+    });
+  });
+  // Deck additions
+  state.decks.filter(d => d.createdAt).forEach(d => {
+    events.push({ type: 'deck_added', ts: d.createdAt, player: d.player, deck: d.commander, deckId: d.id, deckName: d.deckName || null });
+  });
+  // Decklist updates (skip if same timestamp as creation)
+  state.decks.filter(d => d.decklistUpdatedAt && d.decklistUpdatedAt !== d.createdAt).forEach(d => {
+    events.push({ type: 'decklist_updated', ts: d.decklistUpdatedAt, player: d.player, deck: d.commander, deckId: d.id, deckName: d.deckName || null });
+  });
+  return events.sort((a, b) => b.ts - a.ts).slice(0, limit);
+}
+
+function renderPodFeed() {
+  const events = getPodFeed(12);
+  if (events.length === 0) return '';
+  const now = Date.now();
+  const timeAgo = ts => {
+    const d = now - ts;
+    if (d < 60000) return 'just now';
+    if (d < 3600000) return Math.floor(d / 60000) + 'm ago';
+    if (d < 86400000) return Math.floor(d / 3600000) + 'h ago';
+    if (d < 604800000) return Math.floor(d / 86400000) + 'd ago';
+    return new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+  return `
+    <div class="dash-section-title">Pod Activity</div>
+    <div class="dash-card" style="padding:0">
+      ${events.map(ev => {
+        const pc = playerColor(ev.player);
+        const deckLabel = escHtml(ev.deckName || ev.deck);
+        const deckLink = `<span style="cursor:pointer;font-weight:500" onclick="openDeckDetail('${ev.deckId}')">${deckLabel}</span>`;
+        const playerLink = `<span style="color:${pc.color};cursor:pointer" onclick="openProfile('${escHtml(ev.player)}')">${escHtml(ev.player)}</span>`;
+        let icon, text;
+        if (ev.type === 'game') {
+          const opc = ev.oppPlayer ? playerColor(ev.oppPlayer) : { color: 'var(--text-muted)' };
+          const oppLink = ev.oppDeck
+            ? `<span style="color:${opc.color};cursor:pointer" onclick="${ev.oppDeckId ? `openDeckDetail('${ev.oppDeckId}')` : `openProfile('${escHtml(ev.oppPlayer)}')`}">${escHtml(ev.oppDeck)}</span>`
+            : '?';
+          icon = '⚔️';
+          text = `${playerLink} won with ${deckLink}${ev.oppDeck ? ` · beat ${oppLink}` : ''}`;
+        } else if (ev.type === 'deck_added') {
+          icon = '🃏';
+          text = `${playerLink} added ${deckLink} to the pod`;
+        } else {
+          icon = '📋';
+          text = `${playerLink} updated ${deckLink}'s decklist`;
+        }
+        return `<div class="activity-entry">
+          <span style="font-size:15px;flex-shrink:0;line-height:1">${icon}</span>
+          <div class="activity-text">${text}</div>
+          <div class="activity-date">${timeAgo(ev.ts)}</div>
+        </div>`;
+      }).join('')}
+    </div>`;
 }
 
 function openProfile(playerName) {
