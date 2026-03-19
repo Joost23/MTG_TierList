@@ -497,15 +497,40 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 .mood-tag-selector { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .mood-tag-option { font-size: 11px; padding: 3px 10px; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-surface); color: var(--text-secondary); cursor: pointer; white-space: nowrap; transition: border-color 0.15s, background 0.15s; }
 .mood-tag-option.selected { border-color: var(--accent); color: var(--accent); background: var(--accent-muted, rgba(139,92,246,0.12)); }
+
+/* ===== POD CHAT ===== */
+.chat-fab { position:fixed;bottom:70px;right:16px;width:52px;height:52px;border-radius:50%;background:var(--accent-dim);border:none;color:#fff;display:flex;align-items:center;justify-content:center;z-index:60;box-shadow:0 4px 20px rgba(0,0,0,0.5);transition:transform 0.15s,background 0.15s;cursor:pointer;padding:0; }
+.chat-fab:hover { transform:scale(1.08);background:var(--accent); }
+.chat-fab-badge { position:absolute;top:0;right:0;min-width:18px;height:18px;border-radius:9px;background:var(--tier-s);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 4px;border:2px solid var(--bg);font-family:'JetBrains Mono',monospace; }
+.chat-overlay { position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:80;display:flex;flex-direction:column;justify-content:flex-end;animation:fadeIn 0.15s ease; }
+.chat-panel { background:var(--bg-card);border-top:1px solid var(--border);border-radius:16px 16px 0 0;max-height:80vh;min-height:320px;display:flex;flex-direction:column;animation:slideUpSheet 0.25s ease; }
+@keyframes slideUpSheet { from { transform:translateY(100%); } to { transform:translateY(0); } }
+.chat-header { display:flex;align-items:center;gap:10px;padding:14px 16px 12px;border-bottom:1px solid var(--border);flex-shrink:0; }
+.chat-messages { flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:10px;scroll-behavior:smooth; }
+.chat-msg { display:flex;align-items:flex-end;gap:8px; }
+.chat-msg.me { flex-direction:row-reverse; }
+.chat-avatar { font-size:20px;flex-shrink:0;line-height:1;margin-bottom:2px; }
+.chat-bubble-wrap { display:flex;flex-direction:column;gap:2px;max-width:75%; }
+.chat-msg.me .chat-bubble-wrap { align-items:flex-end; }
+.chat-sender { font-size:11px;font-weight:600;margin-bottom:2px;padding-left:4px; }
+.chat-bubble { background:var(--bg-surface);border:1px solid var(--border);border-radius:14px 14px 14px 4px;padding:8px 12px;font-size:13px;line-height:1.5;word-break:break-word; }
+.chat-bubble.me { background:var(--accent-dim);border-color:transparent;border-radius:14px 14px 4px 14px;color:#fff; }
+.chat-time { font-size:10px;color:var(--text-muted);padding:0 4px; }
+.chat-msg.me .chat-time { text-align:right; }
+.chat-input-row { display:flex;gap:8px;padding:10px 14px;border-top:1px solid var(--border);flex-shrink:0;padding-bottom:max(10px,env(safe-area-inset-bottom)); }
+.chat-input { flex:1;font-size:14px;padding:9px 14px;border-radius:20px; }
+.chat-send { padding:9px 18px;border-radius:20px;font-size:13px;flex-shrink:0; }
 </style>
 </head>
 <body>
 <div class="app" id="app"></div>
+<div id="chat-fab-root"></div>
+<div id="chat-root"></div>
 
 <script type="module">
 // ===== FIREBASE =====
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
-import { getFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, writeBatch }
+import { getFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, writeBatch, addDoc, query, orderBy, limit }
   from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, updatePassword, reauthenticateWithCredential, EmailAuthProvider }
   from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
@@ -681,6 +706,9 @@ let state = {
   gamesHistoryOpen: false,
   leaderboardExpanded: {},
   profileView: null,        // player name string while profile page is open, else null
+  chatOpen: false,
+  chatMessages: [],
+  chatUnread: 0,
 };
 
 const scryfallCache = {};
@@ -758,6 +786,7 @@ async function handleLogin() {
 }
 
 async function handleSignOut() {
+  if (unsubscribeChat) { unsubscribeChat(); unsubscribeChat = null; }
   if (unsubscribeDecks) { unsubscribeDecks(); unsubscribeDecks = null; }
   await signOut(auth);
   state.decks = [];
@@ -772,6 +801,8 @@ let unsubscribeDecks = null;
 let unsubscribeSession = null;
 let unsubscribePlaytest = null;
 let unsubscribePrivate = null;
+let unsubscribeChat = null;
+let chatLastReadTs = 0;
 
 function setupFirestoreListener() {
   if (unsubscribeDecks) unsubscribeDecks();
@@ -804,6 +835,20 @@ function setupFirestoreListener() {
         <p style="color:var(--text-muted);font-size:11px;margin-top:12px;font-family:monospace">${err.code || err.message}</p>
       </div>`;
   });
+
+  // Real-time chat
+  if (unsubscribeChat) unsubscribeChat();
+  const chatQ = query(collection(db, 'messages'), orderBy('ts', 'asc'), limit(60));
+  unsubscribeChat = onSnapshot(chatQ, snap => {
+    state.chatMessages = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if (state.chatOpen) {
+      renderChatMessages();
+    } else {
+      const myName = currentUserName();
+      state.chatUnread = state.chatMessages.filter(m => (m.ts || 0) > chatLastReadTs && m.player !== myName).length;
+      renderChatFAB();
+    }
+  }, () => {}); // silently ignore chat errors (Firestore rules may not include messages yet)
 }
 
 // ===== AUTH LISTENER =====
@@ -937,6 +982,7 @@ function render() {
   if (document.querySelector('.deck-card-art[data-art-commander]')) loadDeckCardArts();
   // Lazily load spotlight hero art
   if (document.querySelector('.spotlight-bg[data-spotlight-art]')) loadSpotlightArt();
+  renderChatFAB();
 }
 
 function renderBottomNav(active) {
@@ -4348,7 +4394,122 @@ function renderPlayerProfile(playerName) {
   </div>`;
 }
 
+// ===== POD CHAT =====
+function renderChatFAB() {
+  const fab = document.getElementById('chat-fab-root');
+  if (!fab) return;
+  if (!state.currentUser || !state.loaded) { fab.innerHTML = ''; return; }
+  const unread = state.chatUnread || 0;
+  fab.innerHTML = `<button class="chat-fab" onclick="openChat()" title="Pod Chat">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+    </svg>
+    ${unread > 0 ? `<span class="chat-fab-badge">${unread > 9 ? '9+' : unread}</span>` : ''}
+  </button>`;
+}
+
+function openChat() {
+  state.chatOpen = true;
+  state.chatUnread = 0;
+  chatLastReadTs = Date.now();
+  renderChatFAB();
+  const chatRoot = document.getElementById('chat-root');
+  if (chatRoot) chatRoot.innerHTML = renderChatPanel();
+  setTimeout(() => {
+    const msgs = document.getElementById('chat-messages');
+    if (msgs) msgs.scrollTop = msgs.scrollHeight;
+    const input = document.getElementById('chat-input');
+    if (input) input.focus();
+  }, 60);
+}
+
+function closeChat() {
+  state.chatOpen = false;
+  const chatRoot = document.getElementById('chat-root');
+  if (chatRoot) chatRoot.innerHTML = '';
+  renderChatFAB();
+}
+
+function buildChatMsgHtml(m) {
+  const isMe = m.uid === state.currentUser?.uid;
+  const pc = playerColor(m.player || '');
+  const emoji = state.playerAvatars?.[m.player] || '🧙';
+  const ts = m.ts ? new Date(m.ts).toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit', hour12:false }) : '';
+  return `<div class="chat-msg${isMe ? ' me' : ''}">
+    ${!isMe ? `<span class="chat-avatar">${emoji}</span>` : ''}
+    <div class="chat-bubble-wrap">
+      ${!isMe ? `<div class="chat-sender" style="color:${pc.color}">${escHtml(m.player || '')}</div>` : ''}
+      <div class="chat-bubble${isMe ? ' me' : ''}">${escHtml(m.text || '')}</div>
+      <div class="chat-time">${ts}</div>
+    </div>
+    ${isMe ? `<span class="chat-avatar">${emoji}</span>` : ''}
+  </div>`;
+}
+
+function renderChatPanel() {
+  const players = [...new Set(state.decks.map(d => d.player))].join(', ');
+  const msgs = state.chatMessages;
+  return `<div class="chat-overlay" onclick="closeChat()">
+    <div class="chat-panel" onclick="event.stopPropagation()">
+      <div class="chat-header">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+        </svg>
+        <span style="font-size:14px;font-weight:600">Pod Chat</span>
+        <span style="font-size:11px;color:var(--text-muted);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(players)}</span>
+        <button onclick="closeChat()" style="padding:4px 10px;font-size:13px;flex-shrink:0">✕</button>
+      </div>
+      <div class="chat-messages" id="chat-messages">
+        ${msgs.length === 0
+          ? '<div style="text-align:center;padding:40px 20px;color:var(--text-muted);font-size:13px">No messages yet. Say hi! 👋</div>'
+          : msgs.map(buildChatMsgHtml).join('')}
+      </div>
+      <div class="chat-input-row">
+        <input id="chat-input" class="chat-input" placeholder="Message the pod…" maxlength="500"
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMessage()}">
+        <button class="chat-send btn-primary" onclick="sendChatMessage()">Send</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderChatMessages() {
+  const el = document.getElementById('chat-messages');
+  if (!el) return;
+  const msgs = state.chatMessages;
+  if (msgs.length === 0) {
+    el.innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--text-muted);font-size:13px">No messages yet. Say hi! 👋</div>';
+    return;
+  }
+  const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
+  el.innerHTML = msgs.map(buildChatMsgHtml).join('');
+  if (atBottom) el.scrollTop = el.scrollHeight;
+}
+
+async function sendChatMessage() {
+  const input = document.getElementById('chat-input');
+  if (!input) return;
+  const text = input.value.trim();
+  if (!text || !state.currentUser) return;
+  input.value = '';
+  const myName = currentUserName();
+  try {
+    await addDoc(collection(db, 'messages'), {
+      text,
+      player: myName,
+      uid: state.currentUser.uid,
+      ts: Date.now(),
+    });
+  } catch(e) {
+    console.error('sendChatMessage:', e);
+    input.value = text;
+  }
+}
+
 // ===== WINDOW EXPORTS (needed because this is a module) =====
+window.openChat = openChat;
+window.closeChat = closeChat;
+window.sendChatMessage = sendChatMessage;
 window.openProfile = openProfile;
 window.closeProfile = closeProfile;
 window.render = render;
