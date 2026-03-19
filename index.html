@@ -406,6 +406,16 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 .pt-menu-btn { display:block;width:100%;text-align:left;padding:8px 10px;font-size:13px;border:none;background:transparent;color:var(--text);border-radius:var(--radius-sm);cursor:pointer; }
 .pt-menu-btn:hover { background:var(--bg-hover); }
 .pt-menu-cancel { color:var(--text-muted);border-top:1px solid var(--border);margin-top:4px;padding-top:8px; }
+#pt-card-zoom { position:fixed;pointer-events:none;z-index:999;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,0.6);opacity:0;transform:scale(0.9);transition:opacity 0.15s,transform 0.15s;display:none; }
+#pt-card-zoom.visible { opacity:1;transform:scale(1); }
+#pt-card-zoom img { width:240px;border-radius:12px;display:block; }
+.pt-settings-popover { position:fixed;background:var(--bg-card);border:1px solid var(--border-hover);border-radius:var(--radius);padding:12px 14px;z-index:500;min-width:190px;box-shadow:0 8px 32px rgba(0,0,0,0.6);animation:ptFadeSlide 0.15s ease; }
+.pt-settings-popover label { display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:4px 0;color:var(--text-secondary); }
+.pt-settings-row { display:flex;gap:6px;margin-bottom:10px; }
+.pt-settings-divider { border:none;border-top:1px solid var(--border);margin:8px 0; }
+.pt-size-btn { flex:1;font-size:12px;padding:5px 0;border-radius:var(--radius-sm);text-align:center; }
+.pt-size-btn.active { background:var(--accent);color:#fff;border-color:var(--accent); }
+@keyframes ptFadeSlide { from { opacity:0;transform:translateY(6px) } to { opacity:1;transform:translateY(0) } }
 .pt-overlay-bg { position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:300;display:flex;align-items:flex-end; }
 .pt-overlay { width:100%;max-height:72vh;background:var(--bg-card);border-radius:18px 18px 0 0;display:flex;flex-direction:column; }
 .pt-overlay-header { display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);flex-shrink:0; }
@@ -729,6 +739,8 @@ let state = {
   playtestMillData: null,
   playtestMillToast: null,
   snapToGrid: true,
+  ptCardSize: localStorage.getItem('ptCardSize') || 'M',
+  playtestSettings: false,
   showPlaytester: false,
   playerAvatars: {},
   showAvatarModal: null,
@@ -885,6 +897,14 @@ function setupFirestoreListener() {
 }
 
 // ===== AUTH LISTENER =====
+// Inject zoom preview element once
+(function() {
+  const el = document.createElement('div');
+  el.id = 'pt-card-zoom';
+  el.innerHTML = '<img src="" alt="">';
+  document.body.appendChild(el);
+})();
+
 onAuthStateChanged(auth, user => {
   if (user) {
     state.currentUser = user;
@@ -3000,20 +3020,24 @@ function renderPTGame() {
       ${isMyBoard ? `<button class="pt-zone-btn" onclick="event.stopPropagation();ptAdjustLife(1)" style="color:var(--tier-b-text)">♥+</button>
       <button class="pt-zone-btn" onclick="event.stopPropagation();ptAdjustLife(-1)" style="color:var(--tier-s-text)">♥−</button>` : ''}
     </div>
-    ${isMyBoard ? `<button class="pt-snap-badge" onclick="event.stopPropagation();state.snapToGrid=!state.snapToGrid;render()">Snap: ${state.snapToGrid?'ON':'OFF'}</button>` : ''}
     <div class="pt-battlefield-canvas" id="pt-bf-canvas">
       ${bf.length===0 ? `<div class="pt-bf-empty">Drag cards here from hand</div>` : ''}
       ${bf.map(card => {
         const menuOpen = state.playtestCardMenu?.cardId === card.cardId;
         const cardX = card.x ?? 20;
         const cardY = card.y ?? 20;
+        const bfw = ptCardW();
+        const bfh = Math.round(bfw * 88 / 63);
+        const zoomArgs = card.imageUrl ? `'${escHtml(card.imageUrl)}','${escHtml(card.name.replace(/'/g,"\\'"))}'` : "null,''";
         const img = card.imageUrl
-          ? `<img src="${escHtml(card.imageUrl)}" style="width:72px;border-radius:5px;display:block;pointer-events:none" loading="lazy">`
-          : `<div class="pt-card-back" style="pointer-events:none">${escHtml(card.name.slice(0,14))}</div>`;
+          ? `<img src="${escHtml(card.imageUrl)}" style="width:${bfw}px;border-radius:5px;display:block;pointer-events:none" loading="lazy">`
+          : `<div class="pt-card-back" style="width:${bfw}px;height:${bfh}px;pointer-events:none">${escHtml(card.name.slice(0,14))}</div>`;
         return `<div class="pt-bf-card${card.tapped?' pt-tapped':''}${menuOpen?' pt-card-selected':''}"
           data-card-id="${card.cardId}"
           style="left:${cardX}px;top:${cardY}px"
           onpointerdown="ptPointerDown(event,'${card.cardId}')"
+          onmouseenter="ptZoomHover(event,${zoomArgs})"
+          onmouseleave="ptZoomHide()"
           onclick="event.stopPropagation()">
           ${img}
           ${card.counters?`<div class="pt-counter">${card.counters}</div>`:''}
@@ -3025,6 +3049,7 @@ function renderPTGame() {
 
   // Action bar (own board only)
   const mullCount = myPlayer?.mulliganCount || 0;
+  const settingsHtml = state.playtestSettings ? renderPTSettings(mullCount) : '';
   const actionBar = isMyBoard ? `<div class="pt-action-bar">
     <button class="pt-action-btn" onclick="ptDraw()">Draw</button>
     <button class="pt-action-btn" onclick="ptUntapAll()">Untap All</button>
@@ -3032,12 +3057,8 @@ function renderPTGame() {
     <button class="pt-action-btn" onclick="ptPromptMill()">Mill</button>
     <button class="pt-action-btn" onclick="ptShuffle()">Shuffle</button>
     <button class="pt-action-btn" onclick="ptNextTurn()">Next Turn</button>
-    <button class="pt-action-btn${state.playtestMoreMenu?' active':''}" onclick="event.stopPropagation();state.playtestMoreMenu=!state.playtestMoreMenu;render()">More ▾</button>
-    <button class="pt-action-btn pt-action-danger" onclick="if(confirm('Concede?'))ptConcede()">Concede</button>
-  </div>${state.playtestMoreMenu ? `<div class="pt-action-bar" style="background:var(--bg-surface)">
-    <button class="pt-action-btn" onclick="ptMulligan()">Mulligan${mullCount>0?` (→${Math.max(7-mullCount,0)})`:''}</button>
-    <button class="pt-action-btn" onclick="ptViewLibTop()">View Library Top</button>
-  </div>` : ''}` : '';
+    <button class="pt-action-btn${state.playtestSettings?' active':''}" onclick="event.stopPropagation();ptToggleSettings()" style="padding:7px 10px">⚙</button>
+  </div>${settingsHtml}` : '';
 
   // Scry / mill overlays
   const scryHtml = state.playtestScryData ? renderPTScryOverlay() : '';
@@ -3049,10 +3070,16 @@ function renderPTGame() {
   const handHtml = isMyBoard ? `<div class="pt-hand">
     ${hand.length===0?`<div style="color:var(--text-muted);font-size:12px;display:flex;align-items:center;padding:0 4px">Empty hand</div>`:''}
     ${hand.map(card => {
+      const hw = ptHandW();
+      const hh = Math.round(hw * 88 / 63);
+      const zoomArgs = card.imageUrl ? `'${escHtml(card.imageUrl)}','${escHtml(card.name.replace(/'/g,"\\'"))}'` : "null,''";
       const img = card.imageUrl
-        ? `<img src="${escHtml(card.imageUrl)}" style="width:90px;border-radius:6px;display:block;pointer-events:none" loading="lazy">`
-        : `<div class="pt-hand-card-back">${escHtml(card.name.slice(0,16))}</div>`;
-      return `<div class="pt-hand-card" data-hand-card-id="${card.cardId}" onpointerdown="ptHandPointerDown(event,'${card.cardId}')">${img}</div>`;
+        ? `<img src="${escHtml(card.imageUrl)}" style="width:${hw}px;border-radius:6px;display:block;pointer-events:none" loading="lazy">`
+        : `<div class="pt-hand-card-back" style="width:${hw}px;height:${hh}px">${escHtml(card.name.slice(0,16))}</div>`;
+      return `<div class="pt-hand-card" data-hand-card-id="${card.cardId}"
+        onpointerdown="ptHandPointerDown(event,'${card.cardId}')"
+        onmouseenter="ptZoomHover(event,${zoomArgs})"
+        onmouseleave="ptZoomHide()">${img}</div>`;
     }).join('')}
   </div>` : '';
 
@@ -3061,7 +3088,8 @@ function renderPTGame() {
 
   const cardMenuHtml = state.playtestCardMenu ? renderPTCardMenu() : '';
   const menuBackdrop = state.playtestCardMenu ? `<div style="position:fixed;inset:0;z-index:499" onclick="ptCloseMenu()"></div>` : '';
-  return `<div class="pt-playmat">${tabsHtml}${deckBar}${battlefieldHtml}${actionBar}${handHtml}${overlayHtml}${scryHtml}${millHtml}${numberHtml}${menuBackdrop}${cardMenuHtml}</div>`;
+  const settingsBackdrop = state.playtestSettings ? `<div style="position:fixed;inset:0;z-index:498" onclick="event.stopPropagation();state.playtestSettings=false;render()"></div>` : '';
+  return `<div class="pt-playmat">${tabsHtml}${deckBar}${battlefieldHtml}${actionBar}${handHtml}${overlayHtml}${scryHtml}${millHtml}${numberHtml}${settingsBackdrop}${menuBackdrop}${cardMenuHtml}</div>`;
 }
 
 function renderPTCardMenu() {
@@ -3106,6 +3134,24 @@ function renderPTCardMenu() {
     <div class="pt-card-menu-name">${escHtml(card.name)}</div>
     ${actions.map(a=>`<button class="pt-menu-btn" onclick="${a.fn}">${a.label}</button>`).join('')}
     <button class="pt-menu-btn pt-menu-cancel" onclick="ptCloseMenu()">Cancel</button>
+  </div>`;
+}
+
+function renderPTSettings(mullCount) {
+  const sz = state.ptCardSize || 'M';
+  // Position the popover above the gear button (bottom of action bar)
+  return `<div class="pt-settings-popover" style="bottom:${document.querySelector('.pt-hand')?.offsetHeight||130}px;right:8px;z-index:499" onclick="event.stopPropagation()">
+    <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Card Size</div>
+    <div class="pt-settings-row">
+      <button class="pt-size-btn${sz==='S'?' active':''}" onclick="ptSetSize('S')">S</button>
+      <button class="pt-size-btn${sz==='M'?' active':''}" onclick="ptSetSize('M')">M</button>
+      <button class="pt-size-btn${sz==='L'?' active':''}" onclick="ptSetSize('L')">L</button>
+    </div>
+    <label><input type="checkbox" ${state.snapToGrid?'checked':''} onchange="state.snapToGrid=this.checked;render()"> Snap to grid</label>
+    <hr class="pt-settings-divider">
+    <button class="pt-action-btn" onclick="ptMulligan();state.playtestSettings=false;render()" style="width:100%;margin-bottom:4px">Mulligan${mullCount>0?` (→${Math.max(7-mullCount,0)})`:''}</button>
+    <button class="pt-action-btn" onclick="ptViewLibTop();state.playtestSettings=false" style="width:100%;margin-bottom:4px">View Library Top</button>
+    <button class="pt-action-btn pt-action-danger" onclick="if(confirm('Concede?'))ptConcede()" style="width:100%">Concede</button>
   </div>`;
 }
 
@@ -3298,6 +3344,44 @@ async function ptViewLib(n) {
   render();
 }
 
+// ── Card size helpers ──────────────────────────────────
+const PT_SIZES = { S:{bf:56,hand:72}, M:{bf:76,hand:90}, L:{bf:100,hand:120} };
+function ptCardW() { return (PT_SIZES[state.ptCardSize] || PT_SIZES.M).bf; }
+function ptHandW() { return (PT_SIZES[state.ptCardSize] || PT_SIZES.M).hand; }
+function ptSetSize(sz) { state.ptCardSize = sz; localStorage.setItem('ptCardSize', sz); state.playtestSettings = false; render(); }
+function ptToggleSettings() { state.playtestSettings = !state.playtestSettings; render(); }
+
+// ── Zoom preview ───────────────────────────────────────
+let ptZoomTimer = null;
+function ptZoomShow(imageUrl, name, anchorEl) {
+  if (!imageUrl) return;
+  const el = document.getElementById('pt-card-zoom');
+  if (!el) return;
+  const img = el.querySelector('img');
+  img.src = imageUrl; img.alt = name || '';
+  const rect = anchorEl.getBoundingClientRect();
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const pw = 240, ph = Math.round(240 * 88 / 63);
+  let left = rect.left > vw / 2 ? rect.left - pw - 12 : rect.right + 12;
+  let top  = rect.top  > vh / 2 ? rect.bottom - ph    : rect.top;
+  left = Math.max(8, Math.min(left, vw - pw - 8));
+  top  = Math.max(8, Math.min(top,  vh - ph - 8));
+  el.style.left = left + 'px'; el.style.top = top + 'px';
+  el.style.display = 'block';
+  requestAnimationFrame(() => el.classList.add('visible'));
+}
+function ptZoomHide() {
+  clearTimeout(ptZoomTimer); ptZoomTimer = null;
+  const el = document.getElementById('pt-card-zoom');
+  if (!el) return;
+  el.classList.remove('visible');
+  setTimeout(() => { if (!el.classList.contains('visible')) el.style.display = 'none'; }, 150);
+}
+function ptZoomHover(e, imageUrl, name) {
+  clearTimeout(ptZoomTimer);
+  ptZoomTimer = setTimeout(() => ptZoomShow(imageUrl, name, e.currentTarget), 300);
+}
+
 // ── Drag-and-drop: pointer events ─────────────────────
 let ptHandDrag = null;
 let ptHandDragGhost = null;
@@ -3441,7 +3525,7 @@ document.addEventListener('pointerup', async function(e) {
         let y = Math.max(0, e.clientY - canvasRect.top  + bfEl.scrollTop  - CARD_H / 2);
         x = Math.min(x, bfEl.clientWidth  - CARD_W - 8);
         y = Math.min(y, bfEl.clientHeight - CARD_H - 8);
-        if (state.snapToGrid) { x = Math.round(x/40)*40; y = Math.round(y/40)*40; }
+        if (state.snapToGrid) { x = Math.round(x/ptCardW())*ptCardW(); y = Math.round(y/ptCardW())*ptCardW(); }
         await ptPlayCardAt(drag.cardId, x, y);
       }
     }
@@ -3484,8 +3568,8 @@ document.addEventListener('pointerup', async function(e) {
   let newX = Math.max(0, drag.origCardX + dx);
   let newY = Math.max(0, drag.origCardY + dy);
   if (state.snapToGrid) {
-    newX = Math.round(newX / 40) * 40;
-    newY = Math.round(newY / 40) * 40;
+    newX = Math.round(newX / ptCardW()) * ptCardW();
+    newY = Math.round(newY / ptCardW()) * ptCardW();
   }
   const uid = state.currentUser?.uid;
   const player = state.playtestGame?.players?.[uid];
@@ -4947,6 +5031,10 @@ window.ptOpenZone = ptOpenZone;
 window.ptCloseZone = ptCloseZone;
 window.ptPointerDown = ptPointerDown;
 window.ptHandPointerDown = ptHandPointerDown;
+window.ptZoomHover = ptZoomHover;
+window.ptZoomHide = ptZoomHide;
+window.ptSetSize = ptSetSize;
+window.ptToggleSettings = ptToggleSettings;
 window.ptPlayCardAt = ptPlayCardAt;
 window.ptPromptScry = ptPromptScry;
 window.ptPromptMill = ptPromptMill;
