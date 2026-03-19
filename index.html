@@ -1056,26 +1056,6 @@ function renderDashboard() {
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:4px">
       <div>
-        <div class="dash-section-title" style="margin-bottom:8px">Recent Games</div>
-        <div class="dash-card" style="padding:0">
-          ${recentGames.length === 0
-            ? '<div style="padding:14px 14px"><p style="color:var(--text-muted);font-size:12px">No games yet.</p></div>'
-            : recentGames.slice(0, 8).map(g => {
-                const wpc = playerColor(g.winnerDeck.player);
-                const lpc = g.loserDeck ? playerColor(g.loserDeck.player) : { color: 'var(--text-muted)' };
-                const wav = state.playerAvatars?.[g.winnerDeck.player] || '🧙';
-                return `<div style="display:flex;align-items:flex-start;gap:8px;padding:9px 12px;border-bottom:1px solid var(--border)">
-                  <span style="font-size:14px;flex-shrink:0;margin-top:1px">${wav}</span>
-                  <div style="flex:1;min-width:0">
-                    <div style="font-size:12px;font-weight:500;color:${wpc.color};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(g.winnerDeck.commander)}</div>
-                    <div style="font-size:11px;color:var(--text-muted)">beat <span style="color:${lpc.color}">${g.loserDeck ? escHtml(g.loserDeck.commander) : '?'}</span></div>
-                  </div>
-                </div>`;
-              }).join('')
-          }
-        </div>
-      </div>
-      <div>
         <div class="dash-section-title" style="margin-bottom:8px">Recent Decks</div>
         <div class="dash-card" style="padding:0">
           ${recentDecks.length === 0
@@ -1091,6 +1071,26 @@ function renderDashboard() {
                   <div style="flex:1;min-width:0">
                     <div style="font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(d.commander)}</div>
                     <div style="font-size:11px;color:var(--text-muted)"><span style="color:${pc.color}">${escHtml(d.player)}</span>${cardCount ? ` · ${cardCount}c` : ''} · ${timeLabel}</div>
+                  </div>
+                </div>`;
+              }).join('')
+          }
+        </div>
+      </div>
+      <div>
+        <div class="dash-section-title" style="margin-bottom:8px">Recent Games</div>
+        <div class="dash-card" style="padding:0">
+          ${recentGames.length === 0
+            ? '<div style="padding:14px 14px"><p style="color:var(--text-muted);font-size:12px">No games yet.</p></div>'
+            : recentGames.slice(0, 8).map(g => {
+                const wpc = playerColor(g.winnerDeck.player);
+                const lpc = g.loserDeck ? playerColor(g.loserDeck.player) : { color: 'var(--text-muted)' };
+                const wav = state.playerAvatars?.[g.winnerDeck.player] || '🧙';
+                return `<div style="display:flex;align-items:flex-start;gap:8px;padding:9px 12px;border-bottom:1px solid var(--border)">
+                  <span style="font-size:14px;flex-shrink:0;margin-top:1px">${wav}</span>
+                  <div style="flex:1;min-width:0">
+                    <div style="font-size:12px;font-weight:500;color:${wpc.color};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(g.winnerDeck.commander)}</div>
+                    <div style="font-size:11px;color:var(--text-muted)">beat <span style="color:${lpc.color}">${g.loserDeck ? escHtml(g.loserDeck.commander) : '?'}</span></div>
                   </div>
                 </div>`;
               }).join('')
