@@ -109,8 +109,12 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 
 /* Deck list — compact rows */
 .deck-list { display: flex; flex-direction: column; gap: 4px; }
-.deck-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; transition: background var(--transition), border-color var(--transition); border-left: 3px solid transparent; }
+.deck-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; transition: background var(--transition), border-color var(--transition); border-left: 3px solid transparent; position: relative; overflow: hidden; }
 .deck-card:hover { border-color: var(--border-hover); background: var(--bg-hover); }
+.deck-card-art { position: absolute; inset: 0; background-size: cover; background-position: center 15%; opacity: 0; transition: opacity 0.3s ease; z-index: 0; }
+.deck-card-art.loaded { opacity: 0.12; }
+.deck-card:hover .deck-card-art.loaded { opacity: 0.22; }
+.deck-card > *:not(.deck-card-art) { position: relative; z-index: 1; }
 .deck-row-compact { display: flex; align-items: center; gap: 10px; padding: 0 12px; min-height: 44px; }
 .deck-tier-mini { width: 22px; height: 22px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; font-family: 'JetBrains Mono', monospace; flex-shrink: 0; }
 .deck-commander { font-size: 14px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
@@ -980,6 +984,7 @@ function render() {
   app.innerHTML = html;
   renderChatFAB();
   if (tab === 'home' && document.querySelector('.spotlight-bg[data-spotlight-art]')) loadSpotlightArt();
+  if (document.querySelector('.deck-card-art[data-art-commander]')) loadDeckCardArts();
 }
 
 function renderBottomNav(active) {
@@ -1184,6 +1189,50 @@ function renderCollectionTab() {
   return html;
 }
 
+async function loadDeckCardArts() {
+  const artDivs = [...document.querySelectorAll('.deck-card-art[data-art-commander]')];
+  const toFetch = artDivs.filter(el => el.getAttribute('data-art-commander'));
+  if (toFetch.length === 0) return;
+
+  for (const el of toFetch) {
+    const commander = el.getAttribute('data-art-commander');
+    if (!commander) continue;
+    const key = commander.toLowerCase();
+    let imgUrl = null;
+
+    const existing = scryfallCache[key];
+    if (typeof existing === 'string') {
+      imgUrl = existing;
+    } else if (existing?.imageUrl) {
+      imgUrl = existing.imageUrlArtCrop || existing.imageUrl;
+    } else {
+      try {
+        const searchName = commander.includes(' // ') ? commander.split(' // ')[0].trim() : commander;
+        const resp = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(searchName)}&format=json`);
+        if (resp.ok) {
+          const data = await resp.json();
+          const iuris = data.image_uris || data.card_faces?.[0]?.image_uris;
+          const imgNormal = iuris?.normal || iuris?.large || null;
+          const imgArtCrop = iuris?.art_crop || imgNormal;
+          imgUrl = imgNormal;
+          const backIuris = data.card_faces?.[1]?.image_uris;
+          const isDF = ['transform','modal_dfc','double_faced_token','reversible_card'].includes(data.layout);
+          if (!(scryfallCache[key]?.imageUrlBack)) {
+            scryfallCache[key] = imgNormal ? { imageUrl: imgNormal, imageUrlArtCrop: imgArtCrop, imageUrlBack: backIuris?.normal ?? null, isDoubleFaced: isDF, backFaceName: data.card_faces?.[1]?.name ?? null } : null;
+          }
+        }
+      } catch(e) {}
+      await new Promise(r => setTimeout(r, 80));
+    }
+
+    if (imgUrl && document.contains(el)) {
+      el.style.backgroundImage = `url('${imgUrl}')`;
+      el.removeAttribute('data-art-commander');
+      el.classList.add('loaded');
+    }
+  }
+}
+
 // ===== ACCOUNT TAB =====
 function renderAccountTab() {
   const name = currentUserName();
@@ -1364,12 +1413,17 @@ function renderDeckCard(deck, tier, index) {
   const losses = games.filter(g => g.result === 'loss').length;
   const total = wins + losses;
 
+  const artKey = (deck.commander || '').toLowerCase();
+  const artCacheVal = scryfallCache[artKey];
+  const artUrl = typeof artCacheVal === 'string' ? artCacheVal : (artCacheVal?.imageUrlArtCrop || artCacheVal?.imageUrl || null);
+
   let card = `<div class="deck-card" style="border-left-color:${tier.color};animation-delay:${delay}ms" onclick="toggleExpand('${deck.id}')">
+    <div class="deck-card-art${artUrl ? ' loaded' : ''}" style="${artUrl ? `background-image:url('${escHtml(artUrl)}')` : ''}" data-art-commander="${artUrl ? '' : escHtml(deck.commander)}"></div>
     <div class="deck-row-compact">
       <div class="deck-tier-mini" style="background:${tier.bg};color:${tier.text}">${tier.label}</div>
       <div class="deck-name-stack">
         ${deck.deckName ? `<span class="deck-card-name">${escHtml(deck.deckName)}</span>` : ''}
-        <span class="deck-commander${deck.deckName ? ' deck-commander-sub' : ''}">${escHtml(deck.commander)}</span>
+        <span class="deck-commander${deck.deckName ? ' deck-commander-sub' : ''}">${escHtml(deck.commander?.includes(' // ') ? deck.commander.split(' // ')[0] : deck.commander)}</span>
       </div>
       <span class="deck-player" style="background:${pc.bg};color:${pc.color}">${escHtml(deck.player)}</span>
       <span class="deck-row-score">${overall}</span>
@@ -4191,17 +4245,19 @@ function renderMyDecksGallery() {
     const wins = games.filter(g => g.result === 'win').length;
     const losses = games.filter(g => g.result === 'loss').length;
     const cacheKey = (deck.commander || '').toLowerCase();
-    const cachedImg = scryfallCache[cacheKey];
-    const imgHtml = cachedImg
-      ? `<img class="gallery-card-img" src="${escHtml(cachedImg)}" alt="" loading="lazy" onerror="this.style.display='none'">`
+    const cached = scryfallCache[cacheKey];
+    const imgUrl = typeof cached === 'object' ? cached?.imageUrlArtCrop : cached;
+    const imgHtml = imgUrl
+      ? `<img class="gallery-card-img" src="${escHtml(imgUrl)}" alt="" loading="lazy" onerror="this.style.display='none'">`
       : `<div class="gallery-card-placeholder">🧙</div>`;
     const recordStr = (wins + losses) > 0 ? `${wins}W-${losses}L` : '';
+    const displayCommander = deck.commander?.includes(' // ') ? deck.commander.split(' // ')[0] : deck.commander;
     return `<div class="gallery-card" onclick="openDeckDetail('${escHtml(deck.id)}')">
       ${imgHtml}
       <div class="gallery-card-overlay"></div>
       <div class="gallery-card-footer">
         ${deck.deckName ? `<div class="gallery-card-deckname">${escHtml(deck.deckName)}</div>` : ''}
-        <div class="gallery-card-name">${escHtml(deck.commander)}</div>
+        <div class="gallery-card-name">${escHtml(displayCommander)}</div>
         <div class="gallery-card-meta">
           <span class="gallery-card-tier" style="background:${tierInfo.bg};color:${tierInfo.text}">${tier}</span>
           <span class="gallery-card-score">${overall}</span>
@@ -4228,20 +4284,24 @@ async function loadGalleryImages() {
   for (const deck of myDecks) {
     const key = (deck.commander || '').toLowerCase();
     if (!key) continue;
-    if (scryfallCache[key]) continue;
+    const existing = scryfallCache[key];
+    // Skip if already cached as an object with art, or as a string
+    if (existing && (typeof existing === 'string' || existing.imageUrlArtCrop)) continue;
     try {
-      const resp = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(deck.commander)}&format=json`);
+      // For DFCs use only the front face name for the Scryfall lookup
+      const lookupName = deck.commander.includes(' // ') ? deck.commander.split(' // ')[0].trim() : deck.commander;
+      const resp = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(lookupName)}&format=json`);
       if (!resp.ok) continue;
       const data = await resp.json();
-      const imgUrl = data.image_uris?.art_crop || data.image_uris?.normal || null;
-      if (imgUrl) {
-        scryfallCache[key] = imgUrl;
+      const iuris = data.image_uris || data.card_faces?.[0]?.image_uris;
+      const imageUrlArtCrop = iuris?.art_crop || iuris?.normal || null;
+      if (imageUrlArtCrop) {
+        scryfallCache[key] = { imageUrlArtCrop };
         needsRender = true;
       }
     } catch (e) {
       // ignore fetch errors
     }
-    // Small delay to avoid hammering Scryfall
     await new Promise(r => setTimeout(r, 80));
   }
   if (needsRender && state.myDecksGallery) render();
@@ -4439,6 +4499,7 @@ window.closeAvatarModal = closeAvatarModal;
 window.openMyDecksGallery = openMyDecksGallery;
 window.closeMyDecksGallery = closeMyDecksGallery;
 window.loadGalleryImages = loadGalleryImages;
+window.loadDeckCardArts = loadDeckCardArts;
 window.openGamesHistory = openGamesHistory;
 window.closeGamesHistory = closeGamesHistory;
 window.toggleLeaderboardExpand = toggleLeaderboardExpand;
