@@ -1042,11 +1042,6 @@ function renderDashboard() {
   const userWinRate = userTotal > 0 ? Math.round((userWins / userTotal) * 100) : null;
   const totalGames = allDecks.flatMap(d => d.games || []).filter(g => g.result === 'win').length;
   const leaderboard = getLeaderboardData();
-  const recentGames = getRecentGames(15);
-  const recentDecks = [...state.decks]
-    .filter(d => d.decklistUpdatedAt || d.createdAt)
-    .sort((a, b) => (b.decklistUpdatedAt || b.createdAt || 0) - (a.decklistUpdatedAt || a.createdAt || 0))
-    .slice(0, 3);
 
   return `
     <div class="header" style="margin-bottom:20px">
@@ -1099,50 +1094,6 @@ function renderDashboard() {
           ${isExpanded ? renderLeaderboardExpanded(p.player) : ''}
         </div>`;
       }).join('')}
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:4px">
-      <div>
-        <div class="dash-section-title" style="margin-bottom:8px">Recent Games</div>
-        <div class="dash-card" style="padding:0">
-          ${recentGames.length === 0
-            ? '<div style="padding:14px 14px"><p style="color:var(--text-muted);font-size:12px">No games yet.</p></div>'
-            : recentGames.slice(0, 8).map(g => {
-                const wpc = playerColor(g.winnerDeck.player);
-                const lpc = g.loserDeck ? playerColor(g.loserDeck.player) : { color: 'var(--text-muted)' };
-                const wav = state.playerAvatars?.[g.winnerDeck.player] || '🧙';
-                return `<div style="display:flex;align-items:flex-start;gap:8px;padding:9px 12px;border-bottom:1px solid var(--border)">
-                  <span style="font-size:14px;flex-shrink:0;margin-top:1px">${wav}</span>
-                  <div style="flex:1;min-width:0">
-                    <div style="font-size:12px;font-weight:500;color:${wpc.color};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(g.winnerDeck.commander)}</div>
-                    <div style="font-size:11px;color:var(--text-muted)">beat <span style="color:${lpc.color}">${g.loserDeck ? escHtml(g.loserDeck.commander) : '?'}</span></div>
-                  </div>
-                </div>`;
-              }).join('')
-          }
-        </div>
-      </div>
-      <div>
-        <div class="dash-section-title" style="margin-bottom:8px">Recent Decks</div>
-        <div class="dash-card" style="padding:0">
-          ${recentDecks.length === 0
-            ? '<div style="padding:14px 14px"><p style="color:var(--text-muted);font-size:12px">Update a decklist to see it here.</p></div>'
-            : recentDecks.map(d => {
-                const pc = playerColor(d.player);
-                const ts = d.decklistUpdatedAt || d.createdAt;
-                const daysAgo = ts ? Math.floor((Date.now() - ts) / 86400000) : null;
-                const timeLabel = daysAgo === null ? '' : daysAgo === 0 ? 'Today' : daysAgo === 1 ? 'Yesterday' : `${daysAgo}d ago`;
-                const cardCount = (() => { try { return parseDecklistSections(d.decklist || '').main.length; } catch(e) { return 0; } })();
-                return `<div onclick="openDeckDetail('${d.id}')" style="display:flex;align-items:flex-start;gap:8px;padding:9px 12px;border-bottom:1px solid var(--border);cursor:pointer">
-                  <span style="font-size:14px;flex-shrink:0;margin-top:1px">${state.playerAvatars?.[d.player] || '🧙'}</span>
-                  <div style="flex:1;min-width:0">
-                    <div style="font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(d.commander)}</div>
-                    <div style="font-size:11px;color:var(--text-muted)"><span style="color:${pc.color}">${escHtml(d.player)}</span>${cardCount ? ` · ${cardCount}c` : ''} · ${timeLabel}</div>
-                  </div>
-                </div>`;
-              }).join('')
-          }
-        </div>
-      </div>
     </div>
     ${renderPodFeed()}
     <div class="dash-section-title">Quick Actions</div>
