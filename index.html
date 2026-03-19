@@ -393,14 +393,14 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 .pt-counter { position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;background:#22c55e;color:#fff;border-radius:99px;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 3px;pointer-events:none; }
 .pt-cmd-badge { position:absolute;bottom:-4px;left:2px;font-size:9px;background:rgba(167,139,250,0.8);border-radius:99px;padding:1px 4px;color:#fff;pointer-events:none; }
 .pt-snap-badge { position:absolute;top:8px;left:8px;font-size:9px;padding:3px 7px;background:rgba(0,0,0,0.6);border:1px solid var(--border);border-radius:99px;color:var(--text-muted);cursor:pointer;z-index:10;backdrop-filter:blur(4px); }
-.pt-action-bar { display:flex;gap:6px;padding:8px 10px;background:var(--bg-card);border-top:1px solid var(--border);overflow-x:auto;flex-shrink:0;scrollbar-width:none; }
+.pt-action-bar { display:flex;gap:6px;padding:8px 10px;background:var(--bg-card);border-bottom:1px solid var(--border);overflow-x:auto;flex-shrink:0;scrollbar-width:none; }
 .pt-action-bar::-webkit-scrollbar { display:none; }
 .pt-action-btn { font-size:12px;padding:7px 14px;white-space:nowrap;flex-shrink:0;border-radius:var(--radius-sm); }
 .pt-action-danger { color:var(--tier-s-text) !important;border-color:rgba(226,75,74,0.5) !important; }
-.pt-hand { display:flex;gap:8px;padding:10px 12px;background:var(--bg-card);border-top:1px solid var(--border);overflow-x:auto;flex-shrink:0;min-height:118px;max-height:140px;scrollbar-width:none;overflow-y:visible; }
+.pt-hand { display:flex;gap:3px;padding:6px 8px 8px;background:transparent;border:none;overflow-x:auto;flex-shrink:0;min-height:110px;max-height:130px;scrollbar-width:none; }
 .pt-hand::-webkit-scrollbar { display:none; }
-.pt-hand-card { flex-shrink:0;cursor:grab;border-radius:6px;transition:transform 0.12s ease;touch-action:none;user-select:none;position:relative;transform-origin:bottom center; }
-.pt-hand-card:hover { transform:translateY(-8px) scale(3);z-index:50; }
+.pt-hand-card { flex-shrink:0;cursor:grab;border-radius:6px;transition:transform 0.12s ease;touch-action:none;user-select:none;position:relative; }
+.pt-hand-card.pt-hand-active { transform:translateY(-10px);z-index:50; }
 .pt-hand-card.pt-dragging-src { opacity:0.3; }
 .pt-card-menu { position:fixed;background:var(--bg-card);border:1px solid var(--border-hover);border-radius:var(--radius);padding:8px;z-index:500;min-width:210px;max-width:280px;box-shadow:0 8px 32px rgba(0,0,0,0.6); }
 .pt-card-menu-name { font-size:11px;color:var(--text-muted);padding:0 6px 8px;border-bottom:1px solid var(--border);margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-style:italic; }
@@ -954,7 +954,9 @@ function render() {
     const g = state.playtestGame;
     if (g?.status === 'active') {
       app.innerHTML = renderPTGame();
+      ptInitHandHover();
     } else {
+      ptHideHandPreview();
       app.innerHTML = renderPTLobby();
     }
     return;
@@ -3084,7 +3086,7 @@ function renderPTGame() {
   const cardMenuHtml = state.playtestCardMenu ? renderPTCardMenu() : '';
   const menuBackdrop = state.playtestCardMenu ? `<div style="position:fixed;inset:0;z-index:499" onclick="ptCloseMenu()"></div>` : '';
   const settingsBackdrop = state.playtestSettings ? `<div style="position:fixed;inset:0;z-index:498" onclick="event.stopPropagation();state.playtestSettings=false;render()"></div>` : '';
-  return `<div class="pt-playmat">${tabsHtml}${deckBar}${battlefieldHtml}${actionBar}${handHtml}${overlayHtml}${scryHtml}${millHtml}${numberHtml}${settingsBackdrop}${menuBackdrop}${cardMenuHtml}</div>`;
+  return `<div class="pt-playmat">${tabsHtml}${deckBar}${actionBar}${battlefieldHtml}${handHtml}${overlayHtml}${scryHtml}${millHtml}${numberHtml}${settingsBackdrop}${menuBackdrop}${cardMenuHtml}</div>`;
 }
 
 function renderPTCardMenu() {
@@ -3377,6 +3379,69 @@ function ptZoomHover(e, imageUrl, name) {
   ptZoomTimer = setTimeout(() => ptZoomShow(imageUrl, name, e.currentTarget), 300);
 }
 
+// ── Hand hover preview (fixed-position overlay, X-position detection) ─────
+let ptHandPreviewEl = null;
+
+function ptGetOrCreatePreview() {
+  if (!ptHandPreviewEl) {
+    ptHandPreviewEl = document.createElement('div');
+    ptHandPreviewEl.id = 'pt-hand-preview';
+    ptHandPreviewEl.style.cssText = 'position:fixed;pointer-events:none;z-index:200;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,0.8);display:none;opacity:0;transition:opacity 0.1s ease';
+    ptHandPreviewEl.innerHTML = '<img style="width:100%;border-radius:8px;display:block">';
+    document.body.appendChild(ptHandPreviewEl);
+  }
+  return ptHandPreviewEl;
+}
+
+function ptHideHandPreview() {
+  if (ptHandPreviewEl) { ptHandPreviewEl.style.opacity = '0'; setTimeout(() => { if (ptHandPreviewEl) ptHandPreviewEl.style.display = 'none'; }, 100); }
+  document.querySelectorAll('.pt-hand-card.pt-hand-active').forEach(c => c.classList.remove('pt-hand-active'));
+}
+
+function ptInitHandHover() {
+  const hand = document.querySelector('.pt-hand');
+  if (!hand) return;
+  // Re-attach every render since .pt-hand is recreated
+  hand.addEventListener('pointermove', function(e) {
+    // Skip if dragging
+    if (ptHandDrag || ptDrag) return;
+    const cards = Array.from(this.querySelectorAll('.pt-hand-card'));
+    if (!cards.length) return;
+    const hw = ptHandW();
+    const gap = 3;
+    const containerRect = this.getBoundingClientRect();
+    const relX = e.clientX - containerRect.left + this.scrollLeft;
+    const idx = Math.max(0, Math.min(Math.floor(relX / (hw + gap)), cards.length - 1));
+
+    // Highlight original card
+    cards.forEach((c, i) => c.classList.toggle('pt-hand-active', i === idx));
+
+    // Show fixed preview above the hand
+    const card = cards[idx];
+    const img = card.querySelector('img');
+    if (!img || !img.src || img.src === window.location.href) return;
+
+    const previewW = Math.round(hw * 2.8);
+    const previewH = Math.round(previewW * 88 / 63);
+    const cardRect = card.getBoundingClientRect();
+    const vw = window.innerWidth;
+    let left = cardRect.left + cardRect.width / 2 - previewW / 2;
+    let top = containerRect.top - previewH - 10;
+    left = Math.max(8, Math.min(left, vw - previewW - 8));
+    top = Math.max(8, top);
+
+    const el = ptGetOrCreatePreview();
+    const previewImg = el.querySelector('img');
+    if (previewImg.src !== img.src) previewImg.src = img.src;
+    el.style.width = previewW + 'px';
+    el.style.left = left + 'px';
+    el.style.top = top + 'px';
+    el.style.display = 'block';
+    requestAnimationFrame(() => { if (el) el.style.opacity = '1'; });
+  });
+  hand.addEventListener('pointerleave', ptHideHandPreview);
+}
+
 // ── Drag-and-drop: pointer events ─────────────────────
 let ptHandDrag = null;
 let ptHandDragGhost = null;
@@ -3389,6 +3454,7 @@ function ptHandPointerDown(e, cardId) {
   e.preventDefault();
   e.stopPropagation();
   try { e.target.setPointerCapture(e.pointerId); } catch(_) {}
+  ptHideHandPreview();
   ptHandDrag = { cardId, startX: e.clientX, startY: e.clientY, moved: false };
 }
 
@@ -5028,6 +5094,7 @@ window.ptPointerDown = ptPointerDown;
 window.ptHandPointerDown = ptHandPointerDown;
 window.ptZoomHover = ptZoomHover;
 window.ptZoomHide = ptZoomHide;
+window.ptHideHandPreview = ptHideHandPreview;
 window.ptSetSize = ptSetSize;
 window.ptToggleSettings = ptToggleSettings;
 window.ptPlayCardAt = ptPlayCardAt;
