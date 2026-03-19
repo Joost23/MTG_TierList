@@ -525,6 +525,8 @@ import { getFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot
   from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, updatePassword, reauthenticateWithCredential, EmailAuthProvider }
   from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL }
+  from "https://www.gstatic.com/firebasejs/11.0.0/firebase-storage.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyC1yDJ0Ue4lu9T2Gzk16Q4T0BoephK7Jr4",
@@ -539,6 +541,7 @@ const firebaseConfig = {
 const fbApp = initializeApp(firebaseConfig);
 const db = getFirestore(fbApp);
 const auth = getAuth(fbApp);
+const storage = getStorage(fbApp);
 
 // ===== DATA =====
 const INITIAL_DECKS = [
@@ -3709,12 +3712,15 @@ function getMatchupInsights(deck) {
 }
 
 function renderAvatar(playerName, size = 36) {
-  const emoji = state.playerAvatars?.[playerName];
+  const av = state.playerAvatars?.[playerName];
   const pc = playerColor(playerName);
-  const inner = emoji
-    ? `<span style="font-size:${Math.round(size * 0.55)}px;line-height:1">${emoji}</span>`
-    : `<span style="color:${pc.color};font-weight:700;font-size:${Math.round(size * 0.42)}px">${playerName[0]}</span>`;
-  return `<div class="avatar-circle" style="width:${size}px;height:${size}px;background:${pc.bg};border:2px solid ${pc.color}" onclick="openAvatarModal('${escHtml(playerName)}')" title="Change ${escHtml(playerName)}'s avatar">${inner}</div>`;
+  const isPhoto = av && (av.startsWith('http') || av.startsWith('data:'));
+  const inner = isPhoto
+    ? `<img src="${escHtml(av)}" alt="${escHtml(playerName)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block">`
+    : av
+      ? `<span style="font-size:${Math.round(size * 0.55)}px;line-height:1">${av}</span>`
+      : `<span style="color:${pc.color};font-weight:700;font-size:${Math.round(size * 0.42)}px">${playerName[0]}</span>`;
+  return `<div class="avatar-circle" style="width:${size}px;height:${size}px;background:${pc.bg};border:2px solid ${pc.color};overflow:hidden" onclick="openAvatarModal('${escHtml(playerName)}')" title="Change ${escHtml(playerName)}'s avatar">${inner}</div>`;
 }
 
 function openAvatarModal(playerName) { state.showAvatarModal = playerName; render(); }
@@ -3755,6 +3761,55 @@ async function saveAvatar(playerName, emoji) {
   try {
     await setDoc(doc(db, 'users', playerName), { avatar: emoji }, { merge: true });
   } catch(e) { console.error('saveAvatar:', e); }
+}
+
+async function handleAvatarPhotoSelect(input, playerName) {
+  const file = input.files?.[0];
+  if (!file) return;
+  const status = document.getElementById('avatar-upload-status');
+  if (status) status.textContent = 'Resizing…';
+  try {
+    // Draw to 200×200 canvas (centre-crop)
+    const blob = await new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 200; canvas.height = 200;
+        const ctx = canvas.getContext('2d');
+        const size = Math.min(img.width, img.height);
+        const sx = (img.width - size) / 2;
+        const sy = (img.height - size) / 2;
+        ctx.drawImage(img, sx, sy, size, size, 0, 0, 200, 200);
+        canvas.toBlob(resolve, 'image/jpeg', 0.85);
+      };
+      img.onerror = reject;
+      img.src = URL.createObjectURL(file);
+    });
+    if (status) status.textContent = 'Uploading…';
+    const uid = state.currentUser?.uid;
+    if (!uid) throw new Error('Not signed in');
+    const sRef = storageRef(storage, `avatars/${uid}.jpg`);
+    await uploadBytes(sRef, blob, { contentType: 'image/jpeg' });
+    const url = await getDownloadURL(sRef);
+    if (status) status.textContent = 'Saved!';
+    // Persist to Firestore and update state
+    await setDoc(doc(db, 'users', playerName), { avatar: url }, { merge: true });
+    state.playerAvatars = { ...state.playerAvatars, [playerName]: url };
+    state.showAvatarModal = null;
+    render();
+  } catch(e) {
+    console.error('Avatar upload failed:', e);
+    if (status) status.textContent = 'Upload failed: ' + (e.message || e.code || 'unknown error');
+  }
+}
+
+async function clearAvatarPhoto(playerName) {
+  state.playerAvatars = { ...state.playerAvatars, [playerName]: null };
+  state.showAvatarModal = null;
+  render();
+  try {
+    await setDoc(doc(db, 'users', playerName), { avatar: null }, { merge: true });
+  } catch(e) { console.error('clearAvatarPhoto:', e); }
 }
 
 // ===== DISPLAY NAME MODAL =====
@@ -3862,20 +3917,34 @@ async function doChangePassword() {
 
 function renderAvatarModal(playerName) {
   const current = state.playerAvatars?.[playerName];
+  const isPhoto = current && (current.startsWith('http') || current.startsWith('data:'));
   const pc = playerColor(playerName);
+  const uploadId = 'avatar-file-input';
   return `<div class="modal-overlay" onclick="closeAvatarModal()">
     <div class="modal" onclick="event.stopPropagation()" style="max-width:360px">
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
-        ${renderAvatar(playerName, 44)}
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+        ${renderAvatar(playerName, 52)}
         <div>
           <h2 style="margin-bottom:2px">Avatar</h2>
-          <p style="font-size:13px;color:var(--text-secondary)">Pick an emoji for <span style="color:${pc.color};font-weight:600">${escHtml(playerName)}</span></p>
+          <p style="font-size:13px;color:var(--text-secondary)"><span style="color:${pc.color};font-weight:600">${escHtml(playerName)}</span></p>
         </div>
       </div>
+
+      <div style="margin-bottom:14px">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);font-weight:600;margin-bottom:8px">Photo</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button onclick="document.getElementById('${uploadId}').click()" style="font-size:12px;padding:7px 14px">📷 Upload photo</button>
+          ${isPhoto ? `<button onclick="clearAvatarPhoto('${escHtml(playerName)}')" style="font-size:12px;padding:7px 14px;color:var(--tier-s-text);border-color:rgba(226,75,74,0.4)">Remove</button>` : ''}
+          <span id="avatar-upload-status" style="font-size:11px;color:var(--text-muted)"></span>
+        </div>
+        <input type="file" id="${uploadId}" accept="image/*" style="display:none" onchange="handleAvatarPhotoSelect(this,'${escHtml(playerName)}')">
+      </div>
+
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);font-weight:600;margin-bottom:8px">— or pick an emoji —</div>
       <div class="avatar-picker-grid">
         ${AVATAR_EMOJIS.map(e => `<div class="avatar-option${e===current?' selected':''}" onclick="saveAvatar('${escHtml(playerName)}','${e}')">${e}</div>`).join('')}
       </div>
-      <div style="text-align:center;margin-top:8px">
+      <div style="text-align:center;margin-top:12px">
         <button onclick="closeAvatarModal()" style="font-size:12px;padding:5px 16px">Cancel</button>
       </div>
     </div>
@@ -4426,6 +4495,8 @@ window.closeCardPopup = closeCardPopup;
 window.toggleCardFlip = toggleCardFlip;
 window.toggleTagOption = toggleTagOption;
 window.saveAvatar = saveAvatar;
+window.handleAvatarPhotoSelect = handleAvatarPhotoSelect;
+window.clearAvatarPhoto = clearAvatarPhoto;
 window.openNewGameModal = openNewGameModal;
 window.closeNewGameModal = closeNewGameModal;
 window.setSessionPlayer = setSessionPlayer;
