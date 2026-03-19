@@ -1369,7 +1369,7 @@ function renderDeckCard(deck, tier, index) {
       <div class="deck-tier-mini" style="background:${tier.bg};color:${tier.text}">${tier.label}</div>
       <div class="deck-name-stack">
         ${deck.deckName ? `<span class="deck-card-name">${escHtml(deck.deckName)}</span>` : ''}
-        <span class="deck-commander${deck.deckName ? ' deck-commander-sub' : ''}">${escHtml(deck.commander)}</span>
+        <span class="deck-commander${deck.deckName ? ' deck-commander-sub' : ''}">${escHtml(deck.commander?.includes(' // ') ? deck.commander.split(' // ')[0] : deck.commander)}</span>
       </div>
       <span class="deck-player" style="background:${pc.bg};color:${pc.color}">${escHtml(deck.player)}</span>
       <span class="deck-row-score">${overall}</span>
@@ -4191,17 +4191,19 @@ function renderMyDecksGallery() {
     const wins = games.filter(g => g.result === 'win').length;
     const losses = games.filter(g => g.result === 'loss').length;
     const cacheKey = (deck.commander || '').toLowerCase();
-    const cachedImg = scryfallCache[cacheKey];
-    const imgHtml = cachedImg
-      ? `<img class="gallery-card-img" src="${escHtml(cachedImg)}" alt="" loading="lazy" onerror="this.style.display='none'">`
+    const cached = scryfallCache[cacheKey];
+    const imgUrl = typeof cached === 'object' ? cached?.imageUrlArtCrop : cached;
+    const imgHtml = imgUrl
+      ? `<img class="gallery-card-img" src="${escHtml(imgUrl)}" alt="" loading="lazy" onerror="this.style.display='none'">`
       : `<div class="gallery-card-placeholder">🧙</div>`;
     const recordStr = (wins + losses) > 0 ? `${wins}W-${losses}L` : '';
+    const displayCommander = deck.commander?.includes(' // ') ? deck.commander.split(' // ')[0] : deck.commander;
     return `<div class="gallery-card" onclick="openDeckDetail('${escHtml(deck.id)}')">
       ${imgHtml}
       <div class="gallery-card-overlay"></div>
       <div class="gallery-card-footer">
         ${deck.deckName ? `<div class="gallery-card-deckname">${escHtml(deck.deckName)}</div>` : ''}
-        <div class="gallery-card-name">${escHtml(deck.commander)}</div>
+        <div class="gallery-card-name">${escHtml(displayCommander)}</div>
         <div class="gallery-card-meta">
           <span class="gallery-card-tier" style="background:${tierInfo.bg};color:${tierInfo.text}">${tier}</span>
           <span class="gallery-card-score">${overall}</span>
@@ -4228,20 +4230,24 @@ async function loadGalleryImages() {
   for (const deck of myDecks) {
     const key = (deck.commander || '').toLowerCase();
     if (!key) continue;
-    if (scryfallCache[key]) continue;
+    const existing = scryfallCache[key];
+    // Skip if already cached as an object with art, or as a string
+    if (existing && (typeof existing === 'string' || existing.imageUrlArtCrop)) continue;
     try {
-      const resp = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(deck.commander)}&format=json`);
+      // For DFCs use only the front face name for the Scryfall lookup
+      const lookupName = deck.commander.includes(' // ') ? deck.commander.split(' // ')[0].trim() : deck.commander;
+      const resp = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(lookupName)}&format=json`);
       if (!resp.ok) continue;
       const data = await resp.json();
-      const imgUrl = data.image_uris?.art_crop || data.image_uris?.normal || null;
-      if (imgUrl) {
-        scryfallCache[key] = imgUrl;
+      const iuris = data.image_uris || data.card_faces?.[0]?.image_uris;
+      const imageUrlArtCrop = iuris?.art_crop || iuris?.normal || null;
+      if (imageUrlArtCrop) {
+        scryfallCache[key] = { imageUrlArtCrop };
         needsRender = true;
       }
     } catch (e) {
       // ignore fetch errors
     }
-    // Small delay to avoid hammering Scryfall
     await new Promise(r => setTimeout(r, 80));
   }
   if (needsRender && state.myDecksGallery) render();
