@@ -452,6 +452,16 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 @keyframes pt-toast-in { from { opacity:0;transform:translateX(-50%) translateY(10px); } to { opacity:1;transform:translateX(-50%) translateY(0); } }
 @keyframes pt-card-land { from { transform:scale(1.08); } to { transform:scale(1); } }
 .pt-card-land { animation:pt-card-land 0.2s ease-out; }
+/* ===== RECOMMENDATIONS ===== */
+.rec-card { display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.12s; }
+.rec-card:last-child { border-bottom:none; }
+.rec-card:hover { background:var(--bg-hover); }
+.rec-icon { width:36px;height:36px;border-radius:50%;background:var(--bg-surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0; }
+.rec-body { flex:1;min-width:0; }
+.rec-title { font-size:13px;font-weight:600;margin-bottom:2px; }
+.rec-desc { font-size:12px;color:var(--text-secondary);margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.rec-meta { font-size:11px;color:var(--text-muted); }
+
 /* ===== PHASE 5 POLISH ===== */
 .streak-badge { display:inline-flex;align-items:center;gap:2px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px;font-family:'JetBrains Mono',monospace;flex-shrink:0; }
 .streak-win { background:var(--tier-b-bg);color:var(--tier-b-text); }
@@ -1080,6 +1090,112 @@ function getLeaderboardData() {
   }).slice(0, 10);
 }
 
+const REC_COLOR_NAMES = { W: 'White', U: 'Blue', B: 'Black', R: 'Red', G: 'Green' };
+const REC_COLOR_BG    = { W: '#C8A84B', U: '#1070C8', B: '#4B4B4B', R: '#D0392A', G: '#1A7A3C' };
+
+function getRecommendations() {
+  const myName = currentUserName();
+  if (!myName) return [];
+  const myDecks = state.decks.filter(d => d.player === myName);
+  const recs = [];
+  const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+  // 1. Dust-off: most-played deck not touched in 30 days
+  const neglected = myDecks
+    .map(d => {
+      const games = d.games || [];
+      if (games.length < 3) return null;
+      const recent = games.filter(g => g.date >= cutoff);
+      if (recent.length > 0) return null;
+      return { deck: d, games: games.length };
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.games - a.games)[0];
+  if (neglected) recs.push({ type: 'dust-off', deck: neglected.deck, games: neglected.games });
+
+  // 2. Counter pick: your best deck vs the opponent you lose to most
+  const lossCount = {};
+  myDecks.forEach(d => {
+    (d.games || []).forEach(g => {
+      if (g.result === 'loss' && g.opponentId) lossCount[g.opponentId] = (lossCount[g.opponentId] || 0) + 1;
+    });
+  });
+  const [worstOppId, worstLosses] = Object.entries(lossCount).sort((a, b) => b[1] - a[1])[0] || [];
+  if (worstOppId && worstLosses >= 2) {
+    const worstOpp = state.decks.find(d => d.id === worstOppId);
+    if (worstOpp) {
+      const counter = myDecks
+        .map(d => {
+          const vsGames = (d.games || []).filter(g => g.opponentId === worstOppId);
+          if (!vsGames.length) return null;
+          const wins = vsGames.filter(g => g.result === 'win').length;
+          return { deck: d, wins, total: vsGames.length, wr: wins / vsGames.length };
+        })
+        .filter(Boolean)
+        .sort((a, b) => b.wr - a.wr)[0];
+      if (counter && counter.wr >= 0.4)
+        recs.push({ type: 'counter', deck: counter.deck, opp: worstOpp, wins: counter.wins, total: counter.total, losses: worstLosses });
+    }
+  }
+
+  // 3. Brew challenge: color missing from your collection but present in the pod
+  const myColors = new Set(myDecks.flatMap(d => (d.colors || '').split('')).filter(c => 'WUBRG'.includes(c)));
+  const podColorCount = {};
+  state.decks.filter(d => d.player !== myName).forEach(d => {
+    (d.colors || '').split('').forEach(c => { if ('WUBRG'.includes(c)) podColorCount[c] = (podColorCount[c] || 0) + 1; });
+  });
+  const missingWithPod = ['W','U','B','R','G']
+    .filter(c => !myColors.has(c) && (podColorCount[c] || 0) >= 2)
+    .sort((a, b) => (podColorCount[b] || 0) - (podColorCount[a] || 0));
+  if (missingWithPod.length > 0)
+    recs.push({ type: 'gap', color: missingWithPod[0], podCount: podColorCount[missingWithPod[0]] || 0 });
+
+  return recs;
+}
+
+function renderRecommendations() {
+  const recs = getRecommendations();
+  if (!recs.length) return '';
+  const cards = recs.map(r => {
+    if (r.type === 'dust-off') {
+      const tier = getTier(r.deck.power);
+      return `<div class="rec-card" onclick="openDeckDetail('${r.deck.id}')">
+        <div class="rec-icon">🧹</div>
+        <div class="rec-body">
+          <div class="rec-title">Dust it off</div>
+          <div class="rec-desc">${escHtml(r.deck.commander)}</div>
+          <div class="rec-meta">${r.games} games · not played in 30+ days</div>
+        </div>
+        <span style="font-size:11px;font-weight:700;color:var(--tier-${tier.toLowerCase()}-text);background:var(--tier-${tier.toLowerCase()}-bg);padding:2px 7px;border-radius:4px;flex-shrink:0">${tier}</span>
+      </div>`;
+    }
+    if (r.type === 'counter') {
+      const losses = r.total - r.wins;
+      return `<div class="rec-card" onclick="openDeckDetail('${r.deck.id}')">
+        <div class="rec-icon">⚔️</div>
+        <div class="rec-body">
+          <div class="rec-title">Counter pick</div>
+          <div class="rec-desc">${escHtml(r.deck.commander)} — ${r.wins}W-${losses}L vs ${escHtml(r.opp.commander)}</div>
+          <div class="rec-meta">You've lost to ${escHtml(r.opp.commander)} ${r.losses}× — this matchup favours you</div>
+        </div>
+      </div>`;
+    }
+    if (r.type === 'gap') {
+      const bg = REC_COLOR_BG[r.color];
+      return `<div class="rec-card">
+        <div class="rec-icon" style="background:${bg}22;border-color:${bg}55"><span style="color:${bg};font-weight:700;font-size:14px">${r.color}</span></div>
+        <div class="rec-body">
+          <div class="rec-title">Brew challenge</div>
+          <div class="rec-desc">No ${REC_COLOR_NAMES[r.color]} decks in your collection</div>
+          <div class="rec-meta">${r.podCount} ${REC_COLOR_NAMES[r.color]} deck${r.podCount !== 1 ? 's' : ''} in the pod — consider brewing one</div>
+        </div>
+      </div>`;
+    }
+    return '';
+  }).join('');
+  return `<div class="dash-section-title">Suggestions</div><div class="dash-card" style="overflow:hidden">${cards}</div>`;
+}
+
 function getRecentGames(limit = 10) {
   const games = [];
   state.decks.forEach(deck => {
@@ -1157,6 +1273,7 @@ function renderDashboard() {
         </div>`;
       }).join('')}
     </div>
+    ${renderRecommendations()}
     ${renderPodFeed()}
     <div class="dash-section-title">Quick Actions</div>
     <div class="quick-actions">
