@@ -109,21 +109,15 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 
 /* Deck list — compact rows */
 .deck-list { display: flex; flex-direction: column; gap: 4px; }
-.deck-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; transition: background var(--transition), border-color var(--transition); border-left: 3px solid transparent; position: relative; overflow: hidden; }
-.deck-card:hover { border-color: var(--border-hover); }
-.deck-card-art { position: absolute; inset: 0; background-size: cover; background-position: center 15%; opacity: 0; transition: opacity 0.3s ease; z-index: 0; }
-.deck-card-art.loaded { opacity: 0.12; }
-.deck-card:hover .deck-card-art.loaded { opacity: 0.22; }
-.deck-card > *:not(.deck-card-art) { position: relative; z-index: 1; }
+.deck-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; transition: background var(--transition), border-color var(--transition); border-left: 3px solid transparent; }
+.deck-card:hover { border-color: var(--border-hover); background: var(--bg-hover); }
 .deck-row-compact { display: flex; align-items: center; gap: 10px; padding: 0 12px; min-height: 44px; }
 .deck-tier-mini { width: 22px; height: 22px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; font-family: 'JetBrains Mono', monospace; flex-shrink: 0; }
 .deck-commander { font-size: 14px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-.deck-name-stack { display: flex; flex-direction: column; flex: 1; min-width: 0; overflow: hidden; justify-content: center; }
-.deck-card-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; }
-.deck-commander-sub { font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; }
-.gallery-card-deckname { font-size: 11px; font-weight: 500; color: rgba(255,255,255,0.55); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mana-symbols { display: inline-flex; align-items: center; gap: 1px; vertical-align: middle; }
-.mana-sym { display: inline-block; vertical-align: middle; flex-shrink: 0; }
+.deck-name-stack { display: flex; flex-direction: column; flex: 1; min-width: 0; overflow: hidden; }
+.deck-card-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.deck-commander-sub { font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gallery-card-deckname { font-size: 11px; font-weight: 500; color: rgba(255,255,255,0.6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 1px; }
 .deck-player { padding: 1px 7px; border-radius: 4px; font-size: 11px; font-weight: 500; flex-shrink: 0; }
 .deck-row-score { font-size: 14px; font-weight: 600; font-family: 'JetBrains Mono', monospace; flex-shrink: 0; width: 34px; text-align: right; color: var(--text-secondary); }
 .deck-colors { display: inline-flex; align-items: center; gap: 2px; }
@@ -425,12 +419,46 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 .avatar-option { width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;cursor:pointer;background:var(--bg-surface);border:2px solid transparent;transition:all 0.15s; }
 .avatar-option:hover,.avatar-option.selected { border-color:var(--accent);background:var(--bg-hover); }
 .spotlight-banner { position:relative;border-radius:var(--radius);overflow:hidden;margin-bottom:16px;min-height:172px;display:flex;flex-direction:column;justify-content:flex-end;cursor:pointer; }
-.spotlight-banner:hover .spotlight-bg { filter:blur(12px) brightness(0.5) saturate(1.3);transform:scale(1.14); }
-.spotlight-bg { position:absolute;inset:0;background-size:cover;background-position:center top;filter:blur(12px) brightness(0.4) saturate(1.3);transform:scale(1.12);transition:filter 0.3s,transform 0.3s; }
-.spotlight-bg.no-art { filter:none;transform:none; }
-.spotlight-overlay { position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,0.90) 0%,rgba(0,0,0,0.50) 55%,rgba(0,0,0,0.12) 100%); }
+.spotlight-bg { position:absolute;inset:0;background-size:cover;background-position:center 20%; }
+.spotlight-overlay { position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,0.92) 0%,rgba(0,0,0,0.60) 50%,rgba(0,0,0,0.25) 100%); }
 .spotlight-content { position:relative;z-index:1;padding:18px 20px 16px; }
+.activity-entry { display:flex;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border);align-items:flex-start; }
+.activity-entry:last-child { border-bottom:none; }
+.activity-icon { font-size:15px;flex-shrink:0;line-height:1;margin-top:1px; }
+.activity-text { font-size:13px;flex:1;line-height:1.4; }
+.activity-date { font-size:11px;color:var(--text-muted);flex-shrink:0;margin-top:2px; }
+.chat-fab { position:fixed;bottom:70px;right:16px;width:52px;height:52px;border-radius:50%;background:var(--accent-dim);border:none;color:#fff;display:flex;align-items:center;justify-content:center;z-index:60;box-shadow:0 4px 20px rgba(0,0,0,0.5);transition:transform 0.15s,background 0.15s;cursor:pointer;padding:0; }
+.chat-fab:hover { transform:scale(1.08);background:var(--accent); }
+.chat-fab-badge { position:absolute;top:0;right:0;min-width:18px;height:18px;border-radius:9px;background:var(--tier-s);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 4px;border:2px solid var(--bg);font-family:'JetBrains Mono',monospace; }
+.chat-overlay { position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:80;display:flex;flex-direction:column;justify-content:flex-end;animation:fadeIn 0.15s ease; }
+.chat-panel { background:var(--bg-card);border-top:1px solid var(--border);border-radius:16px 16px 0 0;max-height:80vh;min-height:320px;display:flex;flex-direction:column;animation:slideUpSheet 0.25s ease; }
+.chat-header { display:flex;align-items:center;gap:10px;padding:14px 16px 12px;border-bottom:1px solid var(--border);flex-shrink:0; }
+.chat-messages { flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:10px;scroll-behavior:smooth; }
+.chat-msg { display:flex;align-items:flex-end;gap:8px; }
+.chat-msg.me { flex-direction:row-reverse; }
+.chat-bubble-wrap { display:flex;flex-direction:column;gap:2px;max-width:75%; }
+.chat-msg.me .chat-bubble-wrap { align-items:flex-end; }
+.chat-sender { font-size:11px;font-weight:600;margin-bottom:2px;padding-left:4px; }
+.chat-bubble { background:var(--bg-surface);border:1px solid var(--border);border-radius:14px 14px 14px 4px;padding:8px 12px;font-size:13px;line-height:1.5;word-break:break-word; }
+.chat-bubble.me { background:var(--accent-dim);border-color:transparent;border-radius:14px 14px 4px 14px;color:#fff; }
+.chat-time { font-size:10px;color:var(--text-muted);padding:0 4px; }
+.chat-msg.me .chat-time { text-align:right; }
+.chat-input-row { display:flex;gap:8px;padding:10px 14px;border-top:1px solid var(--border);flex-shrink:0;padding-bottom:max(10px,env(safe-area-inset-bottom)); }
+.chat-input { flex:1;font-size:14px;padding:9px 14px;border-radius:20px; }
+.chat-send { padding:9px 18px;border-radius:20px;font-size:13px;flex-shrink:0; }
 .matchup-insights { display:flex;gap:10px;flex-wrap:wrap;margin-top:16px; }
+.card-flip-wrap { position:relative;width:100%;height:100%; }
+.card-flip-inner { width:100%;height:100%;position:relative;transition:transform 0.45s ease;transform-style:preserve-3d; }
+.card-flip-inner.flipped { transform:rotateY(180deg); }
+.card-flip-front, .card-flip-back { position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden; }
+.card-flip-back { transform:rotateY(180deg); }
+.card-flip-btn { position:absolute;bottom:6px;right:6px;width:28px;height:28px;border-radius:50%;background:rgba(0,0,0,0.72);border:1px solid rgba(255,255,255,0.25);color:#fff;font-size:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2;line-height:1;padding:0; }
+.card-flip-btn:hover { background:rgba(0,0,0,0.9); }
+.mood-tags { display:flex;flex-wrap:wrap;gap:4px;margin-top:6px; }
+.mood-tag { font-size:11px;padding:2px 8px;border-radius:4px;border:1px solid rgba(255,255,255,0.12);background:var(--bg-surface);color:var(--text-secondary); }
+.mood-tag-picker { display:flex;flex-wrap:wrap;gap:6px;margin-top:8px; }
+.mood-tag-option { font-size:11px;padding:4px 10px;border-radius:4px;border:1px solid rgba(255,255,255,0.12);background:var(--bg-surface);color:var(--text-muted);cursor:pointer;transition:all 0.15s; }
+.mood-tag-option.selected { border-color:var(--accent);color:#fff;background:var(--accent-dim); }
 .matchup-pill { display:flex;flex-direction:column;gap:2px;padding:10px 14px;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius);font-size:12px;flex:1;min-width:120px; }
 .matchup-pill-label { font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:2px; }
 .matchup-pill-deck { font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
@@ -481,45 +509,6 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 .lb-chevron.open { transform: rotate(180deg); }
 .leaderboard-row { cursor: pointer; }
 .leaderboard-row:hover { background: var(--bg-hover); }
-
-/* ===== DFC FLIP ===== */
-.card-flip-wrap { position: relative; width: 100%; height: 100%; }
-.card-flip-inner { width: 100%; height: 100%; position: relative; transition: transform 0.45s ease; transform-style: preserve-3d; }
-.card-flip-inner.flipped { transform: rotateY(180deg); }
-.card-flip-front, .card-flip-back { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
-.card-flip-back { transform: rotateY(180deg); }
-.card-flip-btn { position: absolute; bottom: 6px; right: 6px; width: 28px; height: 28px; border-radius: 50%; background: rgba(0,0,0,0.72); border: 1px solid rgba(255,255,255,0.2); color: #fff; font-size: 14px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 10; transition: background 0.15s; padding: 0; line-height: 1; }
-.card-flip-btn:hover { background: rgba(60,60,60,0.9); }
-
-/* ===== MOOD TAGS ===== */
-.mood-tags { display: flex; flex-wrap: wrap; gap: 4px; }
-.mood-tag { font-size: 11px; padding: 2px 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.12); background: var(--bg-surface); color: var(--text-secondary); cursor: default; white-space: nowrap; line-height: 1.5; }
-.mood-tag-selector { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
-.mood-tag-option { font-size: 11px; padding: 3px 10px; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-surface); color: var(--text-secondary); cursor: pointer; white-space: nowrap; transition: border-color 0.15s, background 0.15s; }
-.mood-tag-option.selected { border-color: var(--accent); color: var(--accent); background: var(--accent-muted, rgba(139,92,246,0.12)); }
-
-/* ===== POD CHAT ===== */
-.chat-fab { position:fixed;bottom:70px;right:16px;width:52px;height:52px;border-radius:50%;background:var(--accent-dim);border:none;color:#fff;display:flex;align-items:center;justify-content:center;z-index:60;box-shadow:0 4px 20px rgba(0,0,0,0.5);transition:transform 0.15s,background 0.15s;cursor:pointer;padding:0; }
-.chat-fab:hover { transform:scale(1.08);background:var(--accent); }
-.chat-fab-badge { position:absolute;top:0;right:0;min-width:18px;height:18px;border-radius:9px;background:var(--tier-s);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 4px;border:2px solid var(--bg);font-family:'JetBrains Mono',monospace; }
-.chat-overlay { position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:80;display:flex;flex-direction:column;justify-content:flex-end;animation:fadeIn 0.15s ease; }
-.chat-panel { background:var(--bg-card);border-top:1px solid var(--border);border-radius:16px 16px 0 0;max-height:80vh;min-height:320px;display:flex;flex-direction:column;animation:slideUpSheet 0.25s ease; }
-@keyframes slideUpSheet { from { transform:translateY(100%); } to { transform:translateY(0); } }
-.chat-header { display:flex;align-items:center;gap:10px;padding:14px 16px 12px;border-bottom:1px solid var(--border);flex-shrink:0; }
-.chat-messages { flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:10px;scroll-behavior:smooth; }
-.chat-msg { display:flex;align-items:flex-end;gap:8px; }
-.chat-msg.me { flex-direction:row-reverse; }
-.chat-avatar { font-size:20px;flex-shrink:0;line-height:1;margin-bottom:2px; }
-.chat-bubble-wrap { display:flex;flex-direction:column;gap:2px;max-width:75%; }
-.chat-msg.me .chat-bubble-wrap { align-items:flex-end; }
-.chat-sender { font-size:11px;font-weight:600;margin-bottom:2px;padding-left:4px; }
-.chat-bubble { background:var(--bg-surface);border:1px solid var(--border);border-radius:14px 14px 14px 4px;padding:8px 12px;font-size:13px;line-height:1.5;word-break:break-word; }
-.chat-bubble.me { background:var(--accent-dim);border-color:transparent;border-radius:14px 14px 4px 14px;color:#fff; }
-.chat-time { font-size:10px;color:var(--text-muted);padding:0 4px; }
-.chat-msg.me .chat-time { text-align:right; }
-.chat-input-row { display:flex;gap:8px;padding:10px 14px;border-top:1px solid var(--border);flex-shrink:0;padding-bottom:max(10px,env(safe-area-inset-bottom)); }
-.chat-input { flex:1;font-size:14px;padding:9px 14px;border-radius:20px; }
-.chat-send { padding:9px 18px;border-radius:20px;font-size:13px;flex-shrink:0; }
 </style>
 </head>
 <body>
@@ -530,10 +519,12 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 <script type="module">
 // ===== FIREBASE =====
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
-import { getFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, writeBatch, addDoc, query, orderBy, limit }
+import { getFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, writeBatch, query, orderBy, limit, addDoc, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, updatePassword, reauthenticateWithCredential, EmailAuthProvider }
   from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL }
+  from "https://www.gstatic.com/firebasejs/11.0.0/firebase-storage.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyC1yDJ0Ue4lu9T2Gzk16Q4T0BoephK7Jr4",
@@ -548,6 +539,7 @@ const firebaseConfig = {
 const fbApp = initializeApp(firebaseConfig);
 const db = getFirestore(fbApp);
 const auth = getAuth(fbApp);
+const storage = getStorage(fbApp);
 
 // ===== DATA =====
 const INITIAL_DECKS = [
@@ -604,34 +596,35 @@ function getTier(power) {
 function getOverall(d) {
   return Math.round(((d.power + d.synergy + d.theme + d.optimization) / 4) * 10) / 10;
 }
-const MANA_ORDER = ['W','U','B','R','G','C'];
 const MOOD_TAGS = ['Aggro','Combo','Control','Stax','Aristocrats','Tokens','Tribal','Voltron','Group Hug','Mill','Reanimator','Superfriends','Jank','Chaos','Storm','Infect','Lands','Spellslinger'];
-const TAG_COLORS = {
-  'Aggro': '#b34a00', 'Storm': '#b34a00', 'Infect': '#7a1a1a', 'Voltron': '#8b3a00',
-  'Combo': '#1a4a7a', 'Spellslinger': '#1a3a6a', 'Mill': '#2a3a6a',
-  'Control': '#1a4a3a', 'Stax': '#3a3a1a', 'Lands': '#2a4a1a',
-  'Aristocrats': '#5a1a5a', 'Reanimator': '#4a1a4a', 'Superfriends': '#4a3a1a',
-  'Tokens': '#2a4a2a', 'Tribal': '#3a4a2a', 'Group Hug': '#1a4a4a',
-  'Jank': '#4a4a4a', 'Chaos': '#5a2a5a',
-};
-function renderManaSymbols(colorsStr, size = 16) {
-  if (!colorsStr) return '';
-  const symbols = (colorsStr.toUpperCase().match(/[WUBRGC]/g) || []);
-  const sorted = MANA_ORDER.filter(c => symbols.includes(c));
-  if (sorted.length === 0) return '';
-  return `<span class="mana-symbols">${sorted.map(c =>
-    `<img src="https://svgs.scryfall.io/card-symbols/${c}.svg" alt="${c}" title="${c}" class="mana-sym" style="width:${size}px;height:${size}px" loading="lazy">`
-  ).join('')}</span>`;
-}
+const TAG_COLORS = { Aggro:'#e24b4a', Combo:'#a78bfa', Control:'#60a5fa', Stax:'#f59e0b', Aristocrats:'#f472b6', Tokens:'#4ade80', Tribal:'#34d399', Voltron:'#fbbf24', 'Group Hug':'#67e8f9', Mill:'#818cf8', Reanimator:'#c084fc', Superfriends:'#fb923c', Jank:'#94a3b8', Chaos:'#f43f5e', Storm:'#38bdf8', Infect:'#a3e635', Lands:'#6ee7b7', Spellslinger:'#93c5fd' };
+
 function renderTags(tags, size = 'normal') {
   if (!tags || tags.length === 0) return '';
   const show = size === 'compact' ? tags.slice(0, 2) : tags;
   return `<div class="mood-tags">${show.map(t => {
-    const bg = TAG_COLORS[t] ? TAG_COLORS[t] + '44' : '';
-    const border = TAG_COLORS[t] ? TAG_COLORS[t] + '88' : '';
+    const bg = TAG_COLORS[t] ? TAG_COLORS[t] + '33' : '';
+    const border = TAG_COLORS[t] ? TAG_COLORS[t] + '77' : '';
     const style = bg ? `style="background:${bg};border-color:${border}"` : '';
     return `<span class="mood-tag" ${style}>${escHtml(t)}</span>`;
   }).join('')}${size === 'compact' && tags.length > 2 ? `<span class="mood-tag" style="color:var(--text-muted)">+${tags.length - 2}</span>` : ''}</div>`;
+}
+
+function toggleCardFlip(el) {
+  const inner = el.closest('.card-flip-wrap')?.querySelector('.card-flip-inner');
+  if (inner) inner.classList.toggle('flipped');
+}
+
+function renderManaSymbols(colorsStr, size = 16) {
+  if (!colorsStr) return '';
+  const ORDER = ['W', 'U', 'B', 'R', 'G', 'C'];
+  const symbols = (colorsStr.toUpperCase().match(/[WUBRG]/g) || []);
+  // Sort by WUBRG order, deduplicate
+  const sorted = ORDER.filter(c => symbols.includes(c));
+  if (sorted.length === 0) return '';
+  return sorted.map(c =>
+    `<img src="https://svgs.scryfall.io/card-symbols/${c}.svg" alt="${c}" title="${c}" style="width:${size}px;height:${size}px;vertical-align:middle;display:inline-block" loading="lazy">`
+  ).join('');
 }
 function getTierInfo(label) {
   return TIERS.find(t => t.label === label) || TIERS[4];
@@ -705,10 +698,10 @@ let state = {
   myDecksGallery: false,
   gamesHistoryOpen: false,
   leaderboardExpanded: {},
-  profileView: null,        // player name string while profile page is open, else null
   chatOpen: false,
   chatMessages: [],
   chatUnread: 0,
+  profileView: null,
 };
 
 const scryfallCache = {};
@@ -788,6 +781,7 @@ async function handleLogin() {
 async function handleSignOut() {
   if (unsubscribeChat) { unsubscribeChat(); unsubscribeChat = null; }
   if (unsubscribeDecks) { unsubscribeDecks(); unsubscribeDecks = null; }
+  if (unsubscribeChat) { unsubscribeChat(); unsubscribeChat = null; }
   await signOut(auth);
   state.decks = [];
   state.currentUser = null;
@@ -822,6 +816,20 @@ function setupFirestoreListener() {
       render();
     });
   }
+  // Real-time chat
+  if (unsubscribeChat) unsubscribeChat();
+  const chatQ = query(collection(db, 'messages'), orderBy('ts', 'asc'), limit(60));
+  unsubscribeChat = onSnapshot(chatQ, snap => {
+    state.chatMessages = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if (state.chatOpen) {
+      renderChatMessages();
+    } else {
+      const myName = currentUserName();
+      state.chatUnread = state.chatMessages.filter(m => (m.ts || 0) > chatLastReadTs && m.player !== myName).length;
+      renderChatFAB();
+    }
+  }, () => {});
+
   unsubscribeDecks = onSnapshot(collection(db, 'decks'), snapshot => {
     state.decks = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
     state.loaded = true;
@@ -882,6 +890,7 @@ function render() {
 
   if (state.myDecksGallery) {
     app.innerHTML = renderMyDecksGallery() + renderBottomNav('home');
+    renderChatFAB();
     return;
   }
 
@@ -889,6 +898,7 @@ function render() {
     const allPlayers = [...new Set(state.decks.map(d => d.player))];
     if (allPlayers.includes(state.profileView)) {
       app.innerHTML = renderPlayerProfile(state.profileView) + renderBottomNav(state.tab || 'home');
+      renderChatFAB();
       return;
     }
     state.profileView = null;
@@ -928,16 +938,7 @@ function render() {
         </div>
         <div class="modal-field">
           <label>Deck name <span style="color:var(--text-muted);font-size:11px;font-weight:400">(optional)</span></label>
-          <input id="m-deckname" value="${e ? escHtml(e.deckName||'') : ''}" placeholder="e.g. Vampire Wedding, Dinosaur Stampede…">
-        </div>
-        <div class="modal-field">
-          <label>Playstyle tags <span style="color:var(--text-muted);font-size:11px;font-weight:400">(optional)</span></label>
-          <div class="mood-tag-selector" id="m-tags-wrap">
-            ${MOOD_TAGS.map(t => {
-              const sel = (e?.tags || []).includes(t);
-              return `<button type="button" class="mood-tag-option${sel ? ' selected' : ''}" onclick="this.classList.toggle('selected')">${t}</button>`;
-            }).join('')}
-          </div>
+          <input id="m-deckname" value="${e ? escHtml(e.deckName||'') : ''}" placeholder="e.g. Dinosaur Stampede">
         </div>
         <div class="modal-row">
           <div class="modal-field">
@@ -963,6 +964,18 @@ function render() {
           <label>Notes</label>
           <textarea id="m-notes" placeholder="Brief analysis of the deck...">${e ? escHtml(e.notes||'') : ''}</textarea>
         </div>
+        <div class="modal-field">
+          <label>Playstyle tags</label>
+          <div class="mood-tag-picker" id="m-tags-picker">
+            ${MOOD_TAGS.map(t => {
+              const selected = e?.tags?.includes(t);
+              const bg = TAG_COLORS[t] ? TAG_COLORS[t] + '33' : '';
+              const border = TAG_COLORS[t] ? TAG_COLORS[t] + '77' : '';
+              const selStyle = selected ? `background:${bg};border-color:${border};color:#fff` : '';
+              return `<span class="mood-tag-option${selected ? ' selected' : ''}" style="${selStyle}" data-tag="${escHtml(t)}" onclick="toggleTagOption(this,'${escHtml(t)}')">${escHtml(t)}</span>`;
+            }).join('')}
+          </div>
+        </div>
         <div class="modal-actions">
           <button onclick="closeModal()">Cancel</button>
           <button class="btn-primary" onclick="saveDeck()">${e ? 'Update' : 'Add'} Deck</button>
@@ -978,11 +991,8 @@ function render() {
   if (state.showChangePassword) html += renderChangePasswordModal();
   if (state.gamesHistoryOpen) html += renderGamesHistoryModal();
   app.innerHTML = html;
-  // Lazily load commander art for deck cards
-  if (document.querySelector('.deck-card-art[data-art-commander]')) loadDeckCardArts();
-  // Lazily load spotlight hero art
-  if (document.querySelector('.spotlight-bg[data-spotlight-art]')) loadSpotlightArt();
   renderChatFAB();
+  if (tab === 'home' && document.querySelector('.spotlight-bg[data-spotlight-art]')) loadSpotlightArt();
 }
 
 function renderBottomNav(active) {
@@ -1045,11 +1055,6 @@ function renderDashboard() {
   const userWinRate = userTotal > 0 ? Math.round((userWins / userTotal) * 100) : null;
   const totalGames = allDecks.flatMap(d => d.games || []).filter(g => g.result === 'win').length;
   const leaderboard = getLeaderboardData();
-  const recentGames = getRecentGames(15);
-  const recentDecks = [...state.decks]
-    .filter(d => d.decklistUpdatedAt || d.createdAt)
-    .sort((a, b) => (b.decklistUpdatedAt || b.createdAt || 0) - (a.decklistUpdatedAt || a.createdAt || 0))
-    .slice(0, 3);
 
   return `
     <div class="header" style="margin-bottom:20px">
@@ -1103,50 +1108,6 @@ function renderDashboard() {
         </div>`;
       }).join('')}
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:4px">
-      <div>
-        <div class="dash-section-title" style="margin-bottom:8px">Recent Decks</div>
-        <div class="dash-card" style="padding:0">
-          ${recentDecks.length === 0
-            ? '<div style="padding:14px 14px"><p style="color:var(--text-muted);font-size:12px">Update a decklist to see it here.</p></div>'
-            : recentDecks.map(d => {
-                const pc = playerColor(d.player);
-                const ts = d.decklistUpdatedAt || d.createdAt;
-                const daysAgo = ts ? Math.floor((Date.now() - ts) / 86400000) : null;
-                const timeLabel = daysAgo === null ? '' : daysAgo === 0 ? 'Today' : daysAgo === 1 ? 'Yesterday' : `${daysAgo}d ago`;
-                const cardCount = (() => { try { return parseDecklistSections(d.decklist || '').main.length; } catch(e) { return 0; } })();
-                return `<div onclick="openDeckDetail('${d.id}')" style="display:flex;align-items:flex-start;gap:8px;padding:9px 12px;border-bottom:1px solid var(--border);cursor:pointer">
-                  <span style="font-size:14px;flex-shrink:0;margin-top:1px">${state.playerAvatars?.[d.player] || '🧙'}</span>
-                  <div style="flex:1;min-width:0">
-                    <div style="font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(d.commander)}</div>
-                    <div style="font-size:11px;color:var(--text-muted)"><span style="color:${pc.color};cursor:pointer" onclick="event.stopPropagation();openProfile('${escHtml(d.player)}')">${escHtml(d.player)}</span>${cardCount ? ` · ${cardCount}c` : ''} · ${timeLabel}</div>
-                  </div>
-                </div>`;
-              }).join('')
-          }
-        </div>
-      </div>
-      <div>
-        <div class="dash-section-title" style="margin-bottom:8px">Recent Games</div>
-        <div class="dash-card" style="padding:0">
-          ${recentGames.length === 0
-            ? '<div style="padding:14px 14px"><p style="color:var(--text-muted);font-size:12px">No games yet.</p></div>'
-            : recentGames.slice(0, 8).map(g => {
-                const wpc = playerColor(g.winnerDeck.player);
-                const lpc = g.loserDeck ? playerColor(g.loserDeck.player) : { color: 'var(--text-muted)' };
-                const wav = state.playerAvatars?.[g.winnerDeck.player] || '🧙';
-                return `<div style="display:flex;align-items:flex-start;gap:8px;padding:9px 12px;border-bottom:1px solid var(--border)">
-                  <span style="font-size:14px;flex-shrink:0;margin-top:1px;cursor:pointer" onclick="openProfile('${escHtml(g.winnerDeck.player)}')">${wav}</span>
-                  <div style="flex:1;min-width:0">
-                    <div style="font-size:12px;font-weight:500;color:${wpc.color};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(g.winnerDeck.commander)}</div>
-                    <div style="font-size:11px;color:var(--text-muted)"><span style="cursor:pointer" onclick="openProfile('${escHtml(g.winnerDeck.player)}')">${escHtml(g.winnerDeck.player)}</span> beat <span style="color:${lpc.color}">${g.loserDeck ? escHtml(g.loserDeck.commander) : '?'}</span></div>
-                  </div>
-                </div>`;
-              }).join('')
-          }
-        </div>
-      </div>
-    </div>
     ${renderPodFeed()}
     <div class="dash-section-title">Quick Actions</div>
     <div class="quick-actions">
@@ -1171,8 +1132,7 @@ function renderCollectionTab() {
       (d.commander||'').toLowerCase().includes(q) ||
       (d.player||'').toLowerCase().includes(q) ||
       (d.colors||'').toUpperCase().includes(norm) ||
-      (d.notes||'').toLowerCase().includes(q) ||
-      (d.tags || []).some(t => t.toLowerCase().includes(q))
+      (d.notes||'').toLowerCase().includes(q)
     );
   }
   const sorted = [...filtered].sort((a, b) =>
@@ -1417,13 +1377,7 @@ function renderDeckCard(deck, tier, index) {
   const losses = games.filter(g => g.result === 'loss').length;
   const total = wins + losses;
 
-  const artKey = (deck.commander || '').toLowerCase();
-  const artCacheVal = scryfallCache[artKey];
-  // Prefer art_crop for card backgrounds; fall back to normal
-  const artUrl = typeof artCacheVal === 'string' ? artCacheVal : (artCacheVal?.imageUrlArtCrop || artCacheVal?.imageUrl || null);
-
-  let card = `<div class="deck-card" style="border-left-color:${tier.color};animation-delay:${delay}ms" data-art-id="${escHtml(deck.id)}" onclick="toggleExpand('${deck.id}')">
-    <div class="deck-card-art${artUrl ? ' loaded' : ''}" style="${artUrl ? `background-image:url('${escHtml(artUrl)}')` : ''}" data-art-commander="${artUrl ? '' : escHtml(deck.commander)}"></div>
+  let card = `<div class="deck-card" style="border-left-color:${tier.color};animation-delay:${delay}ms" onclick="toggleExpand('${deck.id}')">
     <div class="deck-row-compact">
       <div class="deck-tier-mini" style="background:${tier.bg};color:${tier.text}">${tier.label}</div>
       <div class="deck-name-stack">
@@ -1438,14 +1392,14 @@ function renderDeckCard(deck, tier, index) {
     const winRate = total > 0 ? Math.round((wins / total) * 100) : null;
     card += `<div class="deck-expanded">
       ${(deck.colors || total > 0) ? `<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
-        ${deck.colors ? `<span class="deck-colors">${renderManaSymbols(deck.colors, 15)}</span>` : ''}
+        ${deck.colors ? `<span class="deck-colors">${renderManaSymbols(deck.colors, 14)}</span>` : ''}
         ${total > 0 ? `<span class="deck-record-badge">${wins}W-${losses}L</span>` : ''}
       </div>` : ''}
-      ${deck.tags && deck.tags.length ? renderTags(deck.tags, 'compact') + '<div style="margin-bottom:8px"></div>' : ''}
       ${renderStat("Power", deck.power, tier.color)}
       ${renderStat("Synergy", deck.synergy, tier.color)}
       ${renderStat("Theme", deck.theme, tier.color)}
       ${renderStat("Optimization", deck.optimization, tier.color)}
+      ${deck.tags?.length ? renderTags(deck.tags, 'compact') : ''}
       ${deck.notes ? `<div class="deck-notes">${escHtml(deck.notes)}</div>` : ''}
       <div class="record-section">
         <div class="record-stat">
@@ -1559,6 +1513,17 @@ function closeModal(e) {
   state.editDeck = null;
   render();
 }
+function toggleTagOption(el, tag) {
+  el.classList.toggle('selected');
+  const bg = TAG_COLORS[tag] ? TAG_COLORS[tag] + '33' : '';
+  const border = TAG_COLORS[tag] ? TAG_COLORS[tag] + '77' : '';
+  if (el.classList.contains('selected')) {
+    el.style.background = bg; el.style.borderColor = border; el.style.color = '#fff';
+  } else {
+    el.style.background = ''; el.style.borderColor = ''; el.style.color = '';
+  }
+}
+
 function editDeck(id) {
   const deck = state.decks.find(d => d.id === id);
   if (deck) openAddModal({...deck});
@@ -1570,8 +1535,7 @@ function saveDeck() {
   const selectedTags = [...document.querySelectorAll('#m-tags-wrap .mood-tag-option.selected')].map(b => b.textContent.trim());
   const data = {
     commander,
-    deckName: deckNameVal || null,
-    tags: selectedTags,
+    deckName: document.getElementById("m-deckname").value.trim() || null,
     player: document.getElementById("m-player").value,
     colors: document.getElementById("m-colors").value.trim().toUpperCase(),
     power: parseFloat(document.getElementById("m-power").value) || 7,
@@ -1579,6 +1543,7 @@ function saveDeck() {
     theme: parseFloat(document.getElementById("m-theme").value) || 7,
     optimization: parseFloat(document.getElementById("m-optimization").value) || 7,
     notes: document.getElementById("m-notes").value.trim(),
+    tags: [...document.querySelectorAll('#m-tags-picker .mood-tag-option.selected')].map(el => el.dataset.tag),
   };
   if (state.editDeck && state.editDeck.id) {
     state.decks = state.decks.map(d => d.id === state.editDeck.id ? { ...d, ...data } : d);
@@ -1940,26 +1905,26 @@ function renderTypeGroupImages(cards, commanderName) {
     html += '<div class="dl-image-grid">';
     group.forEach(c => {
       const cached = scryfallCache[c.name.toLowerCase()];
-      const imgFront = cached?.imageUrl || null;
-      const imgBack = cached?.imageUrlBack || null;
+      const imgFront = cached?.imageUrl || '';
+      const imgBack = cached?.imageUrlBack || '';
       const isDFC = !!(cached?.isDoubleFaced && imgBack);
       const nameJs = escHtml(c.name).replace(/'/g, "\\'");
-      const imgFrontJs = (imgFront || '').replace(/'/g, "\\'");
-      const imgBackJs = (imgBack || '').replace(/'/g, "\\'");
-      let cardImgHtml;
+      const frontJs = imgFront.replace(/'/g, "\\'");
+      const backJs = imgBack.replace(/'/g, "\\'");
+      html += `<div class="dl-card-img-wrap" onclick="showCardPopup('${nameJs}','${frontJs}'${isDFC ? `,'${backJs}'` : ''})">`;
       if (isDFC) {
-        cardImgHtml = `<div class="card-flip-wrap" style="perspective:600px">
-    <div class="card-flip-inner">
-      <div class="card-flip-front"><img src="${escHtml(imgFront)}" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block"></div>
-      <div class="card-flip-back"><img src="${escHtml(imgBack)}" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block"></div>
-    </div>
-    <button class="card-flip-btn" onclick="event.stopPropagation();toggleCardFlip(this)" title="Transform">⟳</button>
-  </div>`;
+        html += `<div class="card-flip-wrap" style="perspective:600px;width:100%;height:100%">
+          <div class="card-flip-inner">
+            <div class="card-flip-front"><img src="${escHtml(imgFront)}" alt="${escHtml(c.name)}" loading="lazy" title="${escHtml(c.name)}" style="width:100%;display:block"></div>
+            <div class="card-flip-back"><img src="${escHtml(imgBack)}" alt="${escHtml(c.name)} (back)" loading="lazy" style="width:100%;display:block"></div>
+          </div>
+          <button class="card-flip-btn" onclick="event.stopPropagation();toggleCardFlip(this)" title="Transform">⟳</button>
+        </div>`;
+      } else if (imgFront) {
+        html += `<img src="${escHtml(imgFront)}" alt="${escHtml(c.name)}" loading="lazy" title="${escHtml(c.name)}">`;
       } else {
-        cardImgHtml = imgFront ? `<img src="${escHtml(imgFront)}" alt="${escHtml(c.name)}" loading="lazy" title="${escHtml(c.name)}" style="width:100%;height:100%;object-fit:cover;display:block">` : `<div class="dl-card-placeholder">${escHtml(c.name)}</div>`;
+        html += `<div class="dl-card-placeholder">${escHtml(c.name)}</div>`;
       }
-      html += `<div class="dl-card-img-wrap" onclick="showCardPopup('${nameJs}','${imgFrontJs}','${imgBackJs}')">`;
-      html += cardImgHtml;
       if (c.qty > 1) html += `<span class="dl-card-qty-badge">${c.qty}</span>`;
       html += `</div>`;
     });
@@ -2013,16 +1978,20 @@ async function fetchScryfallBatch(cards) {
       (data.data || []).forEach(card => {
         const iuris = card.image_uris || card.card_faces?.[0]?.image_uris;
         const imageUrl = iuris?.normal ?? iuris?.large ?? iuris?.small ?? null;
+        const imageUrlArtCrop = iuris?.art_crop || imageUrl;
+        const backIuris = card.card_faces?.[1]?.image_uris;
+        const isDoubleFaced = ['transform','modal_dfc','double_faced_token','reversible_card'].includes(card.layout);
         const cacheEntry = {
           name: card.name,
           imageUrl,
+          imageUrlArtCrop,
+          imageUrlBack: backIuris?.normal ?? null,
+          isDoubleFaced,
+          backFaceName: card.card_faces?.[1]?.name ?? null,
           typeLine: card.type_line || card.card_faces?.[0]?.type_line || '',
           manaCost: card.mana_cost || card.card_faces?.[0]?.mana_cost || '',
           cmc: card.cmc ?? 0,
-          colors: card.colors || card.card_faces?.[0]?.colors || [],
-          imageUrlBack: card.card_faces?.[1]?.image_uris?.normal ?? null,
-          isDoubleFaced: ['transform','modal_dfc','double_faced_token','reversible_card'].includes(card.layout),
-          backFaceName: card.card_faces?.[1]?.name ?? null,
+          colors: card.colors || card.card_faces?.[0]?.colors || []
         };
         scryfallCache[card.name.toLowerCase()] = cacheEntry;
         if (card.card_faces?.[0]?.name) {
@@ -2127,9 +2096,7 @@ async function importFromUrl() {
         if (cmdName) {
           const deckId = state.decklistView;
           const deck = state.decks.find(d => d.id === deckId);
-          const importedDeckName = data.name || null;
-          const nameUpdate = { commander: cmdName };
-          if (importedDeckName && importedDeckName !== cmdName) nameUpdate.deckName = importedDeckName;
+          const nameUpdate = (!deck?.name || deck.name === 'New Deck') ? { commander: cmdName, name: cmdName } : { commander: cmdName };
           state.decks = state.decks.map(d => d.id === deckId ? { ...d, ...nameUpdate } : d);
           fbUpdateDeck(deckId, nameUpdate).catch(console.error);
         }
@@ -2155,10 +2122,8 @@ async function importFromUrl() {
         // Auto-populate the commander field — use raw card name (no set suffix)
         const cmdName = parseCardLine(cmdLines[0])?.name || cmdLines[0].replace(/^\d+\s+/, '').trim();
         const deckId = state.decklistView;
-        const moxUpdate = { commander: cmdName };
-        if (data.name && data.name !== cmdName) moxUpdate.deckName = data.name;
-        state.decks = state.decks.map(d => d.id === deckId ? { ...d, ...moxUpdate } : d);
-        fbUpdateDeck(deckId, moxUpdate).catch(console.error);
+        state.decks = state.decks.map(d => d.id === deckId ? { ...d, commander: cmdName } : d);
+        fbUpdateDeck(deckId, { commander: cmdName }).catch(console.error);
       }
       // Main deck boards (commanders excluded — tracked separately above)
       const mainLines = [];
@@ -2373,18 +2338,13 @@ function renderDeckDetail(deck) {
       <button class="deck-detail-back" onclick="closeDeckDetail()">← Back</button>
       <div class="deck-detail-title">
         <span class="tier-badge" style="background:${tier.color}">${escHtml(tier.label)}</span>
-        <div style="flex:1;min-width:0">
-          ${deck.deckName
-            ? `<h2 style="margin:0;font-size:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(deck.deckName)}</h2>
-               <div style="font-size:11px;color:var(--text-muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(deck.commander)}</div>`
-            : `<h2 style="margin:0">${escHtml(deck.commander)}</h2>`
-          }
-        </div>
+        ${deck.deckName ? `<div><h2 style="margin:0;font-size:18px">${escHtml(deck.deckName)}</h2><div style="font-size:12px;color:var(--text-muted);margin-top:1px">${escHtml(deck.commander)}</div></div>` : `<h2>${escHtml(deck.commander)}</h2>`}
         <span class="player-tag" style="background:var(--player-${deck.player.toLowerCase()}-bg);color:var(--player-${deck.player.toLowerCase()})">${escHtml(deck.player)}</span>
         ${deck.colors ? renderManaSymbols(deck.colors, 18) : ''}
         ${totalCards ? `<span style="font-size:12px;color:var(--text-muted)">${totalCards} cards</span>` : ''}
         ${deck.tags && deck.tags.length ? `<div style="margin-top:8px;width:100%">${renderTags(deck.tags)}</div>` : ''}
       </div>
+      ${deck.tags?.length ? renderTags(deck.tags) : ''}
       <div class="control-group">
         <button class="${state.decklistMode === 'text' ? 'active' : ''}" onclick="setDecklistMode('text')">List</button>
         <button class="${state.decklistMode === 'images' ? 'active' : ''}" onclick="setDecklistMode('images')">Images</button>
@@ -2487,6 +2447,1934 @@ function renderDeckDetail(deck) {
       </div>
     </div>
   </div>` : ''}
+  </div>`;
+}
+
+function openChangelogModal(deckId) {
+  state.showChangelogModal = deckId;
+  state.changelogDraft = { cardsIn: '', cardsOut: '', notes: '' };
+  render();
+}
+function closeChangelogModal() {
+  state.showChangelogModal = false;
+  render();
+}
+function saveChangelogEntry() {
+  const deckId = state.showChangelogModal;
+  if (!deckId) return;
+  const draft = state.changelogDraft;
+  if (!draft.cardsIn.trim() && !draft.cardsOut.trim() && !draft.notes.trim()) return;
+  const entry = {
+    date: new Date().toISOString().split('T')[0],
+    cardsIn: draft.cardsIn.split('\n').map(s => s.trim()).filter(Boolean),
+    cardsOut: draft.cardsOut.split('\n').map(s => s.trim()).filter(Boolean),
+    notes: draft.notes.trim(),
+  };
+  state.decks = state.decks.map(d => {
+    if (d.id !== deckId) return d;
+    const changelog = [...(d.changelog || []), entry];
+    fbUpdateDeck(d.id, { changelog }).catch(console.error);
+    return { ...d, changelog };
+  });
+  state.showChangelogModal = false;
+  render();
+}
+function removeChangelogEntry(deckId, idx) {
+  state.decks = state.decks.map(d => {
+    if (d.id !== deckId) return d;
+    const changelog = (d.changelog || []).filter((_, i) => i !== idx);
+    fbUpdateDeck(d.id, { changelog }).catch(console.error);
+    return { ...d, changelog };
+  });
+  render();
+}
+
+// ===== MULTIPLAYER PLAYTESTER =====
+const PT_COLORS = ['#A78BFA','#34D399','#FBBF24','#F472B6','#60A5FA','#F87171'];
+
+function genId() {
+  return typeof crypto !== 'undefined' && crypto.randomUUID
+    ? crypto.randomUUID()
+    : Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+
+function shuffleArr(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function deckToCardObjects(deck) {
+  const sections = parseDecklistSections(deck.decklist || '');
+  const cards = [];
+  sections.main.forEach(c => {
+    const cached = scryfallCache[c.name.toLowerCase()] || scryfallCache[c.name.split(' // ')[0].trim().toLowerCase()];
+    for (let i = 0; i < (c.qty || 1); i++) {
+      cards.push({
+        cardId: genId(),
+        name: c.name,
+        imageUrl: cached?.imageUrl || null,
+        zone: c.name === deck.commander ? 'command' : 'library',
+        tapped: false,
+        counters: 0,
+        isCommander: c.name === deck.commander,
+        isToken: false,
+        faceDown: false,
+      });
+    }
+  });
+  return cards;
+}
+
+function ptBuildPlayer(uid, deck) {
+  const isLoaned = deck.ownerUid ? deck.ownerUid !== uid : deck.player !== currentUserName();
+  return {
+    uid, displayName: currentUserName(),
+    deckId: deck.id, commander: deck.commander, colors: deck.colors || '',
+    life: 40, poison: 0, commanderDamage: {},
+    battlefield: [], graveyard: [], exile: [], commandZone: [],
+    mulliganCount: 0, conceded: false,
+    isLoaned,
+  };
+}
+
+// ── Lobby actions ─────────────────────────────────────
+async function ptCreate() {
+  const myUid = state.currentUser?.uid;
+  const deck = state.decks.find(d => d.id === state.playtestDeckId);
+  if (!myUid || !deck) return;
+  const sessionId = (Date.now().toString(36).slice(-4) + Math.random().toString(36).slice(2,5)).toUpperCase();
+  try {
+    await setDoc(doc(db, 'gameSessions', sessionId), {
+      hostId: myUid, status: 'waiting', turn: 1, sessionType: 'playtest',
+      players: { [myUid]: ptBuildPlayer(myUid, deck) },
+      createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+    });
+    state.playtestGameId = sessionId;
+    state.playtestViewUid = myUid;
+    ptListen(sessionId);
+    render();
+  } catch(e) {
+    console.error('ptCreate failed:', e);
+    alert('Could not create game: ' + (e.message || e.code || e));
+  }
+}
+
+async function ptJoin(sessionId) {
+  const myUid = state.currentUser?.uid;
+  const deck = state.decks.find(d => d.id === state.playtestDeckId);
+  if (!myUid || !deck || !sessionId) return;
+  await updateDoc(doc(db, 'gameSessions', sessionId), {
+    [`players.${myUid}`]: ptBuildPlayer(myUid, deck),
+    updatedAt: new Date().toISOString(),
+  });
+  state.playtestGameId = sessionId;
+  state.playtestViewUid = myUid;
+  ptListen(sessionId);
+  render();
+}
+
+async function ptStart() {
+  const sessionId = state.playtestGameId;
+  const session = state.playtestGame;
+  if (!session || session.status !== 'waiting') return;
+  const players = Object.entries(session.players || {});
+  const publicUpdate = {};
+  try {
+    // Pre-fetch all card images for every deck before dealing
+    const allDecks = players.map(([, p]) => state.decks.find(d => d.id === p.deckId)).filter(Boolean);
+    const allCardNames = allDecks.flatMap(deck => {
+      const sections = parseDecklistSections(deck.decklist || '');
+      return [...sections.main, ...sections.sideboard, ...sections.maybeboard];
+    });
+    const uncached = allCardNames.filter(c => !(c.name.toLowerCase() in scryfallCache));
+    if (uncached.length) {
+      state.playtestLoading = `Fetching card art… (${uncached.length} cards)`;
+      render();
+      await fetchScryfallBatch(allCardNames);
+      state.playtestLoading = '';
+    }
+
+    for (const [uid, player] of players) {
+      // Use deck from state if available, otherwise deal empty hand
+      const deck = state.decks.find(d => d.id === player.deckId);
+      const all = deck ? deckToCardObjects(deck) : [];
+      const commanders = all.filter(c => c.isCommander);
+      const library = shuffleArr(all.filter(c => !c.isCommander));
+      const hand = library.splice(0, Math.min(7, library.length)).map(c => ({ ...c, zone: 'hand' }));
+      await setDoc(doc(db, 'gameSessions', sessionId, 'privateZones', uid), { hand, library });
+      publicUpdate[`players.${uid}.commandZone`] = commanders;
+    }
+    publicUpdate.status = 'active';
+    publicUpdate.updatedAt = new Date().toISOString();
+    await updateDoc(doc(db, 'gameSessions', sessionId), publicUpdate);
+  } catch(e) {
+    console.error('ptStart failed:', e);
+    alert('Could not start game: ' + (e.message || e.code || e));
+  }
+}
+
+function ptListen(sessionId) {
+  if (unsubscribePlaytest) { unsubscribePlaytest(); unsubscribePlaytest = null; }
+  if (unsubscribePrivate) { unsubscribePrivate(); unsubscribePrivate = null; }
+  const myUid = state.currentUser?.uid;
+  state.playtestGameId = sessionId;
+  unsubscribePlaytest = onSnapshot(doc(db, 'gameSessions', sessionId), snap => {
+    if (snap.exists()) { state.playtestGame = { id: snap.id, ...snap.data() }; render(); }
+  });
+  if (myUid) {
+    unsubscribePrivate = onSnapshot(doc(db, 'gameSessions', sessionId, 'privateZones', myUid), snap => {
+      state.playtestPrivate = snap.exists() ? snap.data() : { hand: [], library: [] };
+      render();
+    });
+  }
+}
+
+async function ptLeave() {
+  if (unsubscribePlaytest) { unsubscribePlaytest(); unsubscribePlaytest = null; }
+  if (unsubscribePrivate) { unsubscribePrivate(); unsubscribePrivate = null; }
+  state.playtestGameId = null; state.playtestGame = null; state.playtestPrivate = null;
+  state.playtestViewUid = null; state.playtestDeckId = null; state.playtestCardMenu = null;
+  state.playtestZoneOverlay = null; state.showPlaytester = false;
+  render();
+}
+
+// ── Firestore write helpers ───────────────────────────
+async function ptPub(fields) {
+  if (!state.playtestGameId) return;
+  await updateDoc(doc(db, 'gameSessions', state.playtestGameId), { ...fields, updatedAt: new Date().toISOString() });
+}
+async function ptPriv(data) {
+  const uid = state.currentUser?.uid;
+  if (!state.playtestGameId || !uid) return;
+  await setDoc(doc(db, 'gameSessions', state.playtestGameId, 'privateZones', uid), data);
+}
+
+// ── Game actions ──────────────────────────────────────
+async function ptDraw(count = 1) {
+  const priv = state.playtestPrivate;
+  if (!priv) return;
+  const library = [...(priv.library || [])];
+  const hand = [...(priv.hand || [])];
+  const drawn = library.splice(0, count);
+  if (!drawn.length) return;
+  drawn.forEach(c => hand.push({ ...c, zone: 'hand' }));
+  await ptPriv({ hand, library });
+}
+
+async function ptUntapAll() {
+  const uid = state.currentUser?.uid;
+  const player = state.playtestGame?.players?.[uid];
+  if (!player) return;
+  await ptPub({ [`players.${uid}.battlefield`]: (player.battlefield || []).map(c => ({ ...c, tapped: false })) });
+}
+
+async function ptMulligan() {
+  const uid = state.currentUser?.uid;
+  const player = state.playtestGame?.players?.[uid];
+  const priv = state.playtestPrivate;
+  if (!player || !priv) return;
+  const mulliganCount = (player.mulliganCount || 0) + 1;
+  const drawCount = Math.max(7 - mulliganCount, 0);
+  const library = shuffleArr([...(priv.library || []), ...(priv.hand || []).map(c => ({ ...c, zone: 'library' }))]);
+  const hand = library.splice(0, drawCount).map(c => ({ ...c, zone: 'hand' }));
+  await ptPriv({ hand, library });
+  await ptPub({ [`players.${uid}.mulliganCount`]: mulliganCount });
+}
+
+async function ptShuffle() {
+  const priv = state.playtestPrivate;
+  if (!priv) return;
+  await ptPriv({ ...priv, library: shuffleArr([...(priv.library || [])]) });
+}
+
+async function ptNextTurn() {
+  await ptPub({ turn: (state.playtestGame?.turn || 1) + 1 });
+}
+
+async function ptAdjustLife(delta) {
+  const uid = state.currentUser?.uid;
+  const player = state.playtestGame?.players?.[uid];
+  if (!player) return;
+  await ptPub({ [`players.${uid}.life`]: (player.life ?? 40) + delta });
+}
+
+async function ptConcede() {
+  const uid = state.currentUser?.uid;
+  if (!uid) return;
+  await ptPub({ [`players.${uid}.conceded`]: true });
+  await ptLeave();
+}
+
+// ── Card actions ──────────────────────────────────────
+async function ptPlayCard(cardId) {
+  const uid = state.currentUser?.uid;
+  const player = state.playtestGame?.players?.[uid];
+  const priv = state.playtestPrivate;
+  if (!player || !priv) return;
+  const hand = [...(priv.hand || [])];
+  const idx = hand.findIndex(c => c.cardId === cardId);
+  if (idx === -1) return;
+  const [card] = hand.splice(idx, 1);
+  const battlefield = [...(player.battlefield || []), { ...card, zone: 'battlefield', tapped: false }];
+  await ptPriv({ ...priv, hand });
+  await ptPub({ [`players.${uid}.battlefield`]: battlefield });
+  ptCloseMenu();
+}
+
+async function ptTapCard(cardId) {
+  const uid = state.currentUser?.uid;
+  const player = state.playtestGame?.players?.[uid];
+  if (!player) return;
+  await ptPub({ [`players.${uid}.battlefield`]: (player.battlefield || []).map(c => c.cardId === cardId ? { ...c, tapped: !c.tapped } : c) });
+  ptCloseMenu();
+}
+
+async function ptMoveCard(cardId, fromZone, toZone) {
+  const uid = state.currentUser?.uid;
+  const player = state.playtestGame?.players?.[uid];
+  const priv = state.playtestPrivate;
+  if (!player || !priv) return;
+  const PRIV = ['hand', 'library'];
+  let card;
+  const newPriv = { hand: [...(priv.hand||[])], library: [...(priv.library||[])] };
+  const pubUp = {};
+  if (PRIV.includes(fromZone)) {
+    const arr = [...newPriv[fromZone]];
+    const idx = arr.findIndex(c => c.cardId === cardId);
+    if (idx === -1) return;
+    [card] = arr.splice(idx, 1);
+    newPriv[fromZone] = arr;
+  } else {
+    const arr = [...(player[fromZone] || [])];
+    const idx = arr.findIndex(c => c.cardId === cardId);
+    if (idx === -1) return;
+    [card] = arr.splice(idx, 1);
+    pubUp[`players.${uid}.${fromZone}`] = arr;
+  }
+  card = { ...card, zone: toZone, tapped: false };
+  if (PRIV.includes(toZone)) {
+    if (toZone === 'library') newPriv.library = [card, ...newPriv.library];
+    else newPriv[toZone] = [...newPriv[toZone], card];
+  } else {
+    const existing = pubUp[`players.${uid}.${toZone}`] || [...(player[toZone] || [])];
+    pubUp[`players.${uid}.${toZone}`] = [...existing, card];
+  }
+  if (PRIV.includes(fromZone) || PRIV.includes(toZone)) await ptPriv(newPriv);
+  if (Object.keys(pubUp).length) await ptPub(pubUp);
+  ptCloseMenu();
+}
+
+async function ptAddCounter(cardId, zone, delta) {
+  const uid = state.currentUser?.uid;
+  const player = state.playtestGame?.players?.[uid];
+  if (!player) return;
+  await ptPub({ [`players.${uid}.${zone}`]: (player[zone]||[]).map(c => c.cardId === cardId ? { ...c, counters: Math.max(0,(c.counters||0)+delta) } : c) });
+}
+
+function ptOpenMenu(cardId, zone) { state.playtestCardMenu = { cardId, zone }; render(); }
+function ptCloseMenu() { state.playtestCardMenu = null; render(); }
+function ptOpenZone(uid, zone) { state.playtestZoneOverlay = { uid, zone }; render(); }
+function ptCloseZone() { state.playtestZoneOverlay = null; render(); }
+function openPlaytester() { state.showPlaytester = true; render(); }
+
+// ── Render: Lobby ─────────────────────────────────────
+function renderPTLobby() {
+  const session = state.playtestGame;
+  const myUid = state.currentUser?.uid;
+  const myName = currentUserName();
+  const myDecks = getMyDecks();
+  const otherDecks = state.decks.filter(d => !myDecks.includes(d));
+  const deckSelect = (id, label) => `
+    <label style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px">${label}</label>
+    <select id="${id}" style="width:100%;margin-bottom:14px" onchange="state.playtestDeckId=this.value;render()">
+      <option value="">— pick a deck —</option>
+      ${myDecks.length ? `<optgroup label="My Decks">${myDecks.map(d => `<option value="${d.id}" ${state.playtestDeckId===d.id?'selected':''}>${escHtml(d.commander)}</option>`).join('')}</optgroup>` : ''}
+      ${otherDecks.length ? `<optgroup label="Borrow a Deck">${otherDecks.map(d => `<option value="${d.id}" ${state.playtestDeckId===d.id?'selected':''}>↩ ${escHtml(d.commander)} (${escHtml(d.player)})</option>`).join('')}</optgroup>` : ''}
+    </select>`;
+  if (!session) {
+    const noDecks = myDecks.length === 0 && otherDecks.length === 0;
+    return `<div style="min-height:100vh;background:var(--bg)">
+      <div style="display:flex;align-items:center;padding:16px 20px;background:var(--bg-card);border-bottom:1px solid var(--border)">
+        <button onclick="ptLeave()" style="padding:6px 12px;font-size:12px;margin-right:12px">← Back</button>
+        <div><div style="font-weight:700;font-size:16px">🎮 Playtester</div><div style="font-size:11px;color:var(--text-muted)">Multiplayer virtual tabletop</div></div>
+      </div>
+      <div class="pt-lobby">
+        ${noDecks ? `<div class="pt-lobby-card" style="text-align:center;color:var(--text-muted);font-size:13px;padding:24px">
+          No decks found for <strong>${escHtml(myName)}</strong>.<br>Add decks in the Decks tab first, then come back to play.
+        </div>` : ''}
+        <div class="pt-lobby-card">
+          <div style="font-weight:600;font-size:15px;margin-bottom:14px">Create Game</div>
+          ${deckSelect('pt-deck-create','Your Deck')}
+          <button class="btn-primary" onclick="ptCreate()" ${(!state.playtestDeckId || noDecks)?'disabled':''} style="width:100%;padding:11px;font-size:14px">Create Game</button>
+        </div>
+        <div class="pt-lobby-card">
+          <div style="font-weight:600;font-size:15px;margin-bottom:14px">Join Game</div>
+          ${deckSelect('pt-deck-join','Your Deck')}
+          <div style="display:flex;gap:8px">
+            <input id="pt-join-code" type="text" placeholder="Session code…" style="flex:1;font-family:'JetBrains Mono',monospace;letter-spacing:2px;font-size:15px" oninput="this.value=this.value.toUpperCase()">
+            <button onclick="ptJoin(document.getElementById('pt-join-code').value.trim())" ${!state.playtestDeckId?'disabled':''} style="padding:8px 16px">Join</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }
+  const isHost = session.hostId === myUid;
+  const players = Object.entries(session.players || {});
+  return `<div style="min-height:100vh;background:var(--bg)">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-card);border-bottom:1px solid var(--border)">
+      <div>
+        <div style="font-weight:700;font-size:16px">Waiting Room</div>
+        <div style="font-size:11px;color:var(--text-muted)">Code: <span style="font-family:'JetBrains Mono',monospace;color:var(--accent);letter-spacing:2px;font-size:13px">${session.id}</span></div>
+      </div>
+      <button onclick="ptLeave()" style="font-size:12px;padding:6px 14px;color:var(--text-muted)">Leave</button>
+    </div>
+    <div class="pt-lobby">
+      <div class="pt-lobby-card">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:14px">Players (${players.length}/4)</div>
+        ${players.map(([uid, p], i) => {
+          const col = PT_COLORS[i % PT_COLORS.length];
+          return `<div class="pt-player-row">
+            <div style="width:38px;height:38px;border-radius:50%;background:${col}22;border:2px solid ${col};display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:${col};flex-shrink:0">${p.displayName[0]}</div>
+            <div style="flex:1">
+              <div style="font-weight:600;font-size:14px">${escHtml(p.displayName)}</div>
+              <div style="font-size:12px;color:var(--text-muted)">${escHtml(p.commander)}</div>
+            </div>
+            ${uid === session.hostId ? `<span style="font-size:10px;padding:2px 8px;background:var(--accent-dim);color:#fff;border-radius:99px">Host</span>` : ''}
+          </div>`;
+        }).join('')}
+      </div>
+      ${state.playtestLoading
+        ? `<div style="text-align:center;padding:20px">
+            <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px">${escHtml(state.playtestLoading)}</div>
+            <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden">
+              <div style="height:100%;background:var(--accent);border-radius:2px;animation:progress-pulse 1.2s ease-in-out infinite"></div>
+            </div>
+           </div>`
+        : isHost
+          ? `<button class="btn-primary" onclick="ptStart()" style="width:100%;padding:13px;font-size:14px">
+              ▶ Start Game (${players.length} player${players.length!==1?'s':''})
+             </button>`
+          : `<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px">Waiting for host to start the game…</div>`}
+    </div>
+  </div>`;
+}
+
+// ── Render: Game ──────────────────────────────────────
+function renderPTGame() {
+  const session = state.playtestGame;
+  const myUid = state.currentUser?.uid;
+  const viewUid = state.playtestViewUid || myUid;
+  const isMyBoard = viewUid === myUid;
+  const players = Object.entries(session.players || {});
+  const viewedPlayer = session.players?.[viewUid];
+  const myPlayer = session.players?.[myUid];
+
+  // Player tabs
+  const tabsHtml = `<div class="pt-tabs">
+    ${players.map(([uid, p], i) => {
+      const col = PT_COLORS[i % PT_COLORS.length];
+      const isActive = uid === viewUid;
+      const lifeCol = (p.life??40) <= 5 ? 'var(--tier-s)' : (p.life??40) <= 15 ? 'var(--tier-a)' : col;
+      return `<button class="pt-tab${isActive?' pt-tab-active':''}" style="--tab-col:${col}" onclick="state.playtestViewUid='${uid}';render()">
+        <div class="pt-tab-name">${escHtml(p.displayName)}</div>
+        <div class="pt-tab-life" style="color:${lifeCol}">${p.life??40}</div>
+        ${p.poison>0?`<div class="pt-tab-poison">☠${p.poison}</div>`:''}
+      </button>`;
+    }).join('')}
+    <button class="pt-tab" style="min-width:44px;font-size:18px" onclick="ptLeave()">✕</button>
+  </div>`;
+
+  // Deck info bar
+  const libCount = isMyBoard ? (state.playtestPrivate?.library?.length ?? '?') : '?';
+  const handCount = isMyBoard ? (state.playtestPrivate?.hand?.length ?? '?') : '?';
+  const deckBar = `<div class="pt-deckbar">
+    <span class="pt-deckbar-commander">${escHtml(viewedPlayer?.commander || '—')}</span>
+    <span class="pt-deckbar-meta">📚${libCount} ✋${isMyBoard?handCount:'?'} Turn ${session.turn||1}</span>
+  </div>`;
+
+  // Battlefield
+  const bf = viewedPlayer?.battlefield || [];
+  const gvLen = (viewedPlayer?.graveyard||[]).length;
+  const exLen = (viewedPlayer?.exile||[]).length;
+  const czLen = (viewedPlayer?.commandZone||[]).length;
+  const battlefieldHtml = `<div class="pt-battlefield" onclick="ptCloseMenu()">
+    <div class="pt-zone-btns">
+      <button class="pt-zone-btn" onclick="event.stopPropagation();ptOpenZone('${viewUid}','commandZone')">⭐ ${czLen}</button>
+      <button class="pt-zone-btn" onclick="event.stopPropagation();ptOpenZone('${viewUid}','graveyard')">GY ${gvLen}</button>
+      <button class="pt-zone-btn" onclick="event.stopPropagation();ptOpenZone('${viewUid}','exile')">EX ${exLen}</button>
+      ${isMyBoard ? `<button class="pt-zone-btn" onclick="event.stopPropagation();ptAdjustLife(1)" style="color:var(--tier-b-text)">♥+</button>
+      <button class="pt-zone-btn" onclick="event.stopPropagation();ptAdjustLife(-1)" style="color:var(--tier-s-text)">♥−</button>` : ''}
+    </div>
+    ${bf.length===0 ? `<div class="pt-bf-empty">Battlefield is empty</div>` : ''}
+    <div class="pt-bf-cards">
+      ${bf.map(card => {
+        const menuOpen = state.playtestCardMenu?.cardId === card.cardId;
+        const img = card.imageUrl
+          ? `<img src="${escHtml(card.imageUrl)}" style="width:72px;border-radius:5px;display:block;pointer-events:none" loading="lazy">`
+          : `<div class="pt-card-back">${escHtml(card.name.slice(0,14))}</div>`;
+        return `<div class="pt-bf-card${card.tapped?' pt-tapped':''}${menuOpen?' pt-card-selected':''}"
+          onclick="${isMyBoard?`event.stopPropagation();ptOpenMenu('${card.cardId}','battlefield')`:''}">
+          ${img}
+          ${card.counters?`<div class="pt-counter">${card.counters}</div>`:''}
+          ${card.isCommander?`<div class="pt-cmd-badge">⭐</div>`:''}
+        </div>`;
+      }).join('')}
+    </div>
+    ${state.playtestCardMenu ? renderPTCardMenu() : ''}
+  </div>`;
+
+  // Action bar (own board only)
+  const mullCount = myPlayer?.mulliganCount || 0;
+  const actionBar = isMyBoard ? `<div class="pt-action-bar">
+    <button class="pt-action-btn" onclick="ptDraw()">Draw</button>
+    <button class="pt-action-btn" onclick="ptUntapAll()">Untap All</button>
+    <button class="pt-action-btn" onclick="ptMulligan()">Mulligan${mullCount>0?` (→${Math.max(7-mullCount,0)})`:''}</button>
+    <button class="pt-action-btn" onclick="ptShuffle()">Shuffle</button>
+    <button class="pt-action-btn" onclick="ptNextTurn()">Next Turn</button>
+    <button class="pt-action-btn pt-action-danger" onclick="if(confirm('Concede?'))ptConcede()">Concede</button>
+  </div>` : '';
+
+  // Hand (own board only)
+  const hand = state.playtestPrivate?.hand || [];
+  const handHtml = isMyBoard ? `<div class="pt-hand">
+    ${hand.length===0?`<div style="color:var(--text-muted);font-size:12px;display:flex;align-items:center;padding:0 4px">Empty hand</div>`:''}
+    ${hand.map(card => {
+      const img = card.imageUrl
+        ? `<img src="${escHtml(card.imageUrl)}" style="width:90px;border-radius:6px;display:block;pointer-events:none" loading="lazy">`
+        : `<div class="pt-hand-card-back">${escHtml(card.name.slice(0,16))}</div>`;
+      return `<div class="pt-hand-card" onclick="ptOpenMenu('${card.cardId}','hand')">${img}</div>`;
+    }).join('')}
+  </div>` : '';
+
+  // Zone overlay
+  const overlayHtml = state.playtestZoneOverlay ? renderPTZoneOverlay() : '';
+
+  return `<div class="pt-playmat">${tabsHtml}${deckBar}${battlefieldHtml}${actionBar}${handHtml}${overlayHtml}</div>`;
+}
+
+function renderPTCardMenu() {
+  const { cardId, zone } = state.playtestCardMenu;
+  const uid = state.currentUser?.uid;
+  const player = state.playtestGame?.players?.[uid];
+  const priv = state.playtestPrivate;
+  let card;
+  if (zone==='hand') card=(priv?.hand||[]).find(c=>c.cardId===cardId);
+  else card=(player?.[zone]||[]).find(c=>c.cardId===cardId);
+  if (!card) return '';
+  const actions = [];
+  if (zone==='hand') {
+    actions.push({label:'▶ Play to Battlefield', fn:`ptPlayCard('${cardId}')`});
+    actions.push({label:'→ Graveyard', fn:`ptMoveCard('${cardId}','hand','graveyard')`});
+    actions.push({label:'→ Exile', fn:`ptMoveCard('${cardId}','hand','exile')`});
+    actions.push({label:'→ Top of Library', fn:`ptMoveCard('${cardId}','hand','library')`});
+  } else if (zone==='battlefield') {
+    actions.push({label:card.tapped?'↺ Untap':'⤵ Tap', fn:`ptTapCard('${cardId}')`});
+    actions.push({label:'➕ Add Counter', fn:`ptAddCounter('${cardId}','battlefield',1)`});
+    if(card.counters>0) actions.push({label:'➖ Remove Counter', fn:`ptAddCounter('${cardId}','battlefield',-1)`});
+    actions.push({label:'→ Hand', fn:`ptMoveCard('${cardId}','battlefield','hand')`});
+    actions.push({label:'→ Graveyard', fn:`ptMoveCard('${cardId}','battlefield','graveyard')`});
+    actions.push({label:'→ Exile', fn:`ptMoveCard('${cardId}','battlefield','exile')`});
+    actions.push({label:'→ Command Zone', fn:`ptMoveCard('${cardId}','battlefield','commandZone')`});
+  } else {
+    actions.push({label:'→ Battlefield', fn:`ptMoveCard('${cardId}','${zone}','battlefield')`});
+    actions.push({label:'→ Hand', fn:`ptMoveCard('${cardId}','${zone}','hand')`});
+    if(zone!=='graveyard') actions.push({label:'→ Graveyard', fn:`ptMoveCard('${cardId}','${zone}','graveyard')`});
+    if(zone!=='exile') actions.push({label:'→ Exile', fn:`ptMoveCard('${cardId}','${zone}','exile')`});
+  }
+  return `<div class="pt-card-menu" onclick="event.stopPropagation()">
+    <div class="pt-card-menu-name">${escHtml(card.name)}</div>
+    ${actions.map(a=>`<button class="pt-menu-btn" onclick="${a.fn}">${a.label}</button>`).join('')}
+    <button class="pt-menu-btn pt-menu-cancel" onclick="ptCloseMenu()">Cancel</button>
+  </div>`;
+}
+
+function renderPTZoneOverlay() {
+  const { uid, zone } = state.playtestZoneOverlay;
+  const myUid = state.currentUser?.uid;
+  const isOwn = uid === myUid;
+  const player = state.playtestGame?.players?.[uid];
+  const ZONE_NAMES = { graveyard:'Graveyard', exile:'Exile', commandZone:'Command Zone', hand:'Hand', library:'Library' };
+  const cards = (zone==='hand'||zone==='library') ? (state.playtestPrivate?.[zone]||[]) : (player?.[zone]||[]);
+  return `<div class="pt-overlay-bg" onclick="ptCloseZone()">
+    <div class="pt-overlay" onclick="event.stopPropagation()">
+      <div class="pt-overlay-header">
+        <span class="pt-overlay-title">${escHtml(player?.displayName||'')} · ${ZONE_NAMES[zone]||zone} (${cards.length})</span>
+        <button onclick="ptCloseZone()" style="font-size:20px;padding:4px 10px;background:none;border:none;color:var(--text-muted)">✕</button>
+      </div>
+      <div class="pt-overlay-cards">
+        ${cards.length===0?`<div style="color:var(--text-muted);font-size:13px;padding:20px;width:100%;text-align:center">Empty</div>`:''}
+        ${cards.map(card=>{
+          const img = card.imageUrl
+            ? `<img src="${escHtml(card.imageUrl)}" style="width:100px;border-radius:6px;display:block" loading="lazy">`
+            : `<div style="width:100px;height:140px;background:var(--bg-surface);border:1px solid var(--border);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--text-muted);text-align:center;padding:6px">${escHtml(card.name)}</div>`;
+          return `<div class="pt-overlay-card">
+            ${img}
+            <div style="font-size:9px;color:var(--text-muted);text-align:center;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(card.name)}</div>
+            ${isOwn&&zone!=='library'?`<button class="pt-overlay-card-btn" onclick="ptMoveCard('${card.cardId}','${zone}','battlefield');ptCloseZone()">→ BF</button>`:''}
+            ${isOwn&&zone!=='hand'?`<button class="pt-overlay-card-btn" onclick="ptMoveCard('${card.cardId}','${zone}','hand');ptCloseZone()">→ Hand</button>`:''}
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+
+// ===== META ANALYSIS =====
+const STRATEGY_TAGS = [
+  { key: 'combo',        label: 'Combo',        emoji: '🔄', keywords: ['combo', 'infinite', 'consultation', 'oracle', 'dualcaster', 'ad nauseam', 'food chain', 'breach', 'storm'] },
+  { key: 'aristocrats',  label: 'Aristocrats',  emoji: '💀', keywords: ['aristocrat', 'sacrifice', 'aristocrats', 'death trigger', 'blood artist'] },
+  { key: 'tribal',       label: 'Tribal',       emoji: '🐉', keywords: ['tribal', 'elf ', 'elves', 'vampire', 'angel', 'dragon', 'eldrazi', 'warrior', 'squirrel', 'pirate', 'ally', 'dinosaur'] },
+  { key: 'infect',       label: 'Infect',       emoji: '☠️', keywords: ['infect', 'poison', 'toxic'] },
+  { key: 'stax',         label: 'Stax',         emoji: '🛡️', keywords: ['stax', 'lock', 'tax', 'winter orb'] },
+  { key: 'control',      label: 'Control',      emoji: '🌊', keywords: ['control', 'counterspell', 'counter suite', 'interaction suite'] },
+  { key: 'tokens',       label: 'Tokens',       emoji: '🪙', keywords: ['token', 'tokens', 'go wide', 'populate'] },
+  { key: 'extra-turns',  label: 'Extra Turns',  emoji: '⏰', keywords: ['extra turn', 'time warp', 'nexus of fate', 'temporal'] },
+  { key: 'superfriends', label: 'Superfriends', emoji: '🌟', keywords: ['superfriend', 'planeswalker', 'proliferate'] },
+  { key: 'lands',        label: 'Lands',        emoji: '🌍', keywords: ['landfall', 'crucible', 'lands matter', 'land tax'] },
+  { key: 'reanimator',   label: 'Reanimator',   emoji: '⚰️', keywords: ['reanimate', 'reanimator', 'sneak attack', 'from graveyard'] },
+  { key: 'group-hug',    label: 'Group Hug',    emoji: '🤝', keywords: ['group hug', 'hug'] },
+  { key: 'voltron',      label: 'Voltron',      emoji: '⚔️', keywords: ['voltron', 'equipment', 'aura', 'commander damage'] },
+  { key: 'aggro',        label: 'Aggro',        emoji: '⚡', keywords: ['aggro', 'aggression', 'attack', 'combat', 'extra combat'] },
+  { key: 'midrange',     label: 'Midrange',     emoji: '⚖️', keywords: ['midrange', 'goodstuff', 'value engine'] },
+  { key: 'stompy',       label: 'Big Mana',     emoji: '🐘', keywords: ['big creature', 'big mana', 'tron', 'ramp into', 'mana base'] },
+];
+
+function getStrategyTag(deck) {
+  const text = ((deck.notes || '') + ' ' + (deck.commander || '') + ' ' + (deck.theme || '')).toLowerCase();
+  for (const tag of STRATEGY_TAGS) {
+    if (tag.keywords.some(kw => text.includes(kw))) return tag;
+  }
+  return { key: 'goodstuff', label: 'Goodstuff', emoji: '✨' };
+}
+
+function getMetaColors() {
+  const COLOR_NAMES = { W: 'White', U: 'Blue', B: 'Black', R: 'Red', G: 'Green' };
+  return ['W','U','B','R','G'].map(c => {
+    const decks = state.decks.filter(d => (d.colors || '').includes(c));
+    const wins = decks.reduce((s, d) => s + (d.games||[]).filter(g => g.result==='win').length, 0);
+    const games = decks.reduce((s, d) => s + (d.games||[]).length, 0);
+    return { c, name: COLOR_NAMES[c], deckCount: decks.length, wins, games, winRate: games > 0 ? Math.round(wins/games*100) : null };
+  });
+}
+
+function getHeadToHead() {
+  const players = [...new Set(state.decks.map(d => d.player))];
+  const matrix = {};
+  players.forEach(p1 => {
+    matrix[p1] = {};
+    players.forEach(p2 => {
+      if (p1 === p2) return;
+      let wins = 0, losses = 0;
+      state.decks.filter(d => d.player === p1).forEach(deck => {
+        (deck.games||[]).forEach(g => {
+          const opp = state.decks.find(d => d.id === g.opponentId);
+          if (opp?.player !== p2) return;
+          if (g.result === 'win') wins++; else losses++;
+        });
+      });
+      matrix[p1][p2] = { wins, losses, total: wins + losses };
+    });
+  });
+  return { matrix, players };
+}
+
+function getTierDistribution() {
+  const players = [...new Set(state.decks.map(d => d.player))];
+  return players.map(p => {
+    const decks = state.decks.filter(d => d.player === p);
+    const tiers = {};
+    TIERS.forEach(t => { tiers[t.label] = decks.filter(d => getTier(getOverall(d)) === t.label).length; });
+    return { player: p, tiers };
+  });
+}
+
+function getStrategyBreakdown() {
+  const map = {};
+  state.decks.forEach(deck => {
+    const tag = getStrategyTag(deck);
+    if (!map[tag.key]) map[tag.key] = { ...tag, count: 0, wins: 0, games: 0 };
+    map[tag.key].count++;
+    map[tag.key].wins  += (deck.games||[]).filter(g => g.result==='win').length;
+    map[tag.key].games += (deck.games||[]).length;
+  });
+  return Object.values(map).sort((a, b) => b.count - a.count);
+}
+
+function renderMetaTab() {
+  const colorData  = getMetaColors();
+  const { matrix, players } = getHeadToHead();
+  const tierDist   = getTierDistribution();
+  const strategies = getStrategyBreakdown();
+  const totalGames = getRecentGames(10000).length;
+
+  const COLOR_BG = { W:'#C8A84B', U:'#1070C8', B:'#6B6B6B', R:'#D0392A', G:'#1A7A3C' };
+  const maxDecks = Math.max(...colorData.map(d => d.deckCount), 1);
+
+  // ── Color Presence ──────────────────────────────────────
+  const colorSection = `
+    <div class="dash-section-title">Color Presence</div>
+    <div class="dash-card" style="padding:16px 18px">
+      ${colorData.map(({ c, name, deckCount, winRate }) => {
+        const pct = Math.round(deckCount / state.decks.length * 100);
+        const bar = Math.round(deckCount / maxDecks * 100);
+        return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+          <div style="width:22px;height:22px;border-radius:50%;background:${COLOR_BG[c]};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0">${c}</div>
+          <span style="font-size:13px;font-weight:500;width:46px;flex-shrink:0">${name}</span>
+          <div style="flex:1;height:8px;background:var(--bg);border-radius:4px;overflow:hidden">
+            <div style="height:100%;width:${bar}%;background:${COLOR_BG[c]};border-radius:4px"></div>
+          </div>
+          <span style="font-size:12px;color:var(--text-secondary);width:70px;text-align:right;flex-shrink:0">${deckCount} decks · ${pct}%</span>
+          <span style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--text-muted);width:32px;text-align:right;flex-shrink:0">${winRate !== null ? winRate+'%' : '—'}</span>
+        </div>`;
+      }).join('')}
+      <div style="font-size:11px;color:var(--text-muted);margin-top:4px;border-top:1px solid var(--border);padding-top:8px">Right column = win rate of decks containing that color</div>
+    </div>`;
+
+  // ── Head-to-Head ────────────────────────────────────────
+  const h2hSection = players.length >= 2 ? `
+    <div class="dash-section-title">Head-to-Head</div>
+    <div class="dash-card" style="padding:16px 18px">
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:280px">
+          <thead><tr>
+            <th style="text-align:left;padding:6px 10px;color:var(--text-muted);font-size:11px;font-weight:500;border-bottom:1px solid var(--border)">Player</th>
+            ${players.map(p => { const pc = playerColor(p); return `<th style="text-align:center;padding:6px 10px;color:${pc.color};font-size:12px;font-weight:600;border-bottom:1px solid var(--border)">${escHtml(p)}</th>`; }).join('')}
+          </tr></thead>
+          <tbody>
+            ${players.map(p1 => {
+              const pc = playerColor(p1);
+              return `<tr>
+                <td style="padding:10px;border-bottom:1px solid var(--border)">
+                  <div style="display:flex;align-items:center;gap:8px">
+                    ${renderAvatar(p1, 24)}
+                    <span style="font-weight:600;color:${pc.color};font-size:13px">${escHtml(p1)}</span>
+                  </div>
+                </td>
+                ${players.map(p2 => {
+                  if (p1 === p2) return `<td style="text-align:center;padding:10px;color:var(--text-muted);border-bottom:1px solid var(--border)">—</td>`;
+                  const r = matrix[p1]?.[p2] || { wins:0, losses:0, total:0 };
+                  if (!r.total) return `<td style="text-align:center;padding:10px;color:var(--text-muted);font-size:12px;border-bottom:1px solid var(--border)">—</td>`;
+                  const col = r.wins > r.losses ? 'var(--tier-b-text)' : r.wins < r.losses ? 'var(--tier-s-text)' : 'var(--text-secondary)';
+                  return `<td style="text-align:center;padding:10px;font-family:'JetBrains Mono',monospace;font-size:12px;color:${col};font-weight:600;border-bottom:1px solid var(--border)">${r.wins}W–${r.losses}L</td>`;
+                }).join('')}
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:10px">Row player's record against each column player</div>
+    </div>` : '';
+
+  // ── Tier Distribution ───────────────────────────────────
+  const tierSection = `
+    <div class="dash-section-title">Power Spread</div>
+    <div class="dash-card" style="padding:16px 18px">
+      ${tierDist.map(({ player, tiers }) => {
+        const pc = playerColor(player);
+        const total = Object.values(tiers).reduce((s, v) => s + v, 0);
+        return `<div style="margin-bottom:16px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            ${renderAvatar(player, 26)}
+            <span style="font-size:13px;font-weight:600;color:${pc.color}">${escHtml(player)}</span>
+            <span style="font-size:11px;color:var(--text-muted)">${total} deck${total!==1?'s':''}</span>
+            <div style="margin-left:auto;display:flex;gap:8px">
+              ${TIERS.map(t => tiers[t.label] ? `<span style="font-size:11px;font-weight:600;color:${t.text};background:${t.bg};padding:1px 7px;border-radius:99px">${t.label} ${tiers[t.label]}</span>` : '').join('')}
+            </div>
+          </div>
+          <div style="display:flex;gap:2px;height:20px;border-radius:6px;overflow:hidden;background:var(--bg)">
+            ${TIERS.map(t => {
+              const count = tiers[t.label] || 0;
+              if (!count) return '';
+              const w = Math.round(count / total * 100);
+              return `<div title="${t.label}: ${count}" style="flex:${count};background:${t.bg};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:${t.text}">${count > 1 ? count : ''}</div>`;
+            }).join('')}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+
+  // ── Archetypes ──────────────────────────────────────────
+  const archSection = `
+    <div class="dash-section-title">Archetypes</div>
+    <div class="dash-card" style="padding:16px 18px">
+      ${strategies.map(s => {
+        const barW = Math.round(s.count / state.decks.length * 100);
+        const wr = s.games > 0 ? Math.round(s.wins / s.games * 100) : null;
+        return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+          <span style="font-size:18px;width:26px;text-align:center;flex-shrink:0">${s.emoji}</span>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+              <span style="font-size:13px;font-weight:500">${s.label}</span>
+              <div style="display:flex;gap:12px;font-size:11px;color:var(--text-muted)">
+                <span>${s.count} deck${s.count!==1?'s':''}</span>
+                ${wr !== null ? `<span style="font-family:'JetBrains Mono',monospace;color:${wr>=50?'var(--tier-b-text)':'var(--text-muted)'}">${wr}% WR</span>` : ''}
+              </div>
+            </div>
+            <div style="height:6px;background:var(--bg);border-radius:3px;overflow:hidden">
+              <div style="height:100%;width:${barW}%;background:var(--accent-dim);border-radius:3px"></div>
+            </div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+
+  // ── Most Lopsided Matchups ──────────────────────────────
+  const matchups = [];
+  state.decks.forEach(d1 => {
+    (d1.games||[]).forEach(g => {
+      if (g.result !== 'win') return;
+      const d2 = state.decks.find(d => d.id === g.opponentId);
+      if (!d2) return;
+      const key = [d1.id, d2.id].sort().join('|');
+      const existing = matchups.find(m => m.key === key);
+      if (existing) { existing.games++; if (d1.id === existing.winner.id) existing.winnerWins++; }
+      else matchups.push({ key, winner: d1, loser: d2, games: 1, winnerWins: 1 });
+    });
+  });
+  const topMatchups = matchups.filter(m => m.games >= 2).sort((a, b) => b.games - a.games).slice(0, 5);
+
+  const matchupSection = topMatchups.length ? `
+    <div class="dash-section-title">Most Played Matchups</div>
+    <div class="dash-card">
+      ${topMatchups.map(m => {
+        const wp1 = playerColor(m.winner.player);
+        const wp2 = playerColor(m.loser.player);
+        return `<div class="activity-entry">
+          <div class="activity-dot"></div>
+          <div class="activity-text" style="flex-wrap:wrap;gap:2px">
+            <span style="color:${wp1.color};font-weight:500">${escHtml(m.winner.commander)}</span>
+            <span style="color:var(--text-muted)"> vs </span>
+            <span style="color:${wp2.color};font-weight:500">${escHtml(m.loser.commander)}</span>
+          </div>
+          <span style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--text-muted);flex-shrink:0">${m.games} game${m.games!==1?'s':''}</span>
+        </div>`;
+      }).join('')}
+    </div>` : '';
+
+  return `
+    <div class="header">
+      <div class="header-glow"></div>
+      <h1>Pod <span>Meta</span></h1>
+      <p>${state.decks.length} decks · ${totalGames} game${totalGames!==1?'s':''} logged</p>
+    </div>
+    ${colorSection}
+    ${h2hSection}
+    ${tierSection}
+    ${archSection}
+    ${matchupSection}
+  `;
+}
+
+// ===== PHASE 5: POLISH =====
+const AVATAR_EMOJIS = ['🧙','🐉','🦁','🦊','🐺','🦅','🌊','🔥','⚡','🌿','💀','👑','🗡️','🛡️','✨','🎭','🧿','🏹','🌙','🐦','🦇','🐲','🦄','🎯','🗺️','⚔️'];
+
+function getPlayerStreak(playerName) {
+  const allGames = state.decks
+    .filter(d => d.player === playerName)
+    .flatMap(d => d.games || [])
+    .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  if (!allGames.length) return null;
+  const first = allGames[0].result;
+  let count = 0;
+  for (const g of allGames) { if (g.result === first) count++; else break; }
+  return { type: first, count };
+}
+
+function getHotDeck() {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 7);
+  const cutoffStr = cutoff.toISOString().split('T')[0];
+  let best = null, bestWins = 0;
+  state.decks.forEach(d => {
+    const w = (d.games || []).filter(g => g.result === 'win' && (g.date || '') >= cutoffStr).length;
+    if (w > bestWins) { bestWins = w; best = d; }
+  });
+  return best && bestWins > 0 ? { deck: best, wins: bestWins } : null;
+}
+
+function getWeeklySpotlight() {
+  if (!state.decks.length) return null;
+  const now = new Date();
+  const weekNum = Math.floor((now - new Date(now.getFullYear(), 0, 1)) / 604800000);
+  const sorted = [...state.decks].sort((a, b) => getOverall(b) - getOverall(a));
+  return sorted[weekNum % sorted.length];
+}
+
+function renderSpotlightBanner() {
+  const hot = getHotDeck();
+  const deck = hot ? hot.deck : getWeeklySpotlight();
+  if (!deck) return '';
+
+  const isHot = !!hot;
+  const pc = playerColor(deck.player);
+  const tier = getTier(deck.power);
+  const tierCl = tier.toLowerCase();
+  const overall = getOverall(deck);
+
+  const cacheKey = deck.commander.toLowerCase();
+  const cached = scryfallCache[cacheKey];
+  const artUrl = typeof cached === 'string' ? cached : (cached?.imageUrlArtCrop || cached?.imageUrl || null);
+
+  const bgDiv = artUrl
+    ? `<div class="spotlight-bg" style="background-image:url('${escHtml(artUrl)}')"></div>`
+    : `<div class="spotlight-bg no-art" style="background:linear-gradient(135deg,${pc.bg} 0%,#0C0B0F 100%)" data-spotlight-art="${escHtml(deck.commander)}"></div>`;
+
+  const winsThisWeek = isHot ? `${hot.wins} win${hot.wins !== 1 ? 's' : ''} this week` : null;
+  const totalGames = (deck.games || []).filter(g => !g.loaned).length;
+  const totalWins = (deck.games || []).filter(g => !g.loaned && g.result === 'win').length;
+  const wr = totalGames >= 3 ? Math.round(totalWins / totalGames * 100) + '% win rate' : null;
+  const statStr = [winsThisWeek, !isHot && wr ? wr : null].filter(Boolean).join(' · ');
+
+  return `<div class="spotlight-banner" onclick="openDeckDetail('${escHtml(deck.id)}')">
+    ${bgDiv}
+    <div class="spotlight-overlay"></div>
+    <div class="spotlight-content">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;font-weight:700;color:${isHot ? 'var(--tier-a-text)' : 'var(--accent)'};margin-bottom:10px">${isHot ? '🔥 Hot This Week' : '✨ Deck Spotlight'}</div>
+      <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:22px;font-weight:700;line-height:1.2;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,0.9);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(deck.deckName || deck.commander)}</div>
+          ${deck.deckName ? `<div style="font-size:13px;color:rgba(255,255,255,0.55);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(deck.commander)}</div>` : ''}
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--tier-${tierCl}-text);background:var(--tier-${tierCl}-bg);border:1px solid var(--tier-${tierCl});padding:3px 8px;border-radius:4px">${tier}</span>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(255,255,255,0.45)">${overall.toFixed(1)}</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:7px;min-width:0;flex:1">
+          ${renderAvatar(deck.player, 20)}
+          <span style="font-size:13px;color:${pc.color};font-weight:500">${escHtml(deck.player)}</span>
+          ${deck.colors ? `<span style="opacity:0.8">${renderManaSymbols(deck.colors, 13)}</span>` : ''}
+          ${statStr ? `<span style="font-size:12px;color:rgba(255,255,255,0.5)">· ${statStr}</span>` : ''}
+        </div>
+        <button onclick="event.stopPropagation();openDeckDetail('${escHtml(deck.id)}')" style="font-size:12px;padding:7px 16px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:#fff;flex-shrink:0;backdrop-filter:blur(8px)">View →</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function loadSpotlightArt() {
+  const el = document.querySelector('.spotlight-bg[data-spotlight-art]');
+  if (!el) return;
+  const commander = el.getAttribute('data-spotlight-art');
+  if (!commander) return;
+  const key = commander.toLowerCase();
+  let artUrl = null;
+  const existing = scryfallCache[key];
+  if (existing) {
+    artUrl = typeof existing === 'string' ? existing : (existing.imageUrlArtCrop || existing.imageUrl || null);
+  }
+  if (!artUrl) {
+    try {
+      const searchName = commander.includes(' // ') ? commander.split(' // ')[0].trim() : commander;
+      const resp = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(searchName)}&format=json`);
+      if (resp.ok) {
+        const data = await resp.json();
+        const iuris = data.image_uris || data.card_faces?.[0]?.image_uris;
+        const imgNormal = iuris?.normal || iuris?.large || null;
+        const imgArtCrop = iuris?.art_crop || imgNormal;
+        artUrl = imgArtCrop;
+        const backIuris = data.card_faces?.[1]?.image_uris;
+        const isDF = ['transform','modal_dfc','double_faced_token','reversible_card'].includes(data.layout);
+        if (!scryfallCache[key]?.imageUrl) {
+          scryfallCache[key] = imgNormal ? { imageUrl: imgNormal, imageUrlArtCrop: imgArtCrop, imageUrlBack: backIuris?.normal ?? null, isDoubleFaced: isDF, backFaceName: data.card_faces?.[1]?.name ?? null } : null;
+        }
+      }
+    } catch(e) {}
+  }
+  if (artUrl && document.contains(el)) {
+    el.classList.remove('no-art');
+    el.style.backgroundImage = `url('${artUrl}')`;
+    el.removeAttribute('data-spotlight-art');
+  }
+}
+
+// ===== POD FEED =====
+function getPodFeed(lim = 12) {
+  const events = [];
+  state.decks.forEach(deck => {
+    (deck.games || []).filter(g => !g.loaned && g.result === 'win').forEach(g => {
+      const ts = g.ts || (g.date ? new Date(g.date + 'T12:00:00').getTime() : 0);
+      if (!ts) return;
+      const oppDeck = state.decks.find(d => d.id === g.opponentId);
+      events.push({ type: 'game', ts, player: deck.player, deck: deck.commander, deckId: deck.id, deckName: deck.deckName || null, oppDeck: oppDeck?.commander || null, oppPlayer: oppDeck?.player || null, oppDeckId: oppDeck?.id || null });
+    });
+  });
+  state.decks.filter(d => d.createdAt).forEach(d => {
+    events.push({ type: 'deck_added', ts: d.createdAt, player: d.player, deck: d.commander, deckId: d.id, deckName: d.deckName || null });
+  });
+  state.decks.filter(d => d.decklistUpdatedAt && d.decklistUpdatedAt !== d.createdAt).forEach(d => {
+    events.push({ type: 'decklist_updated', ts: d.decklistUpdatedAt, player: d.player, deck: d.commander, deckId: d.id, deckName: d.deckName || null });
+  });
+  return events.sort((a, b) => b.ts - a.ts).slice(0, lim);
+}
+
+function renderPodFeed() {
+  const events = getPodFeed(12);
+  if (events.length === 0) return '';
+  const now = Date.now();
+  const timeAgo = ts => {
+    const d = now - ts;
+    if (d < 60000) return 'just now';
+    if (d < 3600000) return Math.floor(d / 60000) + 'm ago';
+    if (d < 86400000) return Math.floor(d / 3600000) + 'h ago';
+    if (d < 604800000) return Math.floor(d / 86400000) + 'd ago';
+    return new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+  return `
+    <div class="dash-section-title">Pod Activity</div>
+    <div class="dash-card" style="padding:0">
+      ${events.map(ev => {
+        const pc = playerColor(ev.player);
+        const deckLabel = escHtml(ev.deckName || ev.deck);
+        const deckLink = `<span style="cursor:pointer;font-weight:500" onclick="openDeckDetail('${ev.deckId}')">${deckLabel}</span>`;
+        const playerLink = `<span style="color:${pc.color};cursor:pointer" onclick="openProfile('${escHtml(ev.player)}')">${escHtml(ev.player)}</span>`;
+        let icon, text;
+        if (ev.type === 'game') {
+          const opc = ev.oppPlayer ? playerColor(ev.oppPlayer) : { color: 'var(--text-muted)' };
+          const oppLink = ev.oppDeck
+            ? `<span style="color:${opc.color};cursor:pointer" onclick="${ev.oppDeckId ? `openDeckDetail('${ev.oppDeckId}')` : `openProfile('${escHtml(ev.oppPlayer)}')`}">${escHtml(ev.oppDeck)}</span>`
+            : '?';
+          icon = '⚔️';
+          text = `${playerLink} won with ${deckLink}${ev.oppDeck ? ` · beat ${oppLink}` : ''}`;
+        } else if (ev.type === 'deck_added') {
+          icon = '🃏';
+          text = `${playerLink} added ${deckLink} to the pod`;
+        } else {
+          icon = '📋';
+          text = `${playerLink} updated ${deckLink}'s decklist`;
+        }
+        return `<div class="activity-entry">
+          <span class="activity-icon">${icon}</span>
+          <div class="activity-text">${text}</div>
+          <div class="activity-date">${timeAgo(ev.ts)}</div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+// ===== PROFILE VIEW =====
+function openProfile(playerName) {
+  state.profileView = playerName;
+  state.decklistView = null;
+  state.myDecksGallery = false;
+  window.scrollTo(0, 0);
+  render();
+}
+function closeProfile() { state.profileView = null; render(); }
+
+function renderPlayerProfile(playerName) {
+  const pc = playerColor(playerName);
+  const playerDecks = state.decks.filter(d => d.player === playerName);
+  const allGames = playerDecks.flatMap(d => (d.games || []).filter(g => !g.loaned));
+  const wins = allGames.filter(g => g.result === 'win').length;
+  const losses = allGames.filter(g => g.result === 'loss').length;
+  const wr = allGames.length >= 3 ? Math.round(wins / allGames.length * 100) : null;
+  const streak = getPlayerStreak(playerName);
+  const bestDeck = (() => {
+    const candidates = playerDecks.map(d => {
+      const dg = (d.games || []).filter(g => !g.loaned);
+      if (dg.length < 3) return null;
+      const dw = dg.filter(g => g.result === 'win').length;
+      return { deck: d, wr: dw / dg.length, games: dg.length };
+    }).filter(Boolean);
+    return candidates.sort((a, b) => b.wr - a.wr)[0] || null;
+  })();
+  const myName = currentUserName();
+  const myDecks = myName !== playerName ? state.decks.filter(d => d.player === myName) : [];
+  const h2hWins = myDecks.flatMap(d => (d.games || []).filter(g => g.result === 'win' && state.decks.find(d2 => d2.id === g.opponentId && d2.player === playerName))).length;
+  const h2hLosses = myDecks.flatMap(d => (d.games || []).filter(g => g.result === 'loss' && state.decks.find(d2 => d2.id === g.opponentId && d2.player === playerName))).length;
+
+  return `<div style="padding:16px 16px 80px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+      <button onclick="closeProfile()" style="font-size:18px;padding:4px 10px;background:none;border:none;color:var(--text-muted)">←</button>
+      <h2 style="margin:0;font-size:20px">Player Profile</h2>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:8px;margin-bottom:24px;padding:20px;background:var(--bg-card);border-radius:var(--radius);border:1px solid var(--border)">
+      ${renderAvatar(playerName, 72)}
+      <div style="font-size:22px;font-weight:700;color:${pc.color}">${escHtml(playerName)}</div>
+      <div style="display:flex;gap:20px;margin-top:8px">
+        <div style="text-align:center"><div style="font-size:20px;font-weight:700">${playerDecks.length}</div><div style="font-size:11px;color:var(--text-muted)">Decks</div></div>
+        <div style="text-align:center"><div style="font-size:20px;font-weight:700">${wins}</div><div style="font-size:11px;color:var(--text-muted)">Wins</div></div>
+        <div style="text-align:center"><div style="font-size:20px;font-weight:700">${wr !== null ? wr + '%' : '—'}</div><div style="font-size:11px;color:var(--text-muted)">Win rate</div></div>
+      </div>
+      ${streak && streak.count >= 2 ? `<span class="streak-badge streak-${streak.type}" style="margin-top:4px">${streak.type === 'win' ? '🔥' : '💀'} ${streak.count} ${streak.type} streak</span>` : ''}
+    </div>
+    ${bestDeck ? `<div class="dash-section-title">Best Deck</div>
+    <div class="dash-card" style="padding:12px 16px;margin-bottom:16px;cursor:pointer" onclick="openDeckDetail('${bestDeck.deck.id}')">
+      <div style="font-weight:600">${escHtml(bestDeck.deck.commander)}</div>
+      <div style="font-size:12px;color:var(--text-muted)">${Math.round(bestDeck.wr * 100)}% win rate · ${bestDeck.games} games</div>
+    </div>` : ''}
+    ${myName !== playerName && (h2hWins + h2hLosses) > 0 ? `<div class="dash-section-title">Head-to-head vs you</div>
+    <div class="dash-card" style="padding:14px 16px;margin-bottom:16px">
+      <span style="color:var(--tier-s-text);font-weight:600">${h2hWins}W</span> – <span style="color:var(--tier-b-text);font-weight:600">${h2hLosses}L</span>
+      <span style="color:var(--text-muted);font-size:12px"> (${playerName}'s perspective)</span>
+    </div>` : ''}
+    <div class="dash-section-title">Decks (${playerDecks.length})</div>
+    <div class="dash-card" style="padding:0">
+      ${playerDecks.length === 0 ? '<div style="padding:14px"><p style="color:var(--text-muted);font-size:12px">No decks yet.</p></div>'
+        : playerDecks.map(d => {
+            const dg = (d.games || []).filter(g => !g.loaned);
+            const dw = dg.filter(g => g.result === 'win').length;
+            const dwr = dg.length >= 3 ? Math.round(dw / dg.length * 100) + '%' : null;
+            const tier = getTier(d.power);
+            const tierCl = tier.toLowerCase();
+            return `<div onclick="openDeckDetail('${d.id}')" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer">
+              <div style="flex:1;min-width:0">
+                <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(d.commander)}</div>
+                <div style="font-size:11px;color:var(--text-muted)">${dg.length}g${dwr ? ' · ' + dwr + ' WR' : ''}</div>
+              </div>
+              <span style="font-size:11px;font-weight:700;color:var(--tier-${tierCl}-text);background:var(--tier-${tierCl}-bg);border:1px solid var(--tier-${tierCl});padding:2px 7px;border-radius:4px;flex-shrink:0">${tier}</span>
+            </div>`;
+          }).join('')}
+    </div>
+  </div>`;
+}
+
+// ===== POD CHAT =====
+function renderChatFAB() {
+  const fab = document.getElementById('chat-fab-root');
+  if (!fab || !state.currentUser || !state.loaded) return;
+  const unread = state.chatUnread || 0;
+  fab.innerHTML = `<button class="chat-fab" onclick="openChat()" title="Pod Chat">
+    💬
+    ${unread > 0 ? `<span class="chat-fab-badge">${unread > 9 ? '9+' : unread}</span>` : ''}
+  </button>`;
+}
+
+function openChat() {
+  state.chatOpen = true;
+  chatLastReadTs = Date.now();
+  state.chatUnread = 0;
+  renderChatFAB();
+  const chatRoot = document.getElementById('chat-root');
+  if (chatRoot) chatRoot.innerHTML = renderChatPanel();
+  setTimeout(() => {
+    const msgs = document.querySelector('.chat-messages');
+    if (msgs) msgs.scrollTop = msgs.scrollHeight;
+    document.querySelector('.chat-input')?.focus();
+  }, 50);
+}
+
+function closeChat() {
+  state.chatOpen = false;
+  chatLastReadTs = Date.now();
+  state.chatUnread = 0;
+  renderChatFAB();
+  const chatRoot = document.getElementById('chat-root');
+  if (chatRoot) chatRoot.innerHTML = '';
+}
+
+function renderChatPanel() {
+  const myName = currentUserName();
+  const msgs = state.chatMessages;
+  const now = Date.now();
+  const fmtTime = ts => {
+    if (!ts) return '';
+    const d = now - ts;
+    if (d < 86400000) return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return new Date(ts).toLocaleDateString([], { month: 'short', day: 'numeric' });
+  };
+  return `<div class="chat-overlay" onclick="closeChat()">
+    <div class="chat-panel" onclick="event.stopPropagation()">
+      <div class="chat-header">
+        <span style="font-size:18px">💬</span>
+        <span style="font-weight:600;flex:1">Pod Chat</span>
+        <button onclick="closeChat()" style="padding:4px 10px;font-size:13px;flex-shrink:0">✕</button>
+      </div>
+      <div class="chat-messages" id="chat-messages-list">
+        ${msgs.length === 0 ? '<div style="text-align:center;color:var(--text-muted);font-size:13px;padding:20px">No messages yet. Say hi! 👋</div>' : ''}
+        ${msgs.map(m => {
+          const isMe = m.player === myName;
+          const pc = playerColor(m.player);
+          const avatar = state.playerAvatars?.[m.player] || m.player?.[0] || '?';
+          return `<div class="chat-msg${isMe ? ' me' : ''}">
+            ${!isMe ? `<span class="chat-avatar" style="color:${pc.color}">${typeof avatar === 'string' && avatar.length > 1 ? avatar : avatar}</span>` : ''}
+            <div class="chat-bubble-wrap">
+              ${!isMe ? `<div class="chat-sender" style="color:${pc.color}">${escHtml(m.player)}</div>` : ''}
+              <div class="chat-bubble${isMe ? ' me' : ''}">${escHtml(m.text || '')}</div>
+              <div class="chat-time">${fmtTime(m.ts)}</div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div class="chat-input-row">
+        <input class="chat-input" type="text" placeholder="Message the pod…" maxlength="500"
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMessage()}">
+        <button class="chat-send btn-primary" onclick="sendChatMessage()">Send</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderChatMessages() {
+  const list = document.getElementById('chat-messages-list');
+  if (!list) return;
+  const myName = currentUserName();
+  const now = Date.now();
+  const msgs = state.chatMessages;
+  const fmtTime = ts => {
+    if (!ts) return '';
+    const d = now - ts;
+    if (d < 86400000) return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return new Date(ts).toLocaleDateString([], { month: 'short', day: 'numeric' });
+  };
+  const wasAtBottom = list.scrollTop + list.clientHeight >= list.scrollHeight - 40;
+  list.innerHTML = msgs.length === 0 ? '<div style="text-align:center;color:var(--text-muted);font-size:13px;padding:20px">No messages yet. Say hi! 👋</div>'
+    : msgs.map(m => {
+        const isMe = m.player === myName;
+        const pc = playerColor(m.player);
+        return `<div class="chat-msg${isMe ? ' me' : ''}">
+          ${!isMe ? `<span class="chat-avatar" style="color:${pc.color}">${state.playerAvatars?.[m.player] || m.player?.[0] || '?'}</span>` : ''}
+          <div class="chat-bubble-wrap">
+            ${!isMe ? `<div class="chat-sender" style="color:${pc.color}">${escHtml(m.player)}</div>` : ''}
+            <div class="chat-bubble${isMe ? ' me' : ''}">${escHtml(m.text || '')}</div>
+            <div class="chat-time">${fmtTime(m.ts)}</div>
+          </div>
+        </div>`;
+      }).join('');
+  if (wasAtBottom) list.scrollTop = list.scrollHeight;
+}
+
+async function sendChatMessage() {
+  const input = document.querySelector('.chat-input');
+  if (!input) return;
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  const myName = currentUserName();
+  try {
+    await addDoc(collection(db, 'messages'), { player: myName, text, ts: Date.now() });
+  } catch(e) {
+    console.error('sendChatMessage:', e);
+  }
+}
+
+function getMatchupInsights(deck) {
+  const games = deck.games || [];
+  if (!games.length) return null;
+  const vs = {};
+  games.forEach(g => {
+    if (!g.opponentId) return;
+    if (!vs[g.opponentId]) vs[g.opponentId] = { wins: 0, losses: 0 };
+    vs[g.opponentId][g.result === 'win' ? 'wins' : 'losses']++;
+  });
+  const entries = Object.entries(vs).map(([id, r]) => {
+    const opp = state.decks.find(d => d.id === id);
+    return opp ? { opp, id, ...r, total: r.wins + r.losses } : null;
+  }).filter(Boolean);
+  if (!entries.length) return null;
+  const byRate = [...entries].sort((a, b) => (b.wins / b.total) - (a.wins / a.total));
+  return {
+    prey: byRate[0]?.wins > 0 ? byRate[0] : null,
+    nemesis: byRate[byRate.length - 1]?.losses > 0 ? byRate[byRate.length - 1] : null,
+    rival: [...entries].sort((a, b) => b.total - a.total)[0] || null,
+  };
+}
+
+function renderAvatar(playerName, size = 36) {
+  const av = state.playerAvatars?.[playerName];
+  const pc = playerColor(playerName);
+  const isPhoto = av && (av.startsWith('http') || av.startsWith('data:'));
+  const inner = isPhoto
+    ? `<img src="${escHtml(av)}" alt="${escHtml(playerName)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block">`
+    : av
+      ? `<span style="font-size:${Math.round(size * 0.55)}px;line-height:1">${av}</span>`
+      : `<span style="color:${pc.color};font-weight:700;font-size:${Math.round(size * 0.42)}px">${playerName[0]}</span>`;
+  return `<div class="avatar-circle" style="width:${size}px;height:${size}px;background:${pc.bg};border:2px solid ${pc.color};overflow:hidden" onclick="openAvatarModal('${escHtml(playerName)}')" title="Change ${escHtml(playerName)}'s avatar">${inner}</div>`;
+}
+
+function openAvatarModal(playerName) { state.showAvatarModal = playerName; render(); }
+function closeAvatarModal() { state.showAvatarModal = null; render(); }
+
+function showCardPopup(name, imageUrl, imageUrlBack) {
+  document.getElementById('card-popup-root')?.remove();
+  const div = document.createElement('div');
+  div.id = 'card-popup-root';
+  const imgContent = imageUrlBack
+    ? `<div class="card-flip-wrap" style="perspective:600px;max-width:300px;margin:0 auto;aspect-ratio:63/88">
+        <div class="card-flip-inner" id="popup-flip-inner">
+          <div class="card-flip-front"><img src="${escHtml(imageUrl)}" style="width:100%;border-radius:8px;display:block"></div>
+          <div class="card-flip-back"><img src="${escHtml(imageUrlBack)}" style="width:100%;border-radius:8px;display:block"></div>
+        </div>
+        <button class="card-flip-btn" onclick="toggleCardFlip(this)" title="Transform">⟳</button>
+      </div>`
+    : (imageUrl
+        ? `<img src="${escHtml(imageUrl)}" alt="${escHtml(name)}">`
+        : `<div style="background:var(--bg-card);border-radius:16px;aspect-ratio:63/88;display:flex;align-items:center;justify-content:center;padding:20px;font-size:14px;color:var(--text-muted)">${escHtml(name)}</div>`);
+  div.innerHTML = `<div class="card-popup-overlay" onclick="closeCardPopup()">
+    <div class="card-popup-inner" onclick="event.stopPropagation()">
+      <div class="card-popup-close" onclick="closeCardPopup()">×</div>
+      ${imgContent}
+      <div class="card-popup-name">${escHtml(name)}</div>
+    </div>
+  </div>`;
+  document.body.appendChild(div);
+}
+function closeCardPopup() {
+  document.getElementById('card-popup-root')?.remove();
+}
+
+async function saveAvatar(playerName, emoji) {
+  state.playerAvatars = { ...state.playerAvatars, [playerName]: emoji };
+  state.showAvatarModal = null;
+  render();
+  try {
+    await setDoc(doc(db, 'users', playerName), { avatar: emoji }, { merge: true });
+  } catch(e) { console.error('saveAvatar:', e); }
+}
+
+async function handleAvatarPhotoSelect(input, playerName) {
+  const file = input.files?.[0];
+  if (!file) return;
+  const status = document.getElementById('avatar-upload-status');
+  if (status) status.textContent = 'Resizing…';
+  try {
+    // Draw to 200×200 canvas (centre-crop)
+    const blob = await new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 200; canvas.height = 200;
+        const ctx = canvas.getContext('2d');
+        const size = Math.min(img.width, img.height);
+        const sx = (img.width - size) / 2;
+        const sy = (img.height - size) / 2;
+        ctx.drawImage(img, sx, sy, size, size, 0, 0, 200, 200);
+        canvas.toBlob(resolve, 'image/jpeg', 0.85);
+      };
+      img.onerror = reject;
+      img.src = URL.createObjectURL(file);
+    });
+    if (status) status.textContent = 'Uploading…';
+    const uid = state.currentUser?.uid;
+    if (!uid) throw new Error('Not signed in');
+    const sRef = storageRef(storage, `avatars/${uid}.jpg`);
+    await uploadBytes(sRef, blob, { contentType: 'image/jpeg' });
+    const url = await getDownloadURL(sRef);
+    if (status) status.textContent = 'Saved!';
+    // Persist to Firestore and update state
+    await setDoc(doc(db, 'users', playerName), { avatar: url }, { merge: true });
+    state.playerAvatars = { ...state.playerAvatars, [playerName]: url };
+    state.showAvatarModal = null;
+    render();
+  } catch(e) {
+    console.error('Avatar upload failed:', e);
+    if (status) status.textContent = 'Upload failed: ' + (e.message || e.code || 'unknown error');
+  }
+}
+
+async function clearAvatarPhoto(playerName) {
+  state.playerAvatars = { ...state.playerAvatars, [playerName]: null };
+  state.showAvatarModal = null;
+  render();
+  try {
+    await setDoc(doc(db, 'users', playerName), { avatar: null }, { merge: true });
+  } catch(e) { console.error('clearAvatarPhoto:', e); }
+}
+
+// ===== DISPLAY NAME MODAL =====
+function renderNameModal() {
+  return `
+  <div class="modal-overlay">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width:340px">
+      <h2 style="margin-bottom:6px">Welcome! 👋</h2>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px">Choose a display name that your pod will see.</p>
+      <div class="modal-field">
+        <label>Your name</label>
+        <input id="name-input" placeholder="e.g. Jeya" maxlength="20"
+          value="${escHtml(state.userProfile?.displayName || '')}"
+          onkeydown="if(event.key==='Enter')saveDisplayName()">
+      </div>
+      ${state.nameModalError ? `<p style="font-size:12px;color:var(--tier-s-text);margin-bottom:12px">${escHtml(state.nameModalError)}</p>` : ''}
+      <div class="modal-actions">
+        <button class="btn-primary" onclick="saveDisplayName()" style="width:100%;padding:10px">Save name</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function saveDisplayName() {
+  const name = document.getElementById('name-input')?.value.trim();
+  if (!name) { state.nameModalError = 'Please enter a name'; render(); return; }
+  if (name.length < 2) { state.nameModalError = 'Name must be at least 2 characters'; render(); return; }
+  const uid = state.currentUser?.uid;
+  if (!uid) return;
+  await setDoc(doc(db, 'userProfiles', uid), { displayName: name, email: state.currentUser.email }, { merge: true });
+  state.showNameModal = false;
+  state.nameModalError = '';
+  render();
+}
+
+// ===== CHANGE PASSWORD MODAL =====
+function renderChangePasswordModal() {
+  return `
+  <div class="modal-overlay" onclick="closeChangePassword()">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width:360px">
+      <h2 style="margin-bottom:8px">Change Password</h2>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:4px">Signed in as <strong>${escHtml(state.currentUser?.email || '')}</strong></p>
+      <p style="font-size:12px;font-weight:600;color:#FBBF24;background:#FBBF2415;border:1px solid #FBBF2440;border-radius:8px;padding:8px 12px;margin-bottom:24px">⚠️ Use a unique password — don't reuse one from another account.</p>
+      <div class="modal-field" style="margin-bottom:16px">
+        <label>Current password</label>
+        <div style="position:relative">
+          <input id="cp-current" type="password" placeholder="••••••••" style="padding-right:44px;width:100%">
+          <button type="button" onclick="togglePwVis('cp-current',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:16px;padding:0">👁</button>
+        </div>
+      </div>
+      <div class="modal-field" style="margin-bottom:16px">
+        <label>New password</label>
+        <div style="position:relative">
+          <input id="cp-new" type="password" placeholder="••••••••" style="padding-right:44px;width:100%">
+          <button type="button" onclick="togglePwVis('cp-new',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:16px;padding:0">👁</button>
+        </div>
+      </div>
+      <div class="modal-field" style="margin-bottom:20px">
+        <label>Confirm new password</label>
+        <div style="position:relative">
+          <input id="cp-confirm" type="password" placeholder="••••••••" style="padding-right:44px;width:100%" onkeydown="if(event.key==='Enter')doChangePassword()">
+          <button type="button" onclick="togglePwVis('cp-confirm',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:16px;padding:0">👁</button>
+        </div>
+      </div>
+      ${state.cpError ? `<p style="font-size:12px;color:var(--tier-s-text);margin-bottom:14px">${escHtml(state.cpError)}</p>` : ''}
+      ${state.cpSuccess ? `<p style="font-size:12px;color:#34D399;margin-bottom:14px">✅ Password updated successfully!</p>` : ''}
+      <div class="modal-actions">
+        <button onclick="closeChangePassword()">Cancel</button>
+        <button class="btn-primary" onclick="doChangePassword()">Update Password</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function closeChangePassword() { state.showChangePassword = false; state.cpError = ''; state.cpSuccess = false; render(); }
+function togglePwVis(inputId, btn) {
+  const inp = document.getElementById(inputId);
+  if (!inp) return;
+  const show = inp.type === 'password';
+  inp.type = show ? 'text' : 'password';
+  btn.textContent = show ? '🙈' : '👁';
+}
+
+async function doChangePassword() {
+  const current = document.getElementById('cp-current')?.value;
+  const newPw = document.getElementById('cp-new')?.value;
+  const confirm = document.getElementById('cp-confirm')?.value;
+  if (!current || !newPw || !confirm) { state.cpError = 'Please fill in all fields'; render(); return; }
+  if (newPw.length < 6) { state.cpError = 'New password must be at least 6 characters'; render(); return; }
+  if (newPw !== confirm) { state.cpError = 'New passwords do not match'; render(); return; }
+  try {
+    const credential = EmailAuthProvider.credential(state.currentUser.email, current);
+    await reauthenticateWithCredential(state.currentUser, credential);
+    await updatePassword(state.currentUser, newPw);
+    state.cpError = '';
+    state.cpSuccess = true;
+    render();
+    setTimeout(() => { state.showChangePassword = false; state.cpSuccess = false; render(); }, 2000);
+  } catch (e) {
+    state.cpError = e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential'
+      ? 'Current password is incorrect' : e.message;
+    render();
+  }
+}
+
+function renderAvatarModal(playerName) {
+  const current = state.playerAvatars?.[playerName];
+  const isPhoto = current && (current.startsWith('http') || current.startsWith('data:'));
+  const pc = playerColor(playerName);
+  const uploadId = 'avatar-file-input';
+  return `<div class="modal-overlay" onclick="closeAvatarModal()">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width:360px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+        ${renderAvatar(playerName, 52)}
+        <div>
+          <h2 style="margin-bottom:2px">Avatar</h2>
+          <p style="font-size:13px;color:var(--text-secondary)"><span style="color:${pc.color};font-weight:600">${escHtml(playerName)}</span></p>
+        </div>
+      </div>
+
+      <div style="margin-bottom:14px">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);font-weight:600;margin-bottom:8px">Photo</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button onclick="document.getElementById('${uploadId}').click()" style="font-size:12px;padding:7px 14px">📷 Upload photo</button>
+          ${isPhoto ? `<button onclick="clearAvatarPhoto('${escHtml(playerName)}')" style="font-size:12px;padding:7px 14px;color:var(--tier-s-text);border-color:rgba(226,75,74,0.4)">Remove</button>` : ''}
+          <span id="avatar-upload-status" style="font-size:11px;color:var(--text-muted)"></span>
+        </div>
+        <input type="file" id="${uploadId}" accept="image/*" style="display:none" onchange="handleAvatarPhotoSelect(this,'${escHtml(playerName)}')">
+      </div>
+
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);font-weight:600;margin-bottom:8px">— or pick an emoji —</div>
+      <div class="avatar-picker-grid">
+        ${AVATAR_EMOJIS.map(e => `<div class="avatar-option${e===current?' selected':''}" onclick="saveAvatar('${escHtml(playerName)}','${e}')">${e}</div>`).join('')}
+      </div>
+      <div style="text-align:center;margin-top:12px">
+        <button onclick="closeAvatarModal()" style="font-size:12px;padding:5px 16px">Cancel</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ===== GAME SESSION =====
+const SESSION_COLORS = ['#A78BFA', '#34D399', '#FBBF24', '#F472B6'];
+
+function openNewGameModal() {
+  const allPlayers = [...new Set(state.decks.map(d => d.player))];
+  state.sessionSetup = {
+    players: allPlayers.map(name => ({
+      name,
+      deckId: state.decks.find(d => d.player === name)?.id || ''
+    })).filter(p => p.deckId).slice(0, 4)
+  };
+  state.showNewGameModal = true;
+  render();
+}
+function closeNewGameModal() { state.showNewGameModal = false; render(); }
+
+function setSessionPlayer(i, key, val) {
+  state.sessionSetup.players = state.sessionSetup.players.map((p, idx) => {
+    if (idx !== i) return p;
+    if (key === 'name') return { ...p, name: val, deckId: state.decks.find(d => d.player === val)?.id || '' };
+    return { ...p, [key]: val };
+  });
+  render();
+}
+function addSessionPlayer() {
+  const allPlayers = [...new Set(state.decks.map(d => d.player))];
+  const existing = state.sessionSetup.players.map(p => p.name);
+  const next = allPlayers.find(p => !existing.includes(p)) || allPlayers[0] || '';
+  state.sessionSetup.players = [...state.sessionSetup.players, { name: next, deckId: state.decks.find(d => d.player === next)?.id || '' }];
+  render();
+}
+function removeSessionPlayer(i) {
+  state.sessionSetup.players = state.sessionSetup.players.filter((_, idx) => idx !== i);
+  render();
+}
+
+async function createSession() {
+  const valid = state.sessionSetup.players.filter(p => p.deckId);
+  if (valid.length < 2) return;
+  const id = (Date.now().toString(36).slice(-4) + Math.random().toString(36).slice(2, 5)).toUpperCase();
+  const sessionData = {
+    hostUid: state.currentUser?.uid || '',
+    status: 'active',
+    createdAt: new Date().toISOString(),
+    players: valid.map(p => {
+      const deck = state.decks.find(d => d.id === p.deckId);
+      return { id: p.deckId, name: deck?.player || p.name, deckId: p.deckId, deckName: deck?.commander || '?', life: 40, commanderDamage: {}, poisonCounters: 0 };
+    })
+  };
+  try {
+    await setDoc(doc(db, 'gameSessions', id), sessionData);
+    state.showNewGameModal = false;
+    listenToSession(id);
+  } catch(e) { console.error('createSession:', e); }
+}
+
+async function joinSession(id) {
+  if (!id) return;
+  state.showJoinInput = false;
+  listenToSession(id.toUpperCase());
+}
+
+function listenToSession(id) {
+  if (unsubscribeSession) { unsubscribeSession(); unsubscribeSession = null; }
+  state.activeSessionId = id;
+  unsubscribeSession = onSnapshot(doc(db, 'gameSessions', id), snap => {
+    if (snap.exists()) {
+      state.gameSession = { id: snap.id, ...snap.data() };
+      if (state.tab !== 'play') { state.tab = 'play'; }
+      render();
+    } else {
+      state.gameSession = null;
+      state.activeSessionId = null;
+      render();
+    }
+  });
+}
+
+async function updateLife(playerId, delta) {
+  if (!state.gameSession || state.gameSession.status !== 'active') return;
+  const players = state.gameSession.players.map(p =>
+    p.id === playerId ? { ...p, life: p.life + delta } : p
+  );
+  await updateDoc(doc(db, 'gameSessions', state.activeSessionId), { players });
+}
+
+async function updateCmdDmg(toId, fromId, delta) {
+  if (!state.gameSession || state.gameSession.status !== 'active') return;
+  const players = state.gameSession.players.map(p => {
+    if (p.id !== toId) return p;
+    const commanderDamage = { ...(p.commanderDamage || {}) };
+    commanderDamage[fromId] = Math.max(0, (commanderDamage[fromId] || 0) + delta);
+    return { ...p, commanderDamage };
+  });
+  await updateDoc(doc(db, 'gameSessions', state.activeSessionId), { players });
+}
+
+function openEndGameModal() { state.showEndGameModal = true; render(); }
+function closeEndGameModal() { state.showEndGameModal = false; render(); }
+
+async function endGame(winnerId) {
+  if (!state.gameSession) return;
+  if (winnerId) {
+    const date = new Date().toISOString().split('T')[0];
+    const session = state.gameSession;
+    const others = session.players.filter(p => p.id !== winnerId);
+    state.decks = state.decks.map(d => {
+      const isWinner = d.id === winnerId;
+      const isLoser = others.some(o => o.id === d.id);
+      if (!isWinner && !isLoser) return d;
+      // Check if the player using this deck is actually its owner
+      const sessionPlayer = session.players.find(p => p.id === d.id);
+      const isLoaned = sessionPlayer && d.player !== sessionPlayer.name;
+      const ts = Date.now();
+      const newGames = isWinner
+        ? others.map(o => ({ opponentId: o.id, result: 'win', date, ts, ...(isLoaned ? { loaned: true, loanedBy: sessionPlayer.name } : {}) }))
+        : [{ opponentId: winnerId, result: 'loss', date, ts, ...(isLoaned ? { loaned: true, loanedBy: sessionPlayer.name } : {}) }];
+      return { ...d, games: [...(d.games || []), ...newGames] };
+    });
+    const batch = writeBatch(db);
+    session.players.forEach(p => {
+      const deck = state.decks.find(d => d.id === p.id);
+      if (deck) { const { id, ...data } = deck; batch.set(doc(db, 'decks', id), data); }
+    });
+    await batch.commit().catch(console.error);
+  }
+  await updateDoc(doc(db, 'gameSessions', state.activeSessionId), {
+    status: 'ended', winnerId: winnerId || null, endedAt: new Date().toISOString()
+  });
+  state.showEndGameModal = false;
+  render();
+}
+
+async function clearSession() {
+  if (unsubscribeSession) { unsubscribeSession(); unsubscribeSession = null; }
+  state.activeSessionId = null;
+  state.gameSession = null;
+  render();
+}
+
+function renderNewGameModal() {
+  const allPlayers = [...new Set(state.decks.map(d => d.player))];
+  const setup = state.sessionSetup;
+  return `<div class="modal-overlay" onclick="closeNewGameModal()">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width:440px">
+      <h2 style="margin-bottom:6px">New Game</h2>
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:18px">Pick 2–4 players and their decks.</p>
+      ${setup.players.map((p, i) => `
+        <div class="session-setup-row">
+          <select onchange="setSessionPlayer(${i},'name',this.value)" style="width:100px;flex-shrink:0">
+            ${allPlayers.map(pl => `<option value="${escHtml(pl)}" ${p.name===pl?'selected':''}>${escHtml(pl)}</option>`).join('')}
+          </select>
+          <select onchange="setSessionPlayer(${i},'deckId',this.value)" style="flex:1">
+            <option value="">— deck —</option>
+            ${state.decks.filter(d => d.player === p.name).map(d => `<option value="${d.id}" ${p.deckId===d.id?'selected':''}>${escHtml(d.commander)}</option>`).join('')}
+          </select>
+          <button onclick="removeSessionPlayer(${i})" style="padding:4px 8px;color:var(--text-muted);border:none;background:transparent;font-size:18px;line-height:1">×</button>
+        </div>`).join('')}
+      ${setup.players.length < 4 ? `<button onclick="addSessionPlayer()" style="font-size:12px;padding:5px 14px;margin-bottom:18px">+ Add player</button>` : ''}
+      <div class="modal-actions" style="margin-top:8px">
+        <button onclick="closeNewGameModal()">Cancel</button>
+        <button class="btn-primary" onclick="createSession()" ${setup.players.filter(p=>p.deckId).length<2?'disabled':''}>Start Game</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderEndGameModal(session) {
+  return `<div class="modal-overlay" onclick="closeEndGameModal()">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width:360px">
+      <h2 style="margin-bottom:6px">End Game</h2>
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:18px">Who won? Results will be logged to each deck's history.</p>
+      ${session.players.map((p, i) => {
+        const col = SESSION_COLORS[i % SESSION_COLORS.length];
+        const lifeColor = p.life <= 5 ? 'var(--tier-s-text)' : p.life <= 15 ? 'var(--tier-a-text)' : 'var(--text)';
+        return `<button onclick="endGame('${p.id}')" style="width:100%;text-align:left;padding:12px 16px;margin-bottom:8px;font-size:14px;border-radius:var(--radius);display:flex;align-items:center;gap:10px;border-color:${col}44">
+          <span style="font-weight:600;color:${col}">${escHtml(p.deckName)}</span>
+          <span style="color:var(--text-muted);font-size:12px">${escHtml(p.name)}</span>
+          <span style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;color:${lifeColor}">${p.life}♥</span>
+        </button>`;
+      }).join('')}
+      <button onclick="endGame(null)" style="width:100%;padding:10px;font-size:13px;margin-top:4px;color:var(--text-muted)">No winner / Draw</button>
+      <div style="text-align:center;margin-top:10px">
+        <button onclick="closeEndGameModal()" style="font-size:12px;padding:4px;border:none;background:transparent;color:var(--text-muted)">Cancel</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderActiveSession() {
+  const s = state.gameSession;
+  const isEnded = s.status === 'ended';
+  const gridCols = s.players.length > 2 ? 2 : s.players.length;
+
+  const lifeTiles = s.players.map((p, i) => {
+    const col = SESSION_COLORS[i % SESSION_COLORS.length];
+    const isDead = p.life <= 0;
+    const lifeColor = p.life <= 5 ? 'var(--tier-s)' : p.life <= 15 ? 'var(--tier-a)' : 'var(--text)';
+    const totalCmdDmg = Object.values(p.commanderDamage || {}).reduce((a, b) => a + b, 0);
+    return `<div class="life-tile ${isDead ? 'life-dead' : ''}" style="border-color:${col}55">
+      <div class="life-tile-name" style="color:${col}">${escHtml(p.name)}</div>
+      <div class="life-tile-deck">${escHtml(p.deckName)}</div>
+      <div class="life-number" style="color:${lifeColor}">${p.life}</div>
+      ${!isEnded ? `<div class="life-controls">
+        <button class="life-btn life-btn-minus life-btn-sm" onclick="updateLife('${p.id}',-5)">−5</button>
+        <button class="life-btn life-btn-minus" onclick="updateLife('${p.id}',-1)">−</button>
+        <button class="life-btn life-btn-plus" onclick="updateLife('${p.id}',1)">+</button>
+        <button class="life-btn life-btn-plus life-btn-sm" onclick="updateLife('${p.id}',5)">+5</button>
+      </div>` : ''}
+      ${totalCmdDmg > 0 ? `<div style="font-size:11px;color:var(--text-muted);margin-top:8px">⚔ ${totalCmdDmg} cmd dmg</div>` : ''}
+    </div>`;
+  }).join('');
+
+  // Commander damage matrix (only show during active game with 2+ players)
+  const cmdDmgHtml = (!isEnded && s.players.length > 1) ? `
+    <div class="cmd-dmg-box">
+      <div class="cmd-dmg-title">Commander Damage</div>
+      ${s.players.map(victim => {
+        const attackers = s.players.filter(atk => atk.id !== victim.id);
+        return `<div class="cmd-dmg-row">
+          <div class="cmd-dmg-victim">${escHtml(victim.name)}</div>
+          <div class="cmd-dmg-sources">
+            ${attackers.map(atk => {
+              const dmg = (victim.commanderDamage || {})[atk.id] || 0;
+              const atkIdx = s.players.findIndex(p => p.id === atk.id);
+              const col = SESSION_COLORS[atkIdx % SESSION_COLORS.length];
+              return `<div class="cmd-dmg-cell">
+                <button class="cmd-btn life-btn-minus" onclick="updateCmdDmg('${victim.id}','${atk.id}',-1)" ${dmg===0?'disabled':''}>−</button>
+                <div class="cmd-dmg-cell-val" style="color:${dmg>=21?'var(--tier-s)':col}">${dmg}</div>
+                <button class="cmd-btn life-btn-plus" onclick="updateCmdDmg('${victim.id}','${atk.id}',1)">+</button>
+                <span class="cmd-dmg-cell-label">${escHtml(atk.name.slice(0,3))}</span>
+              </div>`;
+            }).join('')}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>` : '';
+
+  const winnerDeck = isEnded && s.winnerId ? state.decks.find(d => d.id === s.winnerId) : null;
+
+  return `<div style="margin-bottom:20px">
+    <div class="session-header">
+      <div>
+        <div style="font-size:17px;font-weight:600;margin-bottom:2px">${isEnded ? '🏆 Game Over' : '⚔ Live Session'}</div>
+        <div style="font-size:12px;color:var(--text-muted)">${s.players.length} players · Code: <span style="font-family:'JetBrains Mono',monospace;color:var(--accent);letter-spacing:1px">${s.id}</span></div>
+      </div>
+      ${isEnded
+        ? `<button onclick="clearSession()" style="font-size:12px;padding:6px 14px">Close</button>`
+        : `<button onclick="openEndGameModal()" style="font-size:12px;padding:6px 14px;color:var(--tier-s-text);border-color:var(--tier-s)">End Game</button>`}
+    </div>
+    ${isEnded && winnerDeck ? `<div class="dash-card" style="padding:12px 16px;margin-bottom:16px;border-color:var(--tier-a);background:var(--tier-a-bg)">
+      <span style="font-weight:600;color:var(--tier-a-text)">🏆 ${escHtml(winnerDeck.commander)}</span>
+      <span style="color:var(--text-muted);font-size:12px;margin-left:8px">${escHtml(winnerDeck.player)} wins · results logged</span>
+    </div>` : ''}
+    ${isEnded && !winnerDeck && s.status === 'ended' ? `<div class="dash-card" style="padding:12px 16px;margin-bottom:16px">
+      <span style="color:var(--text-secondary);font-size:13px">Game ended · no winner declared</span>
+    </div>` : ''}
+    <div class="life-grid" style="grid-template-columns:repeat(${gridCols},1fr)">${lifeTiles}</div>
+    ${cmdDmgHtml}
+  </div>`;
+}
+
+// ===== FEATURE 1: MY DECKS GALLERY =====
+function openMyDecksGallery() {
+  state.myDecksGallery = true;
+  window.scrollTo(0, 0);
+  render();
+  loadGalleryImages();
+}
+
+function closeMyDecksGallery() {
+  state.myDecksGallery = false;
+  render();
+}
+
+function renderMyDecksGallery() {
+  const myDecks = getMyDecks();
+  const name = currentUserName();
+  const pc = playerColor(name);
+
+  const cards = myDecks.map(deck => {
+    const tier = getTier(deck.power);
+    const tierInfo = getTierInfo(tier);
+    const overall = getOverall(deck);
+    const games = deck.games || [];
+    const wins = games.filter(g => g.result === 'win').length;
+    const losses = games.filter(g => g.result === 'loss').length;
+    const cacheKey = (deck.commander || '').toLowerCase();
+    const cachedImg = scryfallCache[cacheKey];
+    const imgHtml = cachedImg
+      ? `<img class="gallery-card-img" src="${escHtml(cachedImg)}" alt="" loading="lazy" onerror="this.style.display='none'">`
+      : `<div class="gallery-card-placeholder">🧙</div>`;
+    const recordStr = (wins + losses) > 0 ? `${wins}W-${losses}L` : '';
+    return `<div class="gallery-card" onclick="openDeckDetail('${escHtml(deck.id)}')">
+      ${imgHtml}
+      <div class="gallery-card-overlay"></div>
+      <div class="gallery-card-footer">
+        ${deck.deckName ? `<div class="gallery-card-deckname">${escHtml(deck.deckName)}</div>` : ''}
+        <div class="gallery-card-name">${escHtml(deck.commander)}</div>
+        <div class="gallery-card-meta">
+          <span class="gallery-card-tier" style="background:${tierInfo.bg};color:${tierInfo.text}">${tier}</span>
+          <span class="gallery-card-score">${overall}</span>
+          ${recordStr ? `<span class="gallery-card-record">${recordStr}</span>` : ''}
+          ${deck.colors ? `<span style="display:inline-flex;align-items:center;gap:1px">${renderManaSymbols(deck.colors, 12)}</span>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  return `<div class="app gallery-page">
+    <button class="gallery-back" onclick="closeMyDecksGallery()">← My Decks</button>
+    <div class="dash-section-title" style="margin-bottom:12px">Your Commander Collection · <span style="color:${pc.color}">${myDecks.length} deck${myDecks.length !== 1 ? 's' : ''}</span></div>
+    ${myDecks.length === 0
+      ? `<div class="empty"><h3>No decks yet</h3><p style="color:var(--text-secondary);font-size:13px">Add your first deck to build your gallery.</p><button class="btn-primary" style="margin-top:12px" onclick="closeMyDecksGallery();openAddModal()">+ Add deck</button></div>`
+      : `<div class="gallery-grid">${cards}</div>`
+    }
+  </div>`;
+}
+
+async function loadGalleryImages() {
+  const myDecks = getMyDecks();
+  let needsRender = false;
+  for (const deck of myDecks) {
+    const key = (deck.commander || '').toLowerCase();
+    if (!key) continue;
+    if (scryfallCache[key]) continue;
+    try {
+      const resp = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(deck.commander)}&format=json`);
+      if (!resp.ok) continue;
+      const data = await resp.json();
+      const imgUrl = data.image_uris?.art_crop || data.image_uris?.normal || null;
+      if (imgUrl) {
+        scryfallCache[key] = imgUrl;
+        needsRender = true;
+      }
+    } catch (e) {
+      // ignore fetch errors
+    }
+    // Small delay to avoid hammering Scryfall
+    await new Promise(r => setTimeout(r, 80));
+  }
+  if (needsRender && state.myDecksGallery) render();
+}
+
+// ===== FEATURE 2: GAMES HISTORY MODAL =====
+function openGamesHistory() {
+  state.gamesHistoryOpen = true;
+  render();
+}
+
+function closeGamesHistory() {
+  state.gamesHistoryOpen = false;
+  render();
+}
+
+function renderGamesHistoryModal() {
+  const recentGames = getRecentGames(5);
+  const entries = recentGames.map(g => {
+    const wpc = playerColor(g.winnerDeck.player);
+    const lpc = g.loserDeck ? playerColor(g.loserDeck.player) : { color: 'var(--text-muted)' };
+    const wav = state.playerAvatars?.[g.winnerDeck.player] || '🧙';
+    const lav = g.loserDeck ? (state.playerAvatars?.[g.loserDeck.player] || '🧙') : '❓';
+    const dateStr = g.date ? g.date.slice(5) : ''; // MM-DD
+    return `<div class="gh-entry">
+      <div class="gh-avatars">
+        <span style="font-size:16px">${wav}</span>
+        <span style="font-size:12px;opacity:0.6">${lav}</span>
+      </div>
+      <div class="gh-info">
+        <div class="gh-winner" style="color:${wpc.color}">${escHtml(g.winnerDeck.commander)}</div>
+        <div class="gh-loser">beat <span style="color:${lpc.color}">${g.loserDeck ? escHtml(g.loserDeck.commander) : '?'}</span></div>
+      </div>
+      <div class="gh-date">${escHtml(dateStr)}</div>
+    </div>`;
+  }).join('');
+
+  return `<div class="modal-overlay" onclick="closeGamesHistory()">
+    <div class="gh-modal" onclick="event.stopPropagation()">
+      <div class="gh-header">
+        <span class="gh-title">Recent Games</span>
+        <button class="gh-close" onclick="closeGamesHistory()">✕</button>
+      </div>
+      ${recentGames.length === 0
+        ? '<p style="color:var(--text-muted);font-size:13px;text-align:center;padding:16px 0">No games logged yet.</p>'
+        : entries
+      }
+      <button class="gh-see-all" onclick="closeGamesHistory();setTab('collection')">See all games →</button>
+    </div>
+  </div>`;
+}
+
+// ===== FEATURE 3: EXPANDABLE LEADERBOARD =====
+function toggleLeaderboardExpand(playerName) {
+  state.leaderboardExpanded[playerName] = !state.leaderboardExpanded[playerName];
+  render();
+}
+
+function renderLeaderboardExpanded(playerName) {
+  const myName = currentUserName();
+  const playerDecks = state.decks.filter(d => d.player === playerName);
+  const allGames = playerDecks.flatMap(d => (d.games || []).map(g => ({ ...g, deckCommander: d.commander })));
+  const ownedGames = allGames.filter(g => !g.loaned);
+
+  // Recent form: last 5 results
+  const sorted = [...ownedGames].sort((a, b) => ((b.ts || 0) - (a.ts || 0)) || (b.date || '').localeCompare(a.date || ''));
+  const last5 = sorted.slice(0, 5);
+  const formDots = last5.map(g => {
+    const isWin = g.result === 'win';
+    return `<span class="lb-form-dot" style="background:${isWin ? 'var(--tier-b)' : 'var(--tier-s)'}" title="${isWin ? 'Win' : 'Loss'}"></span>`;
+  }).join('');
+
+  // Favorite deck (most played)
+  const deckPlayCounts = {};
+  playerDecks.forEach(d => {
+    const count = (d.games || []).filter(g => !g.loaned).length;
+    if (count > 0) deckPlayCounts[d.id] = { commander: d.commander, count };
+  });
+  const favDeck = Object.values(deckPlayCounts).sort((a, b) => b.count - a.count)[0] || null;
+
+  // Best performing deck (min 3 games)
+  const deckWinRates = playerDecks.map(d => {
+    const dg = (d.games || []).filter(g => !g.loaned);
+    if (dg.length < 3) return null;
+    const wins = dg.filter(g => g.result === 'win').length;
+    return { commander: d.commander, winRate: Math.round(wins / dg.length * 100), games: dg.length };
+  }).filter(Boolean).sort((a, b) => b.winRate - a.winRate);
+  const bestDeck = deckWinRates[0] || null;
+
+  // Head-to-head vs current user
+  let h2hWins = 0;
+  let h2hLosses = 0;
+  if (playerName !== myName) {
+    const myDecks = getMyDecks();
+    const myDeckIds = new Set(myDecks.map(d => d.id));
+    // Count wins from playerName's perspective against myDecks
+    playerDecks.forEach(d => {
+      (d.games || []).filter(g => !g.loaned).forEach(g => {
+        if (g.result === 'win' && myDeckIds.has(g.opponentId)) h2hWins++;
+        if (g.result === 'loss' && myDeckIds.has(g.opponentId)) h2hLosses++;
+      });
+    });
+  }
+
+  return `<div class="lb-expand-row">
+    <div class="lb-expand-row-inner">
+      ${last5.length > 0 ? `
+        <div class="lb-expand-section">Recent form</div>
+        <div class="lb-form-dots">${formDots}</div>` : ''}
+      ${favDeck ? `
+        <div class="lb-expand-section">Favourite deck</div>
+        <div class="lb-expand-deck">${escHtml(favDeck.commander)} <span style="color:var(--text-muted);font-family:'JetBrains Mono',monospace;font-size:11px">(${favDeck.count}g)</span></div>` : ''}
+      ${bestDeck ? `
+        <div class="lb-expand-section">Best deck (≥3 games)</div>
+        <div class="lb-expand-deck">${escHtml(bestDeck.commander)} <span style="color:var(--text-muted);font-family:'JetBrains Mono',monospace;font-size:11px">${bestDeck.winRate}% in ${bestDeck.games}g</span></div>` : ''}
+      ${playerName !== myName && (h2hWins + h2hLosses) > 0 ? `
+        <div class="lb-expand-section">Head-to-head vs you</div>
+        <div class="lb-expand-h2h"><span style="color:var(--tier-s-text)">${h2hWins}W</span> – <span style="color:var(--tier-b-text)">${h2hLosses}L</span> <span style="color:var(--text-muted);font-size:11px">(${playerName}'s perspective)</span></div>` : ''}
+      ${last5.length === 0 && !favDeck && !bestDeck ? `<div style="font-size:12px;color:var(--text-muted)">No games recorded yet.</div>` : ''}
+    </div>
   </div>`;
 }
 
@@ -4507,11 +6395,6 @@ async function sendChatMessage() {
 }
 
 // ===== WINDOW EXPORTS (needed because this is a module) =====
-window.openChat = openChat;
-window.closeChat = closeChat;
-window.sendChatMessage = sendChatMessage;
-window.openProfile = openProfile;
-window.closeProfile = closeProfile;
 window.render = render;
 window.state = state;
 window.setFilter = setFilter;
@@ -4575,20 +6458,26 @@ window.ptCloseMenu = ptCloseMenu;
 window.ptOpenZone = ptOpenZone;
 window.ptCloseZone = ptCloseZone;
 window.openPlaytester = openPlaytester;
+window.openProfile = openProfile;
+window.closeProfile = closeProfile;
+window.openChat = openChat;
+window.closeChat = closeChat;
+window.sendChatMessage = sendChatMessage;
 window.openAvatarModal = openAvatarModal;
 window.closeAvatarModal = closeAvatarModal;
 window.openMyDecksGallery = openMyDecksGallery;
 window.closeMyDecksGallery = closeMyDecksGallery;
 window.loadGalleryImages = loadGalleryImages;
-window.loadDeckCardArts = loadDeckCardArts;
-window.loadSpotlightArt = loadSpotlightArt;
 window.openGamesHistory = openGamesHistory;
 window.closeGamesHistory = closeGamesHistory;
 window.toggleLeaderboardExpand = toggleLeaderboardExpand;
 window.showCardPopup = showCardPopup;
 window.closeCardPopup = closeCardPopup;
 window.toggleCardFlip = toggleCardFlip;
+window.toggleTagOption = toggleTagOption;
 window.saveAvatar = saveAvatar;
+window.handleAvatarPhotoSelect = handleAvatarPhotoSelect;
+window.clearAvatarPhoto = clearAvatarPhoto;
 window.openNewGameModal = openNewGameModal;
 window.closeNewGameModal = closeNewGameModal;
 window.setSessionPlayer = setSessionPlayer;
