@@ -2892,12 +2892,27 @@ async function ptJoin(sessionId) {
   render();
 }
 
+// Each player deals their own hand — avoids cross-uid Firestore permission errors
+async function ptDealOwnHand(sessionId, uid, player) {
+  const deck = state.decks.find(d => d.id === player.deckId);
+  const all = deck ? deckToCardObjects(deck) : [];
+  const commanders = all.filter(c => c.isCommander);
+  const library = shuffleArr(all.filter(c => !c.isCommander));
+  const hand = library.splice(0, Math.min(7, library.length)).map(c => ({ ...c, zone: 'hand' }));
+  try {
+    await setDoc(doc(db, 'gameSessions', sessionId, 'privateZones', uid), { hand, library });
+    await updateDoc(doc(db, 'gameSessions', sessionId), {
+      [`players.${uid}.commandZone`]: commanders,
+      updatedAt: new Date().toISOString(),
+    });
+  } catch(e) { console.error('ptDealOwnHand failed:', e); }
+}
+
 async function ptStart() {
   const sessionId = state.playtestGameId;
   const session = state.playtestGame;
   if (!session || session.status !== 'waiting') return;
   const players = Object.entries(session.players || {});
-  const publicUpdate = {};
   try {
     // Pre-fetch all card images for every deck before dealing
     const allDecks = players.map(([, p]) => state.decks.find(d => d.id === p.deckId)).filter(Boolean);
@@ -2912,20 +2927,11 @@ async function ptStart() {
       await fetchScryfallBatch(allCardNames);
       state.playtestLoading = '';
     }
-
-    for (const [uid, player] of players) {
-      // Use deck from state if available, otherwise deal empty hand
-      const deck = state.decks.find(d => d.id === player.deckId);
-      const all = deck ? deckToCardObjects(deck) : [];
-      const commanders = all.filter(c => c.isCommander);
-      const library = shuffleArr(all.filter(c => !c.isCommander));
-      const hand = library.splice(0, Math.min(7, library.length)).map(c => ({ ...c, zone: 'hand' }));
-      await setDoc(doc(db, 'gameSessions', sessionId, 'privateZones', uid), { hand, library });
-      publicUpdate[`players.${uid}.commandZone`] = commanders;
-    }
-    publicUpdate.status = 'active';
-    publicUpdate.updatedAt = new Date().toISOString();
-    await updateDoc(doc(db, 'gameSessions', sessionId), publicUpdate);
+    // Mark game active — each player's onSnapshot listener deals their own hand
+    await updateDoc(doc(db, 'gameSessions', sessionId), {
+      status: 'active',
+      updatedAt: new Date().toISOString(),
+    });
   } catch(e) {
     console.error('ptStart failed:', e);
     alert('Could not start game: ' + (e.message || e.code || e));
@@ -2937,8 +2943,17 @@ function ptListen(sessionId) {
   if (unsubscribePrivate) { unsubscribePrivate(); unsubscribePrivate = null; }
   const myUid = state.currentUser?.uid;
   state.playtestGameId = sessionId;
-  unsubscribePlaytest = onSnapshot(doc(db, 'gameSessions', sessionId), snap => {
-    if (snap.exists()) { state.playtestGame = { id: snap.id, ...snap.data() }; render(); }
+  unsubscribePlaytest = onSnapshot(doc(db, 'gameSessions', sessionId), async snap => {
+    if (snap.exists()) {
+      const prevStatus = state.playtestGame?.status;
+      state.playtestGame = { id: snap.id, ...snap.data() };
+      render();
+      // When game goes active, each player deals their own private zone
+      if (prevStatus === 'waiting' && state.playtestGame.status === 'active' && myUid) {
+        const myPlayer = state.playtestGame.players?.[myUid];
+        if (myPlayer) await ptDealOwnHand(sessionId, myUid, myPlayer);
+      }
+    }
   });
   if (myUid) {
     unsubscribePrivate = onSnapshot(doc(db, 'gameSessions', sessionId, 'privateZones', myUid), snap => {
@@ -3997,12 +4012,14 @@ document.addEventListener('pointerup', async function(e) {
   const newBf = (player.battlefield || []).map(c =>
     c.cardId === drag.cardId ? { ...c, x: newX, y: newY } : c
   );
-  // Snap element to final position
+  // Snap element to final position; briefly disable pointer-events so hover-zoom doesn't stick
   const el = document.querySelector(`[data-card-id="${drag.cardId}"]`);
   if (el) {
     el.classList.remove('pt-dragging-src');
     el.style.left = newX + 'px';
     el.style.top = newY + 'px';
+    el.style.pointerEvents = 'none';
+    setTimeout(() => { el.style.pointerEvents = ''; }, 300);
   }
   // Optimistic state update, then Firestore
   if (state.playtestGame?.players?.[uid]) {
