@@ -373,28 +373,35 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 .pt-deckbar-commander { font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
 .pt-deckbar-meta { color:var(--text-muted);flex-shrink:0;font-family:'JetBrains Mono',monospace;font-size:11px; }
 .pt-battlefield { flex:1;position:relative;overflow:auto;background:#090811; }
+.pt-battlefield-canvas { position:relative;min-width:900px;min-height:620px;width:100%;height:100%;padding-bottom:110px;box-sizing:border-box; }
+.pt-drop-highlight { outline:2px dashed var(--accent);background:rgba(167,139,250,0.04) !important; }
 .pt-zone-btns { position:absolute;top:8px;right:8px;display:flex;flex-direction:column;gap:4px;z-index:10; }
 .pt-zone-btn { font-size:10px;padding:5px 9px;background:rgba(0,0,0,0.7);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-secondary);cursor:pointer;backdrop-filter:blur(4px);white-space:nowrap; }
-.pt-zone-btn:hover { background:var(--bg-surface);color:var(--text); }
-.pt-bf-cards { display:flex;flex-wrap:wrap;gap:8px;padding:12px;padding-right:68px;min-height:100%;align-content:flex-start; }
+.pt-zone-btn:hover,.pt-zone-btn.drop-target,.pt-zone-btn.pt-drop-hover { background:var(--accent-dim);color:#fff;border-color:var(--accent);transform:scale(1.1); }
+.pt-battlefield.pt-drop-active .pt-battlefield-canvas { outline:2px dashed var(--accent);outline-offset:-2px;background:rgba(167,139,250,0.04); }
 .pt-bf-empty { position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:13px;pointer-events:none; }
-.pt-bf-card { position:relative;cursor:pointer;transition:transform 0.2s ease;flex-shrink:0;border-radius:5px; }
+.pt-bf-card { position:absolute;cursor:grab;border-radius:5px;transition:filter 0.15s,box-shadow 0.15s;touch-action:none;user-select:none; }
+.pt-bf-card:active { cursor:grabbing; }
+.pt-bf-card.pt-dragging-src { opacity:0.3; }
 .pt-bf-card:hover { filter:brightness(1.15); }
-.pt-tapped { transform:rotate(90deg);margin:14px 8px; }
+.pt-tapped { transform:rotate(90deg); }
+.pt-tapped.pt-bf-card { transform:rotate(90deg) translateY(-10px); }
 .pt-card-selected { outline:2px solid var(--accent);outline-offset:2px; }
 .pt-card-back { width:72px;height:100px;background:linear-gradient(135deg,#1a1535,#0d0b1a);border:1px solid var(--border);border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--text-muted);text-align:center;padding:4px;word-break:break-word; }
 .pt-hand-card-back { width:90px;height:126px;background:linear-gradient(135deg,#1a1535,#0d0b1a);border:1px solid var(--border);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--text-muted);text-align:center;padding:6px;word-break:break-word; }
-.pt-counter { position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;background:#22c55e;color:#fff;border-radius:99px;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 3px; }
-.pt-cmd-badge { position:absolute;bottom:-4px;left:2px;font-size:9px;background:rgba(167,139,250,0.8);border-radius:99px;padding:1px 4px;color:#fff; }
+.pt-counter { position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;background:#22c55e;color:#fff;border-radius:99px;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 3px;pointer-events:none; }
+.pt-cmd-badge { position:absolute;bottom:-4px;left:2px;font-size:9px;background:rgba(167,139,250,0.8);border-radius:99px;padding:1px 4px;color:#fff;pointer-events:none; }
+.pt-snap-badge { position:absolute;top:8px;left:8px;font-size:9px;padding:3px 7px;background:rgba(0,0,0,0.6);border:1px solid var(--border);border-radius:99px;color:var(--text-muted);cursor:pointer;z-index:10;backdrop-filter:blur(4px); }
 .pt-action-bar { display:flex;gap:6px;padding:8px 10px;background:var(--bg-card);border-top:1px solid var(--border);overflow-x:auto;flex-shrink:0;scrollbar-width:none; }
 .pt-action-bar::-webkit-scrollbar { display:none; }
 .pt-action-btn { font-size:12px;padding:7px 14px;white-space:nowrap;flex-shrink:0;border-radius:var(--radius-sm); }
 .pt-action-danger { color:var(--tier-s-text) !important;border-color:rgba(226,75,74,0.5) !important; }
 .pt-hand { display:flex;gap:8px;padding:10px 12px;background:var(--bg-card);border-top:1px solid var(--border);overflow-x:auto;flex-shrink:0;min-height:118px;max-height:140px;scrollbar-width:none; }
 .pt-hand::-webkit-scrollbar { display:none; }
-.pt-hand-card { flex-shrink:0;cursor:pointer;border-radius:6px;transition:transform 0.15s; }
+.pt-hand-card { flex-shrink:0;cursor:grab;border-radius:6px;transition:transform 0.15s;touch-action:none;user-select:none;position:relative; }
 .pt-hand-card:hover { transform:translateY(-6px); }
-.pt-card-menu { position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:var(--bg-card);border:1px solid var(--border-hover);border-radius:var(--radius);padding:8px;z-index:50;min-width:210px;max-width:280px;box-shadow:0 8px 32px rgba(0,0,0,0.6); }
+.pt-hand-card.pt-dragging-src { opacity:0.3; }
+.pt-card-menu { position:fixed;background:var(--bg-card);border:1px solid var(--border-hover);border-radius:var(--radius);padding:8px;z-index:500;min-width:210px;max-width:280px;box-shadow:0 8px 32px rgba(0,0,0,0.6); }
 .pt-card-menu-name { font-size:11px;color:var(--text-muted);padding:0 6px 8px;border-bottom:1px solid var(--border);margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-style:italic; }
 .pt-menu-btn { display:block;width:100%;text-align:left;padding:8px 10px;font-size:13px;border:none;background:transparent;color:var(--text);border-radius:var(--radius-sm);cursor:pointer; }
 .pt-menu-btn:hover { background:var(--bg-hover); }
@@ -407,12 +414,33 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 .pt-overlay-cards::-webkit-scrollbar { display:none; }
 .pt-overlay-card { display:flex;flex-direction:column;align-items:center;gap:5px; }
 .pt-overlay-card-btn { font-size:10px;padding:3px 8px;border-radius:99px; }
-.pt-life-editor { display:flex;align-items:center;gap:6px;margin-top:4px; }
-.pt-life-adj { width:28px;height:28px;border-radius:50%;font-size:14px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;padding:0; }
+.pt-mill-toast { position:fixed;bottom:160px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.85);border:1px solid var(--border);border-radius:var(--radius);padding:10px 16px;z-index:600;max-width:90%;backdrop-filter:blur(8px);animation:pt-toast-in 0.2s ease; }
+.pt-mill-toast.no-anim { animation:none; }
+.pt-mill-toast-title { font-size:11px;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px; }
+.pt-mill-toast-cards { display:flex;gap:6px;flex-wrap:wrap; }
+.pt-mill-toast-card { font-size:11px;color:var(--text);background:var(--bg-surface);padding:2px 8px;border-radius:99px;border:1px solid var(--border); }
+.pt-scry-overlay { position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:400;display:flex;flex-direction:column; }
+.pt-scry-header { display:flex;align-items:center;justify-content:space-between;padding:16px;background:var(--bg-card);border-bottom:1px solid var(--border);flex-shrink:0; }
+.pt-scry-zones { display:flex;flex-direction:column;flex:1;overflow:hidden;gap:0; }
+.pt-scry-zone { flex:1;display:flex;flex-direction:column;padding:12px;overflow-y:auto;border-bottom:2px solid var(--border); }
+.pt-scry-zone-label { font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:10px;font-weight:600; }
+.pt-scry-cards { display:flex;gap:8px;flex-wrap:wrap; }
+.pt-scry-card { position:relative;cursor:pointer;border-radius:6px;transition:transform 0.15s,outline 0.1s; }
+.pt-scry-card:hover { transform:translateY(-4px); }
+.pt-scry-card.scry-bottom { outline:2px solid var(--tier-s);opacity:0.7; }
+.pt-scry-card.scry-top { outline:2px solid var(--tier-b-text); }
+.pt-scry-card-label { position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:9px;white-space:nowrap;color:var(--text-muted); }
+.pt-number-popup { position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:350;display:flex;align-items:center;justify-content:center; }
+.pt-number-popup-inner { background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;min-width:260px;text-align:center; }
+.pt-number-popup-title { font-size:16px;font-weight:600;margin-bottom:16px; }
+.pt-number-quick { display:flex;gap:8px;justify-content:center;margin-bottom:12px; }
 .pt-lobby { padding:20px;max-width:500px;margin:0 auto; }
 .pt-lobby-card { background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px; }
 .pt-player-row { display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border); }
 .pt-player-row:last-child { border-bottom:none; }
+@keyframes pt-toast-in { from { opacity:0;transform:translateX(-50%) translateY(10px); } to { opacity:1;transform:translateX(-50%) translateY(0); } }
+@keyframes pt-card-land { from { transform:scale(1.08); } to { transform:scale(1); } }
+.pt-card-land { animation:pt-card-land 0.2s ease-out; }
 /* ===== PHASE 5 POLISH ===== */
 .streak-badge { display:inline-flex;align-items:center;gap:2px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px;font-family:'JetBrains Mono',monospace;flex-shrink:0; }
 .streak-win { background:var(--tier-b-bg);color:var(--tier-b-text); }
@@ -675,7 +703,6 @@ let state = {
   decklistImportStatus: "",
   showImportPanel: false,
   userProfile: null,
-  playtestLoading: '',
   showNameModal: false,
   showChangePassword: false,
   nameModalError: '',
@@ -696,6 +723,12 @@ let state = {
   playtestDeckId: null,
   playtestCardMenu: null,
   playtestZoneOverlay: null,
+  playtestLoading: '',
+  playtestMoreMenu: false,
+  playtestScryData: null,
+  playtestMillData: null,
+  playtestMillToast: null,
+  snapToGrid: true,
   showPlaytester: false,
   playerAvatars: {},
   showAvatarModal: null,
@@ -709,6 +742,7 @@ let state = {
 };
 
 const scryfallCache = {};
+let ptDrag = null; // active drag: { cardId, fromZone, ghost, startX, startY, originEl }
 
 // ===== FIRESTORE HELPERS =====
 async function fbSaveDeck(deck) {
@@ -2751,6 +2785,11 @@ async function ptConcede() {
 }
 
 // ── Card actions ──────────────────────────────────────
+function ptDefaultPos(battlefield) {
+  const n = battlefield.length;
+  return { x: 20 + (n % 7) * 92, y: 20 + Math.floor(n / 7) * 130 };
+}
+
 async function ptPlayCard(cardId) {
   const uid = state.currentUser?.uid;
   const player = state.playtestGame?.players?.[uid];
@@ -2760,7 +2799,9 @@ async function ptPlayCard(cardId) {
   const idx = hand.findIndex(c => c.cardId === cardId);
   if (idx === -1) return;
   const [card] = hand.splice(idx, 1);
-  const battlefield = [...(player.battlefield || []), { ...card, zone: 'battlefield', tapped: false }];
+  const existingBf = player.battlefield || [];
+  const pos = ptDefaultPos(existingBf);
+  const battlefield = [...existingBf, { ...card, zone: 'battlefield', tapped: false, ...pos }];
   await ptPriv({ ...priv, hand });
   await ptPub({ [`players.${uid}.battlefield`]: battlefield });
   ptCloseMenu();
@@ -2797,6 +2838,10 @@ async function ptMoveCard(cardId, fromZone, toZone) {
     pubUp[`players.${uid}.${fromZone}`] = arr;
   }
   card = { ...card, zone: toZone, tapped: false };
+  if (toZone === 'battlefield') {
+    const existingBf = pubUp[`players.${uid}.battlefield`] || [...(player.battlefield || [])];
+    card = { ...card, ...ptDefaultPos(existingBf) };
+  }
   if (PRIV.includes(toZone)) {
     if (toZone === 'library') newPriv.library = [card, ...newPriv.library];
     else newPriv[toZone] = [...newPriv[toZone], card];
@@ -2816,7 +2861,12 @@ async function ptAddCounter(cardId, zone, delta) {
   await ptPub({ [`players.${uid}.${zone}`]: (player[zone]||[]).map(c => c.cardId === cardId ? { ...c, counters: Math.max(0,(c.counters||0)+delta) } : c) });
 }
 
-function ptOpenMenu(cardId, zone) { state.playtestCardMenu = { cardId, zone }; render(); }
+function ptOpenMenu(cardId, zone, e) {
+  let x = window.innerWidth / 2, y = window.innerHeight / 2;
+  if (e) { x = e.clientX; y = e.clientY; }
+  state.playtestCardMenu = { cardId, zone, x, y };
+  render();
+}
 function ptCloseMenu() { state.playtestCardMenu = null; render(); }
 function ptOpenZone(uid, zone) { state.playtestZoneOverlay = { uid, zone }; render(); }
 function ptCloseZone() { state.playtestZoneOverlay = null; render(); }
@@ -2942,30 +2992,35 @@ function renderPTGame() {
   const gvLen = (viewedPlayer?.graveyard||[]).length;
   const exLen = (viewedPlayer?.exile||[]).length;
   const czLen = (viewedPlayer?.commandZone||[]).length;
-  const battlefieldHtml = `<div class="pt-battlefield" onclick="ptCloseMenu()">
+  const battlefieldHtml = `<div class="pt-battlefield" id="pt-battlefield" onclick="ptCloseMenu()">
     <div class="pt-zone-btns">
       <button class="pt-zone-btn" onclick="event.stopPropagation();ptOpenZone('${viewUid}','commandZone')">⭐ ${czLen}</button>
-      <button class="pt-zone-btn" onclick="event.stopPropagation();ptOpenZone('${viewUid}','graveyard')">GY ${gvLen}</button>
-      <button class="pt-zone-btn" onclick="event.stopPropagation();ptOpenZone('${viewUid}','exile')">EX ${exLen}</button>
+      <button class="pt-zone-btn" data-pt-drop-zone="graveyard" onclick="event.stopPropagation();ptOpenZone('${viewUid}','graveyard')">GY ${gvLen}</button>
+      <button class="pt-zone-btn" data-pt-drop-zone="exile" onclick="event.stopPropagation();ptOpenZone('${viewUid}','exile')">EX ${exLen}</button>
       ${isMyBoard ? `<button class="pt-zone-btn" onclick="event.stopPropagation();ptAdjustLife(1)" style="color:var(--tier-b-text)">♥+</button>
       <button class="pt-zone-btn" onclick="event.stopPropagation();ptAdjustLife(-1)" style="color:var(--tier-s-text)">♥−</button>` : ''}
     </div>
-    ${bf.length===0 ? `<div class="pt-bf-empty">Battlefield is empty</div>` : ''}
-    <div class="pt-bf-cards">
+    ${isMyBoard ? `<button class="pt-snap-badge" onclick="event.stopPropagation();state.snapToGrid=!state.snapToGrid;render()">Snap: ${state.snapToGrid?'ON':'OFF'}</button>` : ''}
+    <div class="pt-battlefield-canvas" id="pt-bf-canvas">
+      ${bf.length===0 ? `<div class="pt-bf-empty">Drag cards here from hand</div>` : ''}
       ${bf.map(card => {
         const menuOpen = state.playtestCardMenu?.cardId === card.cardId;
+        const cardX = card.x ?? 20;
+        const cardY = card.y ?? 20;
         const img = card.imageUrl
           ? `<img src="${escHtml(card.imageUrl)}" style="width:72px;border-radius:5px;display:block;pointer-events:none" loading="lazy">`
-          : `<div class="pt-card-back">${escHtml(card.name.slice(0,14))}</div>`;
+          : `<div class="pt-card-back" style="pointer-events:none">${escHtml(card.name.slice(0,14))}</div>`;
         return `<div class="pt-bf-card${card.tapped?' pt-tapped':''}${menuOpen?' pt-card-selected':''}"
-          onclick="${isMyBoard?`event.stopPropagation();ptOpenMenu('${card.cardId}','battlefield')`:''}">
+          data-card-id="${card.cardId}"
+          style="left:${cardX}px;top:${cardY}px"
+          onpointerdown="ptPointerDown(event,'${card.cardId}')"
+          onclick="event.stopPropagation()">
           ${img}
           ${card.counters?`<div class="pt-counter">${card.counters}</div>`:''}
           ${card.isCommander?`<div class="pt-cmd-badge">⭐</div>`:''}
         </div>`;
       }).join('')}
     </div>
-    ${state.playtestCardMenu ? renderPTCardMenu() : ''}
   </div>`;
 
   // Action bar (own board only)
@@ -2973,11 +3028,21 @@ function renderPTGame() {
   const actionBar = isMyBoard ? `<div class="pt-action-bar">
     <button class="pt-action-btn" onclick="ptDraw()">Draw</button>
     <button class="pt-action-btn" onclick="ptUntapAll()">Untap All</button>
-    <button class="pt-action-btn" onclick="ptMulligan()">Mulligan${mullCount>0?` (→${Math.max(7-mullCount,0)})`:''}</button>
+    <button class="pt-action-btn" onclick="ptPromptScry()">Scry</button>
+    <button class="pt-action-btn" onclick="ptPromptMill()">Mill</button>
     <button class="pt-action-btn" onclick="ptShuffle()">Shuffle</button>
     <button class="pt-action-btn" onclick="ptNextTurn()">Next Turn</button>
+    <button class="pt-action-btn${state.playtestMoreMenu?' active':''}" onclick="event.stopPropagation();state.playtestMoreMenu=!state.playtestMoreMenu;render()">More ▾</button>
     <button class="pt-action-btn pt-action-danger" onclick="if(confirm('Concede?'))ptConcede()">Concede</button>
-  </div>` : '';
+  </div>${state.playtestMoreMenu ? `<div class="pt-action-bar" style="background:var(--bg-surface)">
+    <button class="pt-action-btn" onclick="ptMulligan()">Mulligan${mullCount>0?` (→${Math.max(7-mullCount,0)})`:''}</button>
+    <button class="pt-action-btn" onclick="ptViewLibTop()">View Library Top</button>
+  </div>` : ''}` : '';
+
+  // Scry / mill overlays
+  const scryHtml = state.playtestScryData ? renderPTScryOverlay() : '';
+  const millHtml = state.playtestMillToast ? renderPTMillToast() : '';
+  const numberHtml = state.playtestNumberPopup ? renderPTNumberPopup() : '';
 
   // Hand (own board only)
   const hand = state.playtestPrivate?.hand || [];
@@ -2987,14 +3052,16 @@ function renderPTGame() {
       const img = card.imageUrl
         ? `<img src="${escHtml(card.imageUrl)}" style="width:90px;border-radius:6px;display:block;pointer-events:none" loading="lazy">`
         : `<div class="pt-hand-card-back">${escHtml(card.name.slice(0,16))}</div>`;
-      return `<div class="pt-hand-card" onclick="ptOpenMenu('${card.cardId}','hand')">${img}</div>`;
+      return `<div class="pt-hand-card" data-hand-card-id="${card.cardId}" onpointerdown="ptHandPointerDown(event,'${card.cardId}')">${img}</div>`;
     }).join('')}
   </div>` : '';
 
   // Zone overlay
   const overlayHtml = state.playtestZoneOverlay ? renderPTZoneOverlay() : '';
 
-  return `<div class="pt-playmat">${tabsHtml}${deckBar}${battlefieldHtml}${actionBar}${handHtml}${overlayHtml}</div>`;
+  const cardMenuHtml = state.playtestCardMenu ? renderPTCardMenu() : '';
+  const menuBackdrop = state.playtestCardMenu ? `<div style="position:fixed;inset:0;z-index:499" onclick="ptCloseMenu()"></div>` : '';
+  return `<div class="pt-playmat">${tabsHtml}${deckBar}${battlefieldHtml}${actionBar}${handHtml}${overlayHtml}${scryHtml}${millHtml}${numberHtml}${menuBackdrop}${cardMenuHtml}</div>`;
 }
 
 function renderPTCardMenu() {
@@ -3026,7 +3093,16 @@ function renderPTCardMenu() {
     if(zone!=='graveyard') actions.push({label:'→ Graveyard', fn:`ptMoveCard('${cardId}','${zone}','graveyard')`});
     if(zone!=='exile') actions.push({label:'→ Exile', fn:`ptMoveCard('${cardId}','${zone}','exile')`});
   }
-  return `<div class="pt-card-menu" onclick="event.stopPropagation()">
+  const cm = state.playtestCardMenu;
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const menuW = 220, menuH = Math.min(actions.length * 38 + 80, 400);
+  let left = (cm.x ?? vw/2) - menuW/2;
+  let top = (cm.y ?? vh/2) - menuH - 8;
+  if (left + menuW > vw - 8) left = vw - menuW - 8;
+  if (left < 8) left = 8;
+  if (top < 8) top = (cm.y ?? vh/2) + 16;
+  if (top + menuH > vh - 8) top = vh - menuH - 8;
+  return `<div class="pt-card-menu" style="left:${left}px;top:${top}px" onclick="event.stopPropagation()">
     <div class="pt-card-menu-name">${escHtml(card.name)}</div>
     ${actions.map(a=>`<button class="pt-menu-btn" onclick="${a.fn}">${a.label}</button>`).join('')}
     <button class="pt-menu-btn pt-menu-cancel" onclick="ptCloseMenu()">Cancel</button>
@@ -3034,16 +3110,19 @@ function renderPTCardMenu() {
 }
 
 function renderPTZoneOverlay() {
-  const { uid, zone } = state.playtestZoneOverlay;
+  const overlay = state.playtestZoneOverlay;
+  const { uid, zone } = overlay;
   const myUid = state.currentUser?.uid;
   const isOwn = uid === myUid;
   const player = state.playtestGame?.players?.[uid];
   const ZONE_NAMES = { graveyard:'Graveyard', exile:'Exile', commandZone:'Command Zone', hand:'Hand', library:'Library' };
-  const cards = (zone==='hand'||zone==='library') ? (state.playtestPrivate?.[zone]||[]) : (player?.[zone]||[]);
+  const allCards = (zone==='hand'||zone==='library') ? (state.playtestPrivate?.[zone]||[]) : (player?.[zone]||[]);
+  const cards = overlay.topN != null ? (overlay.cards || allCards.slice(0, overlay.topN)) : allCards;
+  const zoneLabel = overlay.topN != null ? `Library Top ${overlay.topN}` : (ZONE_NAMES[zone]||zone);
   return `<div class="pt-overlay-bg" onclick="ptCloseZone()">
     <div class="pt-overlay" onclick="event.stopPropagation()">
       <div class="pt-overlay-header">
-        <span class="pt-overlay-title">${escHtml(player?.displayName||'')} · ${ZONE_NAMES[zone]||zone} (${cards.length})</span>
+        <span class="pt-overlay-title">${escHtml(player?.displayName||'')} · ${zoneLabel} (${cards.length})</span>
         <button onclick="ptCloseZone()" style="font-size:20px;padding:4px 10px;background:none;border:none;color:var(--text-muted)">✕</button>
       </div>
       <div class="pt-overlay-cards">
@@ -3062,6 +3141,384 @@ function renderPTZoneOverlay() {
       </div>
     </div>
   </div>`;
+}
+
+// ── Render: Scry overlay ───────────────────────────────
+function renderPTScryOverlay() {
+  const sd = state.playtestScryData;
+  if (!sd) return '';
+  return `<div class="pt-scry-overlay" onclick="event.stopPropagation()">
+    <div class="pt-scry-header">
+      <div>
+        <div style="font-weight:700;font-size:15px">Scry ${sd.cards.length}</div>
+        <div style="font-size:11px;color:var(--text-muted)">Click cards to send to bottom — rest stay on top</div>
+      </div>
+      <button class="btn-primary" onclick="ptScryConfirm()" style="font-size:13px;padding:8px 18px">Done</button>
+    </div>
+    <div class="pt-scry-zones">
+      <div class="pt-scry-zone">
+        <div class="pt-scry-zone-label">Staying on top <span style="font-family:'JetBrains Mono',monospace">(${sd.cards.filter(c=>!sd.bottom.includes(c.cardId)).length})</span></div>
+        <div class="pt-scry-cards">
+          ${sd.cards.filter(c => !sd.bottom.includes(c.cardId)).map(card => `
+            <div class="pt-scry-card scry-top" onclick="ptScryToggle('${card.cardId}')">
+              ${card.imageUrl ? `<img src="${escHtml(card.imageUrl)}" style="width:90px;border-radius:6px;display:block" loading="lazy">` : `<div style="width:90px;height:126px;background:var(--bg-surface);border:1px solid var(--border);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--text-muted);text-align:center;padding:6px">${escHtml(card.name)}</div>`}
+              <div class="pt-scry-card-label">${escHtml(card.name.slice(0,12))}</div>
+            </div>`).join('')}
+        </div>
+      </div>
+      <div class="pt-scry-zone">
+        <div class="pt-scry-zone-label">Going to bottom <span style="font-family:'JetBrains Mono',monospace">(${sd.bottom.length})</span></div>
+        <div class="pt-scry-cards">
+          ${sd.bottom.map(cardId => { const card = sd.cards.find(c=>c.cardId===cardId); if(!card)return''; return `
+            <div class="pt-scry-card scry-bottom" onclick="ptScryToggle('${card.cardId}')">
+              ${card.imageUrl ? `<img src="${escHtml(card.imageUrl)}" style="width:90px;border-radius:6px;display:block;opacity:0.7" loading="lazy">` : `<div style="width:90px;height:126px;background:var(--bg-surface);border:1px solid var(--tier-s);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--text-muted);text-align:center;padding:6px">${escHtml(card.name)}</div>`}
+              <div class="pt-scry-card-label">${escHtml(card.name.slice(0,12))}</div>
+            </div>`; }).join('')}
+          ${sd.bottom.length===0?`<div style="color:var(--text-muted);font-size:12px;padding:12px">None yet — click a card above to put it on bottom</div>`:''}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderPTMillToast() {
+  const mt = state.playtestMillToast;
+  if (!mt) return '';
+  const noAnim = mt.shown ? ' no-anim' : '';
+  mt.shown = true;
+  return `<div class="pt-mill-toast${noAnim}" onclick="state.playtestMillToast=null;render()">
+    <div class="pt-mill-toast-title">Milled ${mt.cards.length} card${mt.cards.length!==1?'s':''} — click to dismiss</div>
+    <div class="pt-mill-toast-cards">
+      ${mt.cards.slice(0,12).map(c=>`<span class="pt-mill-toast-card">${escHtml(c.name)}</span>`).join('')}
+      ${mt.cards.length>12?`<span class="pt-mill-toast-card">+${mt.cards.length-12} more</span>`:''}
+    </div>
+  </div>`;
+}
+
+function renderPTNumberPopup() {
+  const p = state.playtestNumberPopup;
+  if (!p) return '';
+  return `<div class="pt-number-popup" onclick="state.playtestNumberPopup=null;render()">
+    <div class="pt-number-popup-inner" onclick="event.stopPropagation()">
+      <div class="pt-number-popup-title">${escHtml(p.title)}</div>
+      <div class="pt-number-quick">
+        ${[1,2,3,4,5,7,10].map(n=>`<button class="pt-action-btn" onclick="ptNumberPopupPick(${n})">${n}</button>`).join('')}
+      </div>
+      <input type="number" min="1" max="99" value="${p.n||''}" id="pt-num-input"
+        style="width:80px;text-align:center;font-size:18px;padding:6px;margin-bottom:12px"
+        oninput="state.playtestNumberPopup.n=this.value"
+        onkeydown="if(event.key==='Enter')ptNumberPopupPick(+this.value)">
+      <div style="display:flex;gap:8px;justify-content:center">
+        <button onclick="state.playtestNumberPopup=null;render()">Cancel</button>
+        <button class="btn-primary" onclick="ptNumberPopupPick(+document.getElementById('pt-num-input').value)">OK</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── Scry / Mill logic ─────────────────────────────────
+function ptPromptScry() {
+  state.playtestMoreMenu = false;
+  state.playtestNumberPopup = { title: 'Scry how many?', action: 'scry', n: '3' };
+  render();
+}
+function ptPromptMill() {
+  state.playtestMoreMenu = false;
+  state.playtestNumberPopup = { title: 'Mill how many?', action: 'mill', n: '3' };
+  render();
+}
+function ptViewLibTop() {
+  state.playtestMoreMenu = false;
+  state.playtestNumberPopup = { title: 'View top how many?', action: 'view', n: '5' };
+  render();
+}
+function ptNumberPopupPick(n) {
+  n = parseInt(n);
+  if (!n || isNaN(n) || n < 1) return;
+  const action = state.playtestNumberPopup?.action;
+  state.playtestNumberPopup = null;
+  if (action === 'scry') ptScry(n);
+  else if (action === 'mill') ptMill(n);
+  else if (action === 'view') ptViewLib(n);
+}
+
+async function ptScry(n) {
+  const priv = state.playtestPrivate;
+  if (!priv) return;
+  const top = priv.library.slice(0, n);
+  state.playtestScryData = { cards: top, bottom: [] };
+  render();
+}
+function ptScryToggle(cardId) {
+  if (!state.playtestScryData) return;
+  const sd = state.playtestScryData;
+  if (sd.bottom.includes(cardId)) {
+    sd.bottom = sd.bottom.filter(id => id !== cardId);
+  } else {
+    sd.bottom = [...sd.bottom, cardId];
+  }
+  render();
+}
+async function ptScryConfirm() {
+  const sd = state.playtestScryData;
+  const priv = state.playtestPrivate;
+  if (!sd || !priv) return;
+  const n = sd.cards.length;
+  const restLib = priv.library.slice(n);
+  const topCards = sd.cards.filter(c => !sd.bottom.includes(c.cardId));
+  const botCards = sd.bottom.map(id => sd.cards.find(c => c.cardId === id)).filter(Boolean);
+  state.playtestScryData = null;
+  await ptPriv({ ...priv, library: [...topCards, ...restLib, ...botCards] });
+}
+
+let ptMillTimer = null;
+async function ptMill(n) {
+  const uid = state.currentUser?.uid;
+  const player = state.playtestGame?.players?.[uid];
+  const priv = state.playtestPrivate;
+  if (!priv) return;
+  const milled = priv.library.slice(0, n);
+  const newLib = priv.library.slice(n);
+  const gy = [...(player?.graveyard || []), ...milled.map(c => ({ ...c, zone: 'graveyard' }))];
+  if (ptMillTimer) { clearTimeout(ptMillTimer); ptMillTimer = null; }
+  state.playtestMillToast = { cards: milled };
+  await Promise.all([
+    ptPriv({ ...priv, library: newLib }),
+    player ? ptPub({ [`players.${uid}.graveyard`]: gy }) : Promise.resolve()
+  ]);
+  render();
+  ptMillTimer = setTimeout(() => { state.playtestMillToast = null; ptMillTimer = null; render(); }, 5000);
+}
+
+async function ptViewLib(n) {
+  const priv = state.playtestPrivate;
+  if (!priv) return;
+  const top = priv.library.slice(0, n);
+  state.playtestZoneOverlay = { uid: state.currentUser?.uid, zone: 'library', topN: n, cards: top };
+  render();
+}
+
+// ── Drag-and-drop: pointer events ─────────────────────
+let ptHandDrag = null;
+let ptHandDragGhost = null;
+
+function ptHandPointerDown(e, cardId) {
+  if (e.button !== 0 && e.pointerType !== 'touch') return;
+  const uid = state.currentUser?.uid;
+  const viewUid = state.playtestViewUid || uid;
+  if (viewUid !== uid) return;
+  e.preventDefault();
+  e.stopPropagation();
+  try { e.target.setPointerCapture(e.pointerId); } catch(_) {}
+  ptHandDrag = { cardId, startX: e.clientX, startY: e.clientY, moved: false };
+}
+
+function ptPointerDown(e, cardId) {
+  if (e.button === 2) { ptOpenMenu(cardId, 'battlefield', e); return; }
+  if (e.button !== 0 && e.pointerType !== 'touch') return;
+  const uid = state.currentUser?.uid;
+  const viewUid = state.playtestViewUid || uid;
+  if (viewUid !== uid) return;
+  const player = state.playtestGame?.players?.[uid];
+  const card = (player?.battlefield || []).find(c => c.cardId === cardId);
+  if (!card) return;
+  e.preventDefault();
+  e.stopPropagation();
+  try { e.target.setPointerCapture(e.pointerId); } catch(_) {}
+  const longPressTimer = setTimeout(() => {
+    if (ptDrag && !ptDrag.moved) {
+      ptDrag.isLongPress = true;
+      ptOpenMenu(cardId, 'battlefield', { clientX: ptDrag.startX, clientY: ptDrag.startY });
+    }
+  }, 400);
+  ptDrag = {
+    cardId,
+    startX: e.clientX,
+    startY: e.clientY,
+    origCardX: card.x ?? 20,
+    origCardY: card.y ?? 20,
+    moved: false,
+    longPressTimer,
+  };
+}
+
+document.addEventListener('pointermove', function(e) {
+  // Hand → battlefield drag
+  if (ptHandDrag) {
+    const dx = e.clientX - ptHandDrag.startX;
+    const dy = e.clientY - ptHandDrag.startY;
+    if (!ptHandDrag.moved && Math.hypot(dx, dy) < 6) return;
+    if (!ptHandDrag.moved) {
+      ptHandDrag.moved = true;
+      state.playtestCardMenu = null;
+      const priv = state.playtestPrivate;
+      const card = (priv?.hand || []).find(c => c.cardId === ptHandDrag.cardId);
+      const ghost = document.createElement('div');
+      ghost.style.cssText = 'position:fixed;width:80px;border-radius:6px;pointer-events:none;z-index:1000;opacity:0.85;transform:translate(-50%,-60%) scale(1.1);box-shadow:0 8px 24px rgba(0,0,0,0.5);transition:none';
+      if (card?.imageUrl) {
+        ghost.innerHTML = `<img src="${card.imageUrl}" style="width:72px;border-radius:5px;display:block">`;
+      } else if (card) {
+        ghost.style.cssText += ';background:#1a1535;height:100px;border:1px solid #555;display:flex;align-items:center;justify-content:center;font-size:9px;color:#aaa;text-align:center;padding:4px;box-sizing:border-box';
+        ghost.textContent = card.name;
+      }
+      document.body.appendChild(ghost);
+      ptHandDragGhost = ghost;
+      const srcEl = document.querySelector(`[data-hand-card-id="${ptHandDrag.cardId}"]`);
+      if (srcEl) srcEl.classList.add('pt-dragging-src');
+    }
+    if (ptHandDragGhost) {
+      ptHandDragGhost.style.left = e.clientX + 'px';
+      ptHandDragGhost.style.top = e.clientY + 'px';
+    }
+    // Highlight battlefield
+    const bfEl2 = document.getElementById('pt-battlefield');
+    if (bfEl2) {
+      const r2 = bfEl2.getBoundingClientRect();
+      bfEl2.classList.toggle('pt-drop-active', e.clientX >= r2.left && e.clientX <= r2.right && e.clientY >= r2.top && e.clientY <= r2.bottom);
+    }
+    // Highlight zone buttons
+    document.querySelectorAll('[data-pt-drop-zone]').forEach(btn => {
+      const r = btn.getBoundingClientRect();
+      btn.classList.toggle('pt-drop-hover', e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom);
+    });
+    return;
+  }
+
+  // Battlefield drag
+  if (!ptDrag) return;
+  const dx = e.clientX - ptDrag.startX;
+  const dy = e.clientY - ptDrag.startY;
+  if (!ptDrag.moved && Math.hypot(dx, dy) < 6) return;
+  if (!ptDrag.moved) {
+    ptDrag.moved = true;
+    if (ptDrag.longPressTimer) { clearTimeout(ptDrag.longPressTimer); ptDrag.longPressTimer = null; }
+    state.playtestCardMenu = null;
+  }
+  // Highlight zone buttons for bf drag
+  document.querySelectorAll('[data-pt-drop-zone]').forEach(btn => {
+    const r = btn.getBoundingClientRect();
+    btn.classList.toggle('pt-drop-hover', e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom);
+  });
+  const newX = Math.max(0, ptDrag.origCardX + dx);
+  const newY = Math.max(0, ptDrag.origCardY + dy);
+  const el = document.querySelector(`[data-card-id="${ptDrag.cardId}"]`);
+  if (el) {
+    el.classList.add('pt-dragging-src');
+    el.style.left = newX + 'px';
+    el.style.top = newY + 'px';
+  }
+});
+
+document.addEventListener('pointerup', async function(e) {
+  // Hand → drop
+  if (ptHandDrag) {
+    const drag = ptHandDrag;
+    ptHandDrag = null;
+    if (ptHandDragGhost) { document.body.removeChild(ptHandDragGhost); ptHandDragGhost = null; }
+    const srcEl = document.querySelector(`[data-hand-card-id="${drag.cardId}"]`);
+    if (srcEl) srcEl.classList.remove('pt-dragging-src');
+    document.getElementById('pt-battlefield')?.classList.remove('pt-drop-active');
+    document.querySelectorAll('[data-pt-drop-zone]').forEach(b => b.classList.remove('pt-drop-hover'));
+    if (!drag.moved) {
+      ptOpenMenu(drag.cardId, 'hand', e);
+      return;
+    }
+    // Check zone button drop first
+    const zoneBtn = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-pt-drop-zone]');
+    if (zoneBtn) {
+      await ptMoveCard(drag.cardId, 'hand', zoneBtn.dataset.ptDropZone);
+      return;
+    }
+    const bfEl = document.getElementById('pt-battlefield');
+    if (bfEl) {
+      const bfRect = bfEl.getBoundingClientRect();
+      if (e.clientX >= bfRect.left && e.clientX <= bfRect.right &&
+          e.clientY >= bfRect.top && e.clientY <= bfRect.bottom) {
+        const canvasEl = document.getElementById('pt-bf-canvas');
+        const canvasRect = canvasEl ? canvasEl.getBoundingClientRect() : bfRect;
+        const CARD_W = 72, CARD_H = 100;
+        let x = Math.max(0, e.clientX - canvasRect.left + bfEl.scrollLeft - CARD_W / 2);
+        let y = Math.max(0, e.clientY - canvasRect.top  + bfEl.scrollTop  - CARD_H / 2);
+        x = Math.min(x, bfEl.clientWidth  - CARD_W - 8);
+        y = Math.min(y, bfEl.clientHeight - CARD_H - 8);
+        if (state.snapToGrid) { x = Math.round(x/40)*40; y = Math.round(y/40)*40; }
+        await ptPlayCardAt(drag.cardId, x, y);
+      }
+    }
+    return;
+  }
+
+  // Battlefield drag
+  if (!ptDrag) return;
+  const drag = ptDrag;
+  ptDrag = null;
+  document.querySelectorAll('[data-pt-drop-zone]').forEach(b => b.classList.remove('pt-drop-hover'));
+  if (!drag.moved) {
+    if (drag.longPressTimer) clearTimeout(drag.longPressTimer);
+    if (!drag.isLongPress) await ptTapCard(drag.cardId);
+    // long-press already opened menu via timer
+    return;
+  }
+  // Check zone button drop
+  const zoneBtn2 = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-pt-drop-zone]');
+  if (zoneBtn2) {
+    const el2 = document.querySelector(`[data-card-id="${drag.cardId}"]`);
+    if (el2) el2.classList.remove('pt-dragging-src');
+    await ptMoveCard(drag.cardId, 'battlefield', zoneBtn2.dataset.ptDropZone);
+    return;
+  }
+  // Check if dropped on hand zone → move to hand
+  const handEl = document.querySelector('.pt-hand');
+  if (handEl) {
+    const hr = handEl.getBoundingClientRect();
+    if (e.clientX >= hr.left && e.clientX <= hr.right && e.clientY >= hr.top && e.clientY <= hr.bottom) {
+      const el2 = document.querySelector(`[data-card-id="${drag.cardId}"]`);
+      if (el2) el2.classList.remove('pt-dragging-src');
+      await ptMoveCard(drag.cardId, 'battlefield', 'hand');
+      return;
+    }
+  }
+
+  const dx = e.clientX - drag.startX;
+  const dy = e.clientY - drag.startY;
+  let newX = Math.max(0, drag.origCardX + dx);
+  let newY = Math.max(0, drag.origCardY + dy);
+  if (state.snapToGrid) {
+    newX = Math.round(newX / 40) * 40;
+    newY = Math.round(newY / 40) * 40;
+  }
+  const uid = state.currentUser?.uid;
+  const player = state.playtestGame?.players?.[uid];
+  if (!player) return;
+  const newBf = (player.battlefield || []).map(c =>
+    c.cardId === drag.cardId ? { ...c, x: newX, y: newY } : c
+  );
+  // Snap element to final position
+  const el = document.querySelector(`[data-card-id="${drag.cardId}"]`);
+  if (el) {
+    el.classList.remove('pt-dragging-src');
+    el.style.left = newX + 'px';
+    el.style.top = newY + 'px';
+  }
+  // Optimistic state update, then Firestore
+  if (state.playtestGame?.players?.[uid]) {
+    state.playtestGame.players[uid].battlefield = newBf;
+  }
+  await ptPub({ [`players.${uid}.battlefield`]: newBf }).catch(console.error);
+});
+
+async function ptPlayCardAt(cardId, x, y) {
+  const uid = state.currentUser?.uid;
+  const player = state.playtestGame?.players?.[uid];
+  const priv = state.playtestPrivate;
+  if (!player || !priv) return;
+  const hand = [...(priv.hand || [])];
+  const idx = hand.findIndex(c => c.cardId === cardId);
+  if (idx === -1) return;
+  const [card] = hand.splice(idx, 1);
+  const battlefield = [...(player.battlefield || []), { ...card, zone: 'battlefield', tapped: false, x, y }];
+  await ptPriv({ ...priv, hand });
+  await ptPub({ [`players.${uid}.battlefield`]: battlefield });
 }
 
 // ===== META ANALYSIS =====
@@ -4488,6 +4945,15 @@ window.ptOpenMenu = ptOpenMenu;
 window.ptCloseMenu = ptCloseMenu;
 window.ptOpenZone = ptOpenZone;
 window.ptCloseZone = ptCloseZone;
+window.ptPointerDown = ptPointerDown;
+window.ptHandPointerDown = ptHandPointerDown;
+window.ptPlayCardAt = ptPlayCardAt;
+window.ptPromptScry = ptPromptScry;
+window.ptPromptMill = ptPromptMill;
+window.ptViewLibTop = ptViewLibTop;
+window.ptNumberPopupPick = ptNumberPopupPick;
+window.ptScryToggle = ptScryToggle;
+window.ptScryConfirm = ptScryConfirm;
 window.openPlaytester = openPlaytester;
 window.openProfile = openProfile;
 window.closeProfile = closeProfile;
