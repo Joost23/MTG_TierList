@@ -424,8 +424,12 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 .avatar-picker-grid { display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:16px 0; }
 .avatar-option { width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;cursor:pointer;background:var(--bg-surface);border:2px solid transparent;transition:all 0.15s; }
 .avatar-option:hover,.avatar-option.selected { border-color:var(--accent);background:var(--bg-hover); }
-.hot-deck-banner { background:linear-gradient(135deg,#2A2010 0%,var(--bg-card) 100%);border:1px solid var(--tier-a);border-radius:var(--radius);padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:14px; }
-.hot-deck-info { flex:1;min-width:0; }
+.spotlight-banner { position:relative;border-radius:var(--radius);overflow:hidden;margin-bottom:16px;min-height:172px;display:flex;flex-direction:column;justify-content:flex-end;cursor:pointer; }
+.spotlight-banner:hover .spotlight-bg { filter:blur(12px) brightness(0.5) saturate(1.3);transform:scale(1.14); }
+.spotlight-bg { position:absolute;inset:0;background-size:cover;background-position:center top;filter:blur(12px) brightness(0.4) saturate(1.3);transform:scale(1.12);transition:filter 0.3s,transform 0.3s; }
+.spotlight-bg.no-art { filter:none;transform:none; }
+.spotlight-overlay { position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,0.90) 0%,rgba(0,0,0,0.50) 55%,rgba(0,0,0,0.12) 100%); }
+.spotlight-content { position:relative;z-index:1;padding:18px 20px 16px; }
 .matchup-insights { display:flex;gap:10px;flex-wrap:wrap;margin-top:16px; }
 .matchup-pill { display:flex;flex-direction:column;gap:2px;padding:10px 14px;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius);font-size:12px;flex:1;min-width:120px; }
 .matchup-pill-label { font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:2px; }
@@ -931,6 +935,8 @@ function render() {
   app.innerHTML = html;
   // Lazily load commander art for deck cards
   if (document.querySelector('.deck-card-art[data-art-commander]')) loadDeckCardArts();
+  // Lazily load spotlight hero art
+  if (document.querySelector('.spotlight-bg[data-spotlight-art]')) loadSpotlightArt();
 }
 
 function renderBottomNav(active) {
@@ -1022,20 +1028,7 @@ function renderDashboard() {
         <div class="dash-stat-value">${userWinRate !== null ? userWinRate + '%' : '—'}</div>
       </div>
     </div>
-    ${(() => {
-      const hot = getHotDeck();
-      if (!hot) return '';
-      const pc = playerColor(hot.deck.player);
-      return `<div class="hot-deck-banner">
-        <div style="font-size:28px">🔥</div>
-        <div class="hot-deck-info">
-          <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:var(--tier-a-text);font-weight:600;margin-bottom:3px">Hot This Week</div>
-          <div style="font-weight:600;font-size:14px">${escHtml(hot.deck.commander)}</div>
-          <div style="font-size:12px;color:var(--text-muted)">${escHtml(hot.deck.player)} · ${hot.wins} win${hot.wins !== 1 ? 's' : ''} this week</div>
-        </div>
-        <button onclick="openDeckDetail('${hot.deck.id}')" style="font-size:12px;padding:6px 14px;flex-shrink:0">View →</button>
-      </div>`;
-    })()}
+    ${renderSpotlightBanner()}
     <div class="dash-section-title">Pod Leaderboard</div>
     <div class="dash-card">
       ${leaderboard.map((p, i) => {
@@ -4027,6 +4020,112 @@ function toggleCardFlip(el) {
   if (inner) inner.classList.toggle('flipped');
 }
 
+// ===== DECK SPOTLIGHT =====
+function getWeeklySpotlight() {
+  if (!state.decks.length) return null;
+  // Rotate weekly through top-scored decks (seeded by ISO week number)
+  const now = new Date();
+  const weekNum = Math.floor((now - new Date(now.getFullYear(), 0, 1)) / 604800000);
+  const sorted = [...state.decks].sort((a, b) => getOverall(b) - getOverall(a));
+  return sorted[weekNum % sorted.length];
+}
+
+function renderSpotlightBanner() {
+  const hot = getHotDeck();
+  const deck = hot ? hot.deck : getWeeklySpotlight();
+  if (!deck) return '';
+
+  const isHot = !!hot;
+  const pc = playerColor(deck.player);
+  const tier = getTier(deck.power);
+  const tierCl = tier.toLowerCase();
+  const overall = getOverall(deck);
+
+  // Art from cache
+  const cacheKey = deck.commander.toLowerCase();
+  const cached = scryfallCache[cacheKey];
+  const artUrl = typeof cached === 'string' ? cached : (cached?.imageUrlArtCrop || cached?.imageUrl || null);
+
+  // Build bg div — no-art fallback uses player color gradient
+  const bgDiv = artUrl
+    ? `<div class="spotlight-bg" style="background-image:url('${escHtml(artUrl)}')"></div>`
+    : `<div class="spotlight-bg no-art" style="background:linear-gradient(135deg,${pc.bg} 0%,#0C0B0F 100%)" data-spotlight-art="${escHtml(deck.commander)}"></div>`;
+  // Player + stat line
+  const winsThisWeek = isHot ? `${hot.wins} win${hot.wins !== 1 ? 's' : ''} this week` : null;
+  const totalGames = (deck.games || []).filter(g => !g.loaned).length;
+  const totalWins = (deck.games || []).filter(g => !g.loaned && g.result === 'win').length;
+  const wr = totalGames >= 3 ? Math.round(totalWins / totalGames * 100) + '% win rate' : null;
+  const statStr = [winsThisWeek, wr ? (isHot ? null : wr) : null].filter(Boolean).join(' · ');
+
+  return `<div class="spotlight-banner" onclick="openDeckDetail('${escHtml(deck.id)}')">
+    ${bgDiv}
+    <div class="spotlight-overlay"></div>
+    <div class="spotlight-content">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;font-weight:700;color:${isHot ? 'var(--tier-a-text)' : 'var(--accent)'};margin-bottom:10px">${isHot ? '🔥 Hot This Week' : '✨ Deck Spotlight'}</div>
+      <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:22px;font-weight:700;line-height:1.2;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,0.9);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(deck.deckName || deck.commander)}</div>
+          ${deck.deckName ? `<div style="font-size:13px;color:rgba(255,255,255,0.55);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(deck.commander)}</div>` : ''}
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--tier-${tierCl}-text);background:var(--tier-${tierCl}-bg);border:1px solid var(--tier-${tierCl});padding:3px 8px;border-radius:4px">${tier}</span>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(255,255,255,0.45)">${overall.toFixed(1)}</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:7px;min-width:0;flex:1">
+          ${renderAvatar(deck.player, 20)}
+          <span style="font-size:13px;color:${pc.color};font-weight:500">${escHtml(deck.player)}</span>
+          ${deck.colors ? `<span style="opacity:0.8">${renderManaSymbols(deck.colors, 13)}</span>` : ''}
+          ${statStr ? `<span style="font-size:12px;color:rgba(255,255,255,0.5)">· ${statStr}</span>` : ''}
+        </div>
+        <button onclick="event.stopPropagation();openDeckDetail('${escHtml(deck.id)}')" style="font-size:12px;padding:7px 16px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:#fff;flex-shrink:0;backdrop-filter:blur(8px)">View →</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function loadSpotlightArt() {
+  const el = document.querySelector('.spotlight-bg[data-spotlight-art]');
+  if (!el) return;
+  const commander = el.getAttribute('data-spotlight-art');
+  if (!commander) return;
+
+  const key = commander.toLowerCase();
+  let artUrl = null;
+  const existing = scryfallCache[key];
+  if (existing) {
+    artUrl = typeof existing === 'string' ? existing : (existing.imageUrlArtCrop || existing.imageUrl || null);
+  }
+
+  if (!artUrl) {
+    try {
+      const searchName = commander.includes(' // ') ? commander.split(' // ')[0].trim() : commander;
+      const resp = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(searchName)}&format=json`);
+      if (resp.ok) {
+        const data = await resp.json();
+        const iuris = data.image_uris || data.card_faces?.[0]?.image_uris;
+        const imgNormal = iuris?.normal || iuris?.large || null;
+        const imgArtCrop = iuris?.art_crop || imgNormal;
+        artUrl = imgArtCrop;
+        const backIuris = data.card_faces?.[1]?.image_uris;
+        const isDF = ['transform','modal_dfc','double_faced_token','reversible_card'].includes(data.layout);
+        if (!scryfallCache[key]?.imageUrl) {
+          scryfallCache[key] = imgNormal ? { imageUrl: imgNormal, imageUrlArtCrop: imgArtCrop, imageUrlBack: backIuris?.normal ?? null, isDoubleFaced: isDF, backFaceName: data.card_faces?.[1]?.name ?? null } : null;
+        }
+      }
+    } catch(e) {}
+  }
+
+  if (artUrl && document.contains(el)) {
+    el.classList.remove('no-art');
+    el.style.backgroundImage = `url('${artUrl}')`;
+    el.removeAttribute('data-spotlight-art');
+    el.style.filter = 'blur(12px) brightness(0.4) saturate(1.3)';
+    el.style.transform = 'scale(1.12)';
+  }
+}
+
 // ===== POD FEED =====
 function getPodFeed(limit = 12) {
   const events = [];
@@ -4321,6 +4420,7 @@ window.openMyDecksGallery = openMyDecksGallery;
 window.closeMyDecksGallery = closeMyDecksGallery;
 window.loadGalleryImages = loadGalleryImages;
 window.loadDeckCardArts = loadDeckCardArts;
+window.loadSpotlightArt = loadSpotlightArt;
 window.openGamesHistory = openGamesHistory;
 window.closeGamesHistory = closeGamesHistory;
 window.toggleLeaderboardExpand = toggleLeaderboardExpand;
