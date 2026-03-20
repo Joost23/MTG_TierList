@@ -803,7 +803,8 @@ let state = {
 const scryfallCache = {};
 const tokenDataCache = {}; // scryfallId → { scryfallId, name, imageUrl, power, toughness, typeLine, colors, oracleText }
 let ptDrag = null; // active drag: { cardId, fromZone, ghost, startX, startY, originEl }
-let ptPan = null;  // active pan: { startX, startY, origX, origY }
+let ptPan = null;        // committed pan (only after pointer moved > threshold)
+let ptPanPending = null; // pan candidate recorded on pointerdown, not yet committed
 let ptPanX = 0, ptPanY = 0, ptScale = 1.0;
 let ptPinch = null; // active pinch: { startDist, startScale, canvasX, canvasY }
 const ptTouches = new Map(); // pointerId → {x,y} for pinch tracking
@@ -2974,7 +2975,7 @@ async function ptLeave() {
   state.playtestGameId = null; state.playtestGame = null; state.playtestPrivate = null;
   state.playtestViewUid = null; state.playtestDeckId = null; state.playtestCardMenu = null;
   state.playtestZoneOverlay = null; state.showPlaytester = false;
-  ptPanX = 0; ptPanY = 0; ptScale = 1.0; ptPan = null; ptPinch = null; ptTouches.clear();
+  ptPanX = 0; ptPanY = 0; ptScale = 1.0; ptPan = null; ptPanPending = null; ptPinch = null; ptTouches.clear();
   render();
 }
 
@@ -3874,16 +3875,14 @@ function ptBfPanStart(e) {
     }
     return;
   }
-  // Mouse: pan on empty space
+  // Mouse: record pan candidate — commit only once pointer moves
   if (e.target.closest('.pt-bf-card,.pt-zone-btn,.pt-bf-empty')) return;
   if (ptDrag || ptHandDrag) return;
-  ptPan = { startX: e.clientX, startY: e.clientY, origX: ptPanX, origY: ptPanY };
-  document.getElementById('pt-battlefield')?.classList.add('pt-panning');
-  e.preventDefault();
+  ptPanPending = { startX: e.clientX, startY: e.clientY, origX: ptPanX, origY: ptPanY };
 }
 
 function ptPointerDown(e, cardId) {
-  e.stopPropagation(); // don't trigger ptBfPanStart
+  ptPanPending = null; // cancel any pending pan — user is interacting with a card
   if (e.button === 2) { ptOpenMenu(cardId, 'battlefield', e); return; }
   if (e.button !== 0 && e.pointerType !== 'touch') return;
   const uid = state.currentUser?.uid;
@@ -3913,6 +3912,15 @@ function ptPointerDown(e, cardId) {
 }
 
 document.addEventListener('pointermove', function(e) {
+  // Commit pending mouse pan once pointer moves past threshold
+  if (ptPanPending && e.pointerType !== 'touch') {
+    const dx = e.clientX - ptPanPending.startX, dy = e.clientY - ptPanPending.startY;
+    if (Math.hypot(dx, dy) > 4) {
+      ptPan = ptPanPending;
+      ptPanPending = null;
+      document.getElementById('pt-battlefield')?.classList.add('pt-panning');
+    }
+  }
   // Pinch zoom (touch)
   if (ptPinch && e.pointerType === 'touch' && ptTouches.has(e.pointerId)) {
     ptTouches.set(e.pointerId, {x: e.clientX, y: e.clientY});
@@ -4035,6 +4043,7 @@ function ptCleanupTouch(pointerId) {
 }
 
 document.addEventListener('pointercancel', function(e) {
+  ptPanPending = null;
   if (e.pointerType === 'touch') ptCleanupTouch(e.pointerId);
 });
 
@@ -4046,6 +4055,7 @@ document.addEventListener('pointerup', async function(e) {
     if (wasPinching) return; // pinch-end, not a tap
   }
   // Battlefield pan end
+  ptPanPending = null;
   if (ptPan && e.pointerType !== 'touch') {
     ptPan = null;
     document.getElementById('pt-battlefield')?.classList.remove('pt-panning');
