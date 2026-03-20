@@ -477,10 +477,18 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 .pt-number-popup-inner { background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;min-width:260px;text-align:center; }
 .pt-number-popup-title { font-size:16px;font-weight:600;margin-bottom:16px; }
 .pt-number-quick { display:flex;gap:8px;justify-content:center;margin-bottom:12px; }
-.pt-lobby { padding:20px;max-width:500px;margin:0 auto; }
+.pt-lobby { padding:20px;max-width:540px;margin:0 auto; }
 .pt-lobby-card { background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px; }
 .pt-player-row { display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border); }
 .pt-player-row:last-child { border-bottom:none; }
+.pt-sessions-list { display:flex;flex-direction:column;gap:8px; }
+.pt-session-row { display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-sm);transition:border-color var(--transition); }
+.pt-session-row:hover { border-color:var(--border-hover); }
+.pt-session-names { font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+.pt-session-commanders { font-size:11px;color:var(--text-muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+.pt-session-badge { font-size:10px;font-weight:600;padding:2px 7px;border-radius:99px;flex-shrink:0; }
+.pt-session-waiting { background:var(--tier-b-bg);color:var(--tier-b-text); }
+.pt-session-active  { background:var(--tier-a-bg);color:var(--tier-a-text); }
 @keyframes pt-toast-in { from { opacity:0;transform:translateX(-50%) translateY(10px); } to { opacity:1;transform:translateX(-50%) translateY(0); } }
 @keyframes pt-card-land { from { transform:scale(1.08); } to { transform:scale(1); } }
 .pt-card-land { animation:pt-card-land 0.2s ease-out; }
@@ -604,7 +612,7 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 <script type="module">
 // ===== FIREBASE =====
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
-import { getFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, writeBatch, query, orderBy, limit, addDoc, serverTimestamp }
+import { getFirestore, collection, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, writeBatch, query, where, orderBy, limit, addDoc, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, updatePassword, reauthenticateWithCredential, EmailAuthProvider }
   from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
@@ -774,6 +782,7 @@ let state = {
   playtestPrivate: null,
   playtestViewUid: null,
   playtestDeckId: null,
+  playtestSessions: [],
   playtestCardMenu: null,
   playtestZoneOverlay: null,
   playtestLoading: '',
@@ -899,6 +908,7 @@ let unsubscribeSession = null;
 let unsubscribePlaytest = null;
 let unsubscribePrivate = null;
 let unsubscribeChat = null;
+let unsubscribeSessions = null;
 let chatLastReadTs = 0;
 
 function setupFirestoreListener() {
@@ -2894,15 +2904,35 @@ async function ptCreate() {
 async function ptJoin(sessionId) {
   const myUid = state.currentUser?.uid;
   const deck = state.decks.find(d => d.id === state.playtestDeckId);
-  if (!myUid || !deck || !sessionId) return;
-  await updateDoc(doc(db, 'gameSessions', sessionId), {
-    [`players.${myUid}`]: ptBuildPlayer(myUid, deck),
-    updatedAt: new Date().toISOString(),
-  });
-  state.playtestGameId = sessionId;
-  state.playtestViewUid = myUid;
-  ptListen(sessionId);
-  render();
+  if (!myUid || !sessionId) { showToast('Select a deck first'); return; }
+  if (!deck) { showToast('Select a deck first'); return; }
+  try {
+    const snap = await getDoc(doc(db, 'gameSessions', sessionId));
+    if (!snap.exists()) { showToast('Session not found — check the code'); return; }
+    const session = snap.data();
+    if (session.status === 'finished') { showToast('That game has already ended'); return; }
+    const existingPlayers = Object.keys(session.players || {});
+    if (existingPlayers.length >= 4 && !existingPlayers.includes(myUid)) {
+      showToast('Game is full (4/4 players)');
+      return;
+    }
+    const player = ptBuildPlayer(myUid, deck);
+    await updateDoc(doc(db, 'gameSessions', sessionId), {
+      [`players.${myUid}`]: player,
+      updatedAt: new Date().toISOString(),
+    });
+    state.playtestGameId = sessionId;
+    state.playtestViewUid = myUid;
+    ptListen(sessionId);
+    // If game is already active we missed the waiting→active transition — deal hand now
+    if (session.status === 'active') {
+      await ptDealOwnHand(sessionId, myUid, player);
+    }
+    render();
+  } catch(e) {
+    console.error('ptJoin failed:', e);
+    showToast('Could not join: ' + (e.message || e.code || 'unknown error'));
+  }
 }
 
 // Each player deals their own hand — avoids cross-uid Firestore permission errors
@@ -2976,12 +3006,45 @@ function ptListen(sessionId) {
   }
 }
 
+function ptListenSessions() {
+  if (unsubscribeSessions) return; // already listening
+  const cutoff = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(); // sessions updated in last 3h
+  const q = query(collection(db, 'gameSessions'),
+    where('sessionType', '==', 'playtest'),
+    where('updatedAt', '>=', cutoff),
+    orderBy('updatedAt', 'desc'),
+    limit(30));
+  unsubscribeSessions = onSnapshot(q, snap => {
+    state.playtestSessions = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .filter(s => s.status === 'waiting' || s.status === 'active');
+    render();
+  }, err => {
+    console.warn('ptListenSessions error:', err.code, err.message);
+    // Fall back to a simple unordered query if composite index is missing
+    if (err.code === 'failed-precondition' || err.code === 'unimplemented') {
+      if (unsubscribeSessions) { unsubscribeSessions(); unsubscribeSessions = null; }
+      const q2 = query(collection(db, 'gameSessions'), orderBy('updatedAt', 'desc'), limit(30));
+      unsubscribeSessions = onSnapshot(q2, snap => {
+        const cutoffMs = Date.now() - 3 * 60 * 60 * 1000;
+        state.playtestSessions = snap.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .filter(s => s.sessionType === 'playtest'
+                    && (s.status === 'waiting' || s.status === 'active')
+                    && new Date(s.updatedAt).getTime() > cutoffMs);
+        render();
+      }, () => {});
+    }
+  });
+}
+
 async function ptLeave() {
   if (unsubscribePlaytest) { unsubscribePlaytest(); unsubscribePlaytest = null; }
   if (unsubscribePrivate) { unsubscribePrivate(); unsubscribePrivate = null; }
+  if (unsubscribeSessions) { unsubscribeSessions(); unsubscribeSessions = null; }
   state.playtestGameId = null; state.playtestGame = null; state.playtestPrivate = null;
   state.playtestViewUid = null; state.playtestDeckId = null; state.playtestCardMenu = null;
-  state.playtestZoneOverlay = null; state.showPlaytester = false;
+  state.playtestZoneOverlay = null; state.showPlaytester = false; state.playtestSessions = [];
   ptPanX = 0; ptPanY = 0; ptScale = 1.0; ptPan = null; ptPanPending = null; ptPinch = null; ptTouches.clear();
   render();
 }
@@ -3154,7 +3217,51 @@ function ptOpenMenu(cardId, zone, e) {
 function ptCloseMenu() { state.playtestCardMenu = null; render(); }
 function ptOpenZone(uid, zone) { state.playtestZoneOverlay = { uid, zone }; render(); }
 function ptCloseZone() { state.playtestZoneOverlay = null; render(); }
-function openPlaytester() { state.showPlaytester = true; render(); }
+function openPlaytester() { state.showPlaytester = true; ptListenSessions(); render(); }
+
+// ── Render: Session Browser ────────────────────────────
+function renderPTSessionBrowser() {
+  const sessions = state.playtestSessions || [];
+  const myUid = state.currentUser?.uid;
+  const waiting = sessions.filter(s => s.status === 'waiting');
+  const active  = sessions.filter(s => s.status === 'active');
+
+  function sessionRow(s) {
+    const players = Object.values(s.players || {});
+    const count = players.length;
+    const isIn = players.some(p => p.uid === myUid || Object.keys(s.players || {}).includes(myUid));
+    const commanders = players.map(p => escHtml(p.commander)).join(' · ');
+    const names = players.map(p => escHtml(p.displayName)).join(', ');
+    const isFull = count >= 4 && !isIn;
+    const statusCls = s.status === 'waiting' ? 'pt-session-waiting' : 'pt-session-active';
+    const statusLabel = s.status === 'waiting' ? 'Open' : 'Playing';
+    return `<div class="pt-session-row">
+      <div style="flex:1;min-width:0">
+        <div class="pt-session-names">${names} <span style="color:var(--text-muted)">(${count}/4)</span></div>
+        <div class="pt-session-commanders">${commanders}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+        <span class="pt-session-badge ${statusCls}">${statusLabel}</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted)">${escHtml(s.id)}</span>
+        <button onclick="ptJoin('${escHtml(s.id)}')" ${(isFull || !state.playtestDeckId) ? 'disabled' : ''} style="padding:5px 12px;font-size:12px">
+          ${isIn ? 'Rejoin' : isFull ? 'Full' : 'Join'}
+        </button>
+      </div>
+    </div>`;
+  }
+
+  const rows = [...waiting, ...active].map(sessionRow).join('');
+
+  return `<div class="pt-lobby-card pt-session-browser">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div style="font-weight:600;font-size:15px">Active Lobbies</div>
+      <span style="font-size:11px;color:var(--text-muted)">${waiting.length} open · ${active.length} in progress</span>
+    </div>
+    ${rows.length
+      ? `<div class="pt-sessions-list">${rows}</div>`
+      : `<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:16px 0">No active lobbies right now</div>`}
+  </div>`;
+}
 
 // ── Render: Lobby ─────────────────────────────────────
 function renderPTLobby() {
@@ -3190,10 +3297,11 @@ function renderPTLobby() {
           <div style="font-weight:600;font-size:15px;margin-bottom:14px">Join Game</div>
           ${deckSelect('pt-deck-join','Your Deck')}
           <div style="display:flex;gap:8px">
-            <input id="pt-join-code" type="text" placeholder="Session code…" style="flex:1;font-family:'JetBrains Mono',monospace;letter-spacing:2px;font-size:15px" oninput="this.value=this.value.toUpperCase()">
+            <input id="pt-join-code" type="text" placeholder="Session code…" style="flex:1;font-family:'JetBrains Mono',monospace;letter-spacing:2px;font-size:15px" oninput="this.value=this.value.toUpperCase()" onkeydown="if(event.key==='Enter')ptJoin(this.value.trim())">
             <button onclick="ptJoin(document.getElementById('pt-join-code').value.trim())" ${!state.playtestDeckId?'disabled':''} style="padding:8px 16px">Join</button>
           </div>
         </div>
+        ${renderPTSessionBrowser()}
       </div>
     </div>`;
   }
