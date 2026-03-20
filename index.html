@@ -372,8 +372,9 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 .pt-deckbar { display:flex;align-items:center;gap:10px;padding:6px 12px;background:var(--bg-surface);border-bottom:1px solid var(--border);font-size:12px;flex-shrink:0;overflow:hidden; }
 .pt-deckbar-commander { font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
 .pt-deckbar-meta { color:var(--text-muted);flex-shrink:0;font-family:'JetBrains Mono',monospace;font-size:11px; }
-.pt-battlefield { flex:1;position:relative;overflow:auto;background:#090811; }
-.pt-battlefield-canvas { position:relative;min-width:900px;min-height:620px;width:100%;height:100%;padding-bottom:110px;box-sizing:border-box; }
+.pt-battlefield { flex:1;position:relative;overflow:hidden;background:#090811;cursor:grab; }
+.pt-battlefield.pt-panning { cursor:grabbing; }
+.pt-battlefield-canvas { position:absolute;top:0;left:0;width:4000px;height:4000px; }
 .pt-drop-highlight { outline:2px dashed var(--accent);background:rgba(167,139,250,0.04) !important; }
 .pt-zone-btns { position:absolute;top:8px;right:8px;display:flex;flex-direction:column;gap:4px;z-index:10; }
 .pt-zone-btn { font-size:10px;padding:5px 9px;background:rgba(0,0,0,0.7);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-secondary);cursor:pointer;backdrop-filter:blur(4px);white-space:nowrap; }
@@ -802,6 +803,8 @@ let state = {
 const scryfallCache = {};
 const tokenDataCache = {}; // scryfallId → { scryfallId, name, imageUrl, power, toughness, typeLine, colors, oracleText }
 let ptDrag = null; // active drag: { cardId, fromZone, ghost, startX, startY, originEl }
+let ptPan = null;  // active pan: { startX, startY, origX, origY }
+let ptPanX = 0, ptPanY = 0;
 
 // ===== FIRESTORE HELPERS =====
 async function fbSaveDeck(deck) {
@@ -2969,6 +2972,7 @@ async function ptLeave() {
   state.playtestGameId = null; state.playtestGame = null; state.playtestPrivate = null;
   state.playtestViewUid = null; state.playtestDeckId = null; state.playtestCardMenu = null;
   state.playtestZoneOverlay = null; state.showPlaytester = false;
+  ptPanX = 0; ptPanY = 0; ptPan = null;
   render();
 }
 
@@ -3255,7 +3259,7 @@ function renderPTGame() {
   const gvLen = (viewedPlayer?.graveyard||[]).length;
   const exLen = (viewedPlayer?.exile||[]).length;
   const czLen = (viewedPlayer?.commandZone||[]).length;
-  const battlefieldHtml = `<div class="pt-battlefield" id="pt-battlefield" onclick="ptCloseMenu()">
+  const battlefieldHtml = `<div class="pt-battlefield" id="pt-battlefield" onclick="ptCloseMenu()" onpointerdown="ptBfPanStart(event)">
     <div class="pt-zone-btns">
       <button class="pt-zone-btn" onclick="event.stopPropagation();ptOpenZone('${viewUid}','commandZone')">⭐ ${czLen}</button>
       <button class="pt-zone-btn" data-pt-drop-zone="graveyard" onclick="event.stopPropagation();ptOpenZone('${viewUid}','graveyard')">GY ${gvLen}</button>
@@ -3263,7 +3267,7 @@ function renderPTGame() {
       ${isMyBoard ? `<button class="pt-zone-btn" onclick="event.stopPropagation();ptAdjustLife(1)" style="color:var(--tier-b-text)">♥+</button>
       <button class="pt-zone-btn" onclick="event.stopPropagation();ptAdjustLife(-1)" style="color:var(--tier-s-text)">♥−</button>` : ''}
     </div>
-    <div class="pt-battlefield-canvas" id="pt-bf-canvas">
+    <div class="pt-battlefield-canvas" id="pt-bf-canvas" style="transform:translate(${ptPanX}px,${ptPanY}px)">
       ${bf.length===0 ? `<div class="pt-bf-empty">Drag cards here from hand</div>` : ''}
       ${bf.map(card => {
         const menuOpen = state.playtestCardMenu?.cardId === card.cardId;
@@ -3832,7 +3836,17 @@ function ptHandPointerDown(e, cardId) {
   ptHandDrag = { cardId, startX: e.clientX, startY: e.clientY, moved: false };
 }
 
+function ptBfPanStart(e) {
+  if (e.button !== 0 && e.pointerType !== 'touch') return;
+  if (e.target.closest('.pt-bf-card,.pt-zone-btn,.pt-bf-empty')) return;
+  if (ptDrag || ptHandDrag) return;
+  ptPan = { startX: e.clientX, startY: e.clientY, origX: ptPanX, origY: ptPanY };
+  document.getElementById('pt-battlefield')?.classList.add('pt-panning');
+  e.preventDefault();
+}
+
 function ptPointerDown(e, cardId) {
+  e.stopPropagation(); // don't trigger ptBfPanStart
   if (e.button === 2) { ptOpenMenu(cardId, 'battlefield', e); return; }
   if (e.button !== 0 && e.pointerType !== 'touch') return;
   const uid = state.currentUser?.uid;
@@ -3862,6 +3876,14 @@ function ptPointerDown(e, cardId) {
 }
 
 document.addEventListener('pointermove', function(e) {
+  // Battlefield pan
+  if (ptPan) {
+    ptPanX = ptPan.origX + (e.clientX - ptPan.startX);
+    ptPanY = ptPan.origY + (e.clientY - ptPan.startY);
+    const canvas = document.getElementById('pt-bf-canvas');
+    if (canvas) canvas.style.transform = `translate(${ptPanX}px,${ptPanY}px)`;
+    return;
+  }
   // Hand → battlefield drag
   if (ptHandDrag) {
     const dx = e.clientX - ptHandDrag.startX;
@@ -3950,6 +3972,12 @@ document.addEventListener('pointermove', function(e) {
 });
 
 document.addEventListener('pointerup', async function(e) {
+  // Battlefield pan end
+  if (ptPan) {
+    ptPan = null;
+    document.getElementById('pt-battlefield')?.classList.remove('pt-panning');
+    return;
+  }
   // Hand → drop
   if (ptHandDrag) {
     const drag = ptHandDrag;
@@ -3976,11 +4004,9 @@ document.addEventListener('pointerup', async function(e) {
           e.clientY >= bfRect.top && e.clientY <= bfRect.bottom) {
         const canvasEl = document.getElementById('pt-bf-canvas');
         const canvasRect = canvasEl ? canvasEl.getBoundingClientRect() : bfRect;
-        const CARD_W = 72, CARD_H = 100;
-        let x = Math.max(0, e.clientX - canvasRect.left + bfEl.scrollLeft - CARD_W / 2);
-        let y = Math.max(0, e.clientY - canvasRect.top  + bfEl.scrollTop  - CARD_H / 2);
-        x = Math.min(x, bfEl.clientWidth  - CARD_W - 8);
-        y = Math.min(y, bfEl.clientHeight - CARD_H - 8);
+        const CARD_W = ptCardW(), CARD_H = Math.round(CARD_W * 88 / 63);
+        let x = Math.max(0, e.clientX - canvasRect.left - CARD_W / 2);
+        let y = Math.max(0, e.clientY - canvasRect.top  - CARD_H / 2);
         if (state.snapToGrid) { x = Math.round(x/ptCardW())*ptCardW(); y = Math.round(y/ptCardW())*ptCardW(); }
         await ptPlayCardAt(drag.cardId, x, y);
       }
@@ -5489,6 +5515,7 @@ window.ptOpenZone = ptOpenZone;
 window.ptCloseZone = ptCloseZone;
 window.ptPointerDown = ptPointerDown;
 window.ptHandPointerDown = ptHandPointerDown;
+window.ptBfPanStart = ptBfPanStart;
 window.ptZoomHover = ptZoomHover;
 window.ptZoomHide = ptZoomHide;
 window.ptHideHandPreview = ptHideHandPreview;
