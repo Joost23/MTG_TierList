@@ -399,11 +399,9 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 .pt-action-btn { font-size:12px;padding:7px 14px;white-space:nowrap;flex-shrink:0;border-radius:var(--radius-sm); }
 .pt-action-danger { color:var(--tier-s-text) !important;border-color:rgba(226,75,74,0.5) !important; }
 .pt-hand-wrap { position:relative;flex-shrink:0;width:100%; }
-.pt-hand { display:flex;gap:3px;padding:6px 8px 8px;background:transparent;border:none;overflow-x:auto;flex-shrink:0;min-height:110px;max-height:130px;scrollbar-width:none;justify-content:center; }
-.pt-hand::-webkit-scrollbar { display:none; }
-.pt-hand.fan-mode { overflow:visible;gap:0; }
-.pt-hand-card { flex-shrink:0;cursor:grab;border-radius:6px;transition:transform 0.12s ease,margin-left 0.12s ease;touch-action:none;user-select:none;position:relative; }
-.pt-hand-card.pt-hand-active { transform:translateY(-14px) scale(1.06);z-index:60; }
+.pt-hand { display:flex;gap:3px;padding:6px 8px 8px;background:transparent;border:none;overflow:visible;flex-shrink:0;min-height:110px;max-height:130px;scrollbar-width:none;justify-content:center; }
+.pt-hand.fan-mode { gap:0; }
+.pt-hand-card { flex-shrink:0;cursor:grab;border-radius:6px;transition:transform 0.16s cubic-bezier(0.34,1.56,0.64,1),margin-left 0.12s ease;touch-action:none;user-select:none;position:relative; }
 .pt-hand.fan-mode .pt-hand-card.pt-hand-active { margin-left:8px !important;margin-right:8px; }
 .pt-hand-card.pt-dragging-src { opacity:0.3; }
 .pt-hand-card.pt-hand-reorder-target::before { content:'';position:absolute;left:-3px;top:0;bottom:0;width:3px;background:var(--accent);border-radius:2px;z-index:5; }
@@ -3079,7 +3077,7 @@ async function ptTapCard(cardId) {
   ptCloseMenu();
 }
 
-async function ptMoveCard(cardId, fromZone, toZone) {
+async function ptMoveCard(cardId, fromZone, toZone, opts = {}) {
   const uid = state.currentUser?.uid;
   const player = state.playtestGame?.players?.[uid];
   const priv = state.playtestPrivate;
@@ -3115,8 +3113,15 @@ async function ptMoveCard(cardId, fromZone, toZone) {
     card = { ...card, ...ptDefaultPos(existingBf) };
   }
   if (PRIV.includes(toZone)) {
-    if (toZone === 'library') newPriv.library = [card, ...newPriv.library];
-    else newPriv[toZone] = [...newPriv[toZone], card];
+    if (toZone === 'library') {
+      newPriv.library = [card, ...newPriv.library];
+    } else if (toZone === 'hand' && opts.insertBefore != null) {
+      const h = [...newPriv.hand];
+      h.splice(opts.insertBefore, 0, card);
+      newPriv.hand = h;
+    } else {
+      newPriv[toZone] = [...newPriv[toZone], card];
+    }
   } else {
     const existing = pubUp[`players.${uid}.${toZone}`] || [...(player[toZone] || [])];
     pubUp[`players.${uid}.${toZone}`] = [...existing, card];
@@ -3668,46 +3673,31 @@ function ptGetOrCreatePreview() {
 }
 
 function ptHideHandPreview() {
-  if (ptHandPreviewEl) { ptHandPreviewEl.style.opacity = '0'; setTimeout(() => { if (ptHandPreviewEl) ptHandPreviewEl.style.display = 'none'; }, 100); }
-  document.querySelectorAll('.pt-hand-card.pt-hand-active').forEach(c => c.classList.remove('pt-hand-active'));
+  document.querySelectorAll('.pt-hand-card').forEach(c => { c.style.transform = ''; c.style.zIndex = ''; });
 }
 
 function ptInitHandHover() {
   const hand = document.querySelector('.pt-hand');
   if (!hand) return;
-  const wrap = hand.closest('.pt-hand-wrap') || hand;
   hand.addEventListener('pointermove', function(e) {
     if (ptHandDrag || ptDrag) return;
     const cards = Array.from(this.querySelectorAll('.pt-hand-card'));
     if (!cards.length) return;
-    // Use actual rendered card positions — works for both centered and fan layouts
+    // Determine hovered card by actual rendered positions
     let idx = 0;
     for (let i = 0; i < cards.length; i++) {
       const cr = cards[i].getBoundingClientRect();
       if (e.clientX >= cr.left - 2) idx = i;
       else break;
     }
-    cards.forEach((c, i) => c.classList.toggle('pt-hand-active', i === idx));
-    const card = cards[idx];
-    const img = card.querySelector('img');
-    if (!img || !img.src || img.src === window.location.href) return;
-    const previewW = Math.round(hw * 2.8);
-    const previewH = Math.round(previewW * 88 / 63);
-    const cardRect = card.getBoundingClientRect();
-    const wrapRect = wrap.getBoundingClientRect();
-    const vw = window.innerWidth;
-    let left = cardRect.left + cardRect.width / 2 - previewW / 2;
-    let top = wrapRect.top - previewH - 10;
-    left = Math.max(8, Math.min(left, vw - previewW - 8));
-    top = Math.max(8, top);
-    const el = ptGetOrCreatePreview();
-    const previewImg = el.querySelector('img');
-    if (previewImg.src !== img.src) previewImg.src = img.src;
-    el.style.width = previewW + 'px';
-    el.style.left = left + 'px';
-    el.style.top = top + 'px';
-    el.style.display = 'block';
-    requestAnimationFrame(() => { if (el) el.style.opacity = '1'; });
+    // Apply Arena-style wave: scale falls off with distance from hovered card
+    cards.forEach((c, i) => {
+      const dist = Math.abs(i - idx);
+      if (dist === 0)      { c.style.transform = 'translateY(-24px) scale(1.55)'; c.style.zIndex = '60'; }
+      else if (dist === 1) { c.style.transform = 'translateY(-10px) scale(1.14)'; c.style.zIndex = '50'; }
+      else if (dist === 2) { c.style.transform = 'translateY(-3px) scale(1.04)';  c.style.zIndex = '40'; }
+      else                 { c.style.transform = '';                               c.style.zIndex = ''; }
+    });
   });
   hand.addEventListener('pointerleave', ptHideHandPreview);
 }
@@ -4037,12 +4027,42 @@ document.addEventListener('pointermove', function(e) {
     ptDrag.moved = true;
     if (ptDrag.longPressTimer) { clearTimeout(ptDrag.longPressTimer); ptDrag.longPressTimer = null; }
     state.playtestCardMenu = null;
+    ptHideHandPreview(); // clear any wave state on hand cards
   }
   // Highlight zone buttons for bf drag
   document.querySelectorAll('[data-pt-drop-zone]').forEach(btn => {
     const r = btn.getBoundingClientRect();
     btn.classList.toggle('pt-drop-hover', e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom);
   });
+  // Hand insert indicator while dragging bf card over hand
+  const handElBf = document.querySelector('.pt-hand');
+  document.querySelectorAll('.pt-hand-reorder-target,.pt-hand-reorder-end').forEach(c => c.classList.remove('pt-hand-reorder-target','pt-hand-reorder-end'));
+  if (handElBf && ptDrag.moved) {
+    const hr = handElBf.getBoundingClientRect();
+    const overHand = e.clientY >= hr.top - 30 && e.clientY <= hr.bottom + 30
+                  && e.clientX >= hr.left && e.clientX <= hr.right + 40;
+    if (overHand) {
+      const handCards = Array.from(handElBf.querySelectorAll('.pt-hand-card'));
+      let insertBefore = null;
+      let marked = false;
+      for (const hc of handCards) {
+        const cr = hc.getBoundingClientRect();
+        if (e.clientX < cr.left + cr.width / 2) {
+          insertBefore = parseInt(hc.dataset.handIdx);
+          hc.classList.add('pt-hand-reorder-target');
+          marked = true;
+          break;
+        }
+      }
+      if (!marked) {
+        const last = [...handCards].reverse()[0];
+        if (last) last.classList.add('pt-hand-reorder-end');
+      }
+      ptDrag.handInsertBefore = insertBefore;
+    } else {
+      ptDrag.handInsertBefore = undefined;
+    }
+  }
   let newX = Math.max(0, ptDrag.origCardX + dx / ptScale);
   let newY = Math.max(0, ptDrag.origCardY + dy / ptScale);
   if (state.snapToGrid) {
@@ -4145,6 +4165,7 @@ document.addEventListener('pointerup', async function(e) {
   const drag = ptDrag;
   ptDrag = null;
   document.querySelectorAll('[data-pt-drop-zone]').forEach(b => b.classList.remove('pt-drop-hover'));
+  document.querySelectorAll('.pt-hand-reorder-target,.pt-hand-reorder-end').forEach(c => c.classList.remove('pt-hand-reorder-target','pt-hand-reorder-end'));
   if (!drag.moved) {
     if (drag.longPressTimer) clearTimeout(drag.longPressTimer);
     if (!drag.isLongPress) await ptTapCard(drag.cardId);
@@ -4166,7 +4187,7 @@ document.addEventListener('pointerup', async function(e) {
     if (e.clientX >= hr.left && e.clientX <= hr.right && e.clientY >= hr.top && e.clientY <= hr.bottom) {
       const el2 = document.querySelector(`[data-card-id="${drag.cardId}"]`);
       if (el2) el2.classList.remove('pt-dragging-src');
-      await ptMoveCard(drag.cardId, 'battlefield', 'hand');
+      await ptMoveCard(drag.cardId, 'battlefield', 'hand', { insertBefore: drag.handInsertBefore });
       return;
     }
   }
