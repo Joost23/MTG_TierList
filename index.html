@@ -372,9 +372,9 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 .pt-deckbar { display:flex;align-items:center;gap:10px;padding:6px 12px;background:var(--bg-surface);border-bottom:1px solid var(--border);font-size:12px;flex-shrink:0;overflow:hidden; }
 .pt-deckbar-commander { font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
 .pt-deckbar-meta { color:var(--text-muted);flex-shrink:0;font-family:'JetBrains Mono',monospace;font-size:11px; }
-.pt-battlefield { flex:1;position:relative;overflow:hidden;background:#090811;cursor:grab; }
+.pt-battlefield { flex:1;position:relative;overflow:hidden;background:#090811;cursor:grab;touch-action:none; }
 .pt-battlefield.pt-panning { cursor:grabbing; }
-.pt-battlefield-canvas { position:absolute;top:0;left:0;width:4000px;height:4000px; }
+.pt-battlefield-canvas { position:absolute;top:0;left:0;width:4000px;height:4000px;transform-origin:0 0; }
 .pt-drop-highlight { outline:2px dashed var(--accent);background:rgba(167,139,250,0.04) !important; }
 .pt-zone-btns { position:absolute;top:8px;right:8px;display:flex;flex-direction:column;gap:4px;z-index:10; }
 .pt-zone-btn { font-size:10px;padding:5px 9px;background:rgba(0,0,0,0.7);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-secondary);cursor:pointer;backdrop-filter:blur(4px);white-space:nowrap; }
@@ -804,7 +804,9 @@ const scryfallCache = {};
 const tokenDataCache = {}; // scryfallId → { scryfallId, name, imageUrl, power, toughness, typeLine, colors, oracleText }
 let ptDrag = null; // active drag: { cardId, fromZone, ghost, startX, startY, originEl }
 let ptPan = null;  // active pan: { startX, startY, origX, origY }
-let ptPanX = 0, ptPanY = 0;
+let ptPanX = 0, ptPanY = 0, ptScale = 1.0;
+let ptPinch = null; // active pinch: { startDist, startScale, canvasX, canvasY }
+const ptTouches = new Map(); // pointerId → {x,y} for pinch tracking
 
 // ===== FIRESTORE HELPERS =====
 async function fbSaveDeck(deck) {
@@ -2972,7 +2974,7 @@ async function ptLeave() {
   state.playtestGameId = null; state.playtestGame = null; state.playtestPrivate = null;
   state.playtestViewUid = null; state.playtestDeckId = null; state.playtestCardMenu = null;
   state.playtestZoneOverlay = null; state.showPlaytester = false;
-  ptPanX = 0; ptPanY = 0; ptPan = null;
+  ptPanX = 0; ptPanY = 0; ptScale = 1.0; ptPan = null; ptPinch = null; ptTouches.clear();
   render();
 }
 
@@ -3267,7 +3269,7 @@ function renderPTGame() {
       ${isMyBoard ? `<button class="pt-zone-btn" onclick="event.stopPropagation();ptAdjustLife(1)" style="color:var(--tier-b-text)">♥+</button>
       <button class="pt-zone-btn" onclick="event.stopPropagation();ptAdjustLife(-1)" style="color:var(--tier-s-text)">♥−</button>` : ''}
     </div>
-    <div class="pt-battlefield-canvas" id="pt-bf-canvas" style="transform:translate(${ptPanX}px,${ptPanY}px)">
+    <div class="pt-battlefield-canvas" id="pt-bf-canvas" style="transform:translate(${ptPanX}px,${ptPanY}px) scale(${ptScale})">
       ${bf.length===0 ? `<div class="pt-bf-empty">Drag cards here from hand</div>` : ''}
       ${bf.map(card => {
         const menuOpen = state.playtestCardMenu?.cardId === card.cardId;
@@ -3405,12 +3407,7 @@ function renderPTSettings(mullCount) {
   const sz = state.ptCardSize || 'M';
   // Position the popover above the gear button (bottom of action bar)
   return `<div class="pt-settings-popover" style="bottom:${document.querySelector('.pt-hand')?.offsetHeight||130}px;right:8px;z-index:499" onclick="event.stopPropagation()">
-    <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Card Size</div>
-    <div class="pt-settings-row">
-      <button class="pt-size-btn${sz==='S'?' active':''}" onclick="ptSetSize('S')">S</button>
-      <button class="pt-size-btn${sz==='M'?' active':''}" onclick="ptSetSize('M')">M</button>
-      <button class="pt-size-btn${sz==='L'?' active':''}" onclick="ptSetSize('L')">L</button>
-    </div>
+    <button class="pt-action-btn" onclick="ptResetZoom()" style="width:100%;margin-bottom:8px">Reset Zoom</button>
     <label><input type="checkbox" ${state.snapToGrid?'checked':''} onchange="state.snapToGrid=this.checked;render()"> Snap to grid</label>
     <hr class="pt-settings-divider">
     <button class="pt-action-btn" onclick="ptMulligan();state.playtestSettings=false;render()" style="width:100%;margin-bottom:4px">Mulligan${mullCount>0?` (→${Math.max(7-mullCount,0)})`:''}</button>
@@ -3613,6 +3610,12 @@ const PT_SIZES = { S:{bf:56,hand:72}, M:{bf:76,hand:90}, L:{bf:100,hand:120} };
 function ptCardW() { return (PT_SIZES[state.ptCardSize] || PT_SIZES.M).bf; }
 function ptHandW() { return (PT_SIZES[state.ptCardSize] || PT_SIZES.M).hand; }
 function ptSetSize(sz) { state.ptCardSize = sz; localStorage.setItem('ptCardSize', sz); state.playtestSettings = false; render(); }
+function ptResetZoom() {
+  ptScale = 1.0; ptPanX = 0; ptPanY = 0;
+  const canvas = document.getElementById('pt-bf-canvas');
+  if (canvas) canvas.style.transform = `translate(0px,0px) scale(1)`;
+  state.playtestSettings = false; render();
+}
 function ptToggleSettings() { state.playtestSettings = !state.playtestSettings; render(); }
 
 // ── Zoom preview ───────────────────────────────────────
@@ -3836,8 +3839,42 @@ function ptHandPointerDown(e, cardId) {
   ptHandDrag = { cardId, startX: e.clientX, startY: e.clientY, moved: false };
 }
 
+function applyScale(factor, originX, originY) {
+  const newScale = Math.max(0.25, Math.min(4, ptScale * factor));
+  ptPanX = originX - ((originX - ptPanX) / ptScale) * newScale;
+  ptPanY = originY - ((originY - ptPanY) / ptScale) * newScale;
+  ptScale = newScale;
+  const canvas = document.getElementById('pt-bf-canvas');
+  if (canvas) canvas.style.transform = `translate(${ptPanX}px,${ptPanY}px) scale(${ptScale})`;
+}
+
 function ptBfPanStart(e) {
   if (e.button !== 0 && e.pointerType !== 'touch') return;
+  if (e.pointerType === 'touch') {
+    ptTouches.set(e.pointerId, {x: e.clientX, y: e.clientY});
+    if (ptTouches.size >= 2) {
+      // Two fingers down — switch to pinch
+      ptPan = null;
+      document.getElementById('pt-battlefield')?.classList.remove('pt-panning');
+      const pts = [...ptTouches.values()];
+      const midX = (pts[0].x + pts[1].x) / 2;
+      const midY = (pts[0].y + pts[1].y) / 2;
+      ptPinch = {
+        startDist: Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y),
+        startScale: ptScale,
+        canvasX: (midX - ptPanX) / ptScale,
+        canvasY: (midY - ptPanY) / ptScale,
+      };
+      return;
+    }
+    // Single touch on empty space — pan
+    if (!e.target.closest('.pt-bf-card,.pt-zone-btn') && !ptDrag && !ptHandDrag) {
+      ptPan = { startX: e.clientX, startY: e.clientY, origX: ptPanX, origY: ptPanY };
+      document.getElementById('pt-battlefield')?.classList.add('pt-panning');
+    }
+    return;
+  }
+  // Mouse: pan on empty space
   if (e.target.closest('.pt-bf-card,.pt-zone-btn,.pt-bf-empty')) return;
   if (ptDrag || ptHandDrag) return;
   ptPan = { startX: e.clientX, startY: e.clientY, origX: ptPanX, origY: ptPanY };
@@ -3876,12 +3913,30 @@ function ptPointerDown(e, cardId) {
 }
 
 document.addEventListener('pointermove', function(e) {
+  // Pinch zoom (touch)
+  if (ptPinch && e.pointerType === 'touch' && ptTouches.has(e.pointerId)) {
+    ptTouches.set(e.pointerId, {x: e.clientX, y: e.clientY});
+    if (ptTouches.size >= 2) {
+      const pts = [...ptTouches.values()];
+      const newDist = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
+      const midX = (pts[0].x + pts[1].x) / 2;
+      const midY = (pts[0].y + pts[1].y) / 2;
+      const newScale = Math.max(0.25, Math.min(4, ptPinch.startScale * (newDist / ptPinch.startDist)));
+      ptPanX = midX - ptPinch.canvasX * newScale;
+      ptPanY = midY - ptPinch.canvasY * newScale;
+      ptScale = newScale;
+      const canvas = document.getElementById('pt-bf-canvas');
+      if (canvas) canvas.style.transform = `translate(${ptPanX}px,${ptPanY}px) scale(${ptScale})`;
+    }
+    return;
+  }
   // Battlefield pan
   if (ptPan) {
+    if (e.pointerType === 'touch') ptTouches.set(e.pointerId, {x: e.clientX, y: e.clientY});
     ptPanX = ptPan.origX + (e.clientX - ptPan.startX);
     ptPanY = ptPan.origY + (e.clientY - ptPan.startY);
     const canvas = document.getElementById('pt-bf-canvas');
-    if (canvas) canvas.style.transform = `translate(${ptPanX}px,${ptPanY}px)`;
+    if (canvas) canvas.style.transform = `translate(${ptPanX}px,${ptPanY}px) scale(${ptScale})`;
     return;
   }
   // Hand → battlefield drag
@@ -3911,17 +3966,16 @@ document.addEventListener('pointermove', function(e) {
       let ghostX = e.clientX, ghostY = e.clientY;
       if (state.snapToGrid) {
         const canvasEl = document.getElementById('pt-bf-canvas');
-        const bfEl2b = document.getElementById('pt-battlefield');
-        if (canvasEl && bfEl2b) {
+        if (canvasEl) {
           const cr = canvasEl.getBoundingClientRect();
           const cw = ptCardW();
           const ch = Math.round(cw * 88 / 63);
-          let sx = e.clientX - cr.left + bfEl2b.scrollLeft - cw / 2;
-          let sy = e.clientY - cr.top  + bfEl2b.scrollTop  - ch / 2;
+          let sx = (e.clientX - cr.left) / ptScale - cw / 2;
+          let sy = (e.clientY - cr.top)  / ptScale - ch / 2;
           sx = Math.round(sx / cw) * cw;
           sy = Math.round(sy / cw) * cw;
-          ghostX = cr.left - bfEl2b.scrollLeft + sx + cw / 2;
-          ghostY = cr.top  - bfEl2b.scrollTop  + sy + ch / 2;
+          ghostX = cr.left + (sx + cw / 2) * ptScale;
+          ghostY = cr.top  + (sy + ch / 2) * ptScale;
         }
       }
       ptHandDragGhost.style.left = ghostX + 'px';
@@ -3956,8 +4010,8 @@ document.addEventListener('pointermove', function(e) {
     const r = btn.getBoundingClientRect();
     btn.classList.toggle('pt-drop-hover', e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom);
   });
-  let newX = Math.max(0, ptDrag.origCardX + dx);
-  let newY = Math.max(0, ptDrag.origCardY + dy);
+  let newX = Math.max(0, ptDrag.origCardX + dx / ptScale);
+  let newY = Math.max(0, ptDrag.origCardY + dy / ptScale);
   if (state.snapToGrid) {
     const cw = ptCardW();
     newX = Math.round(newX / cw) * cw;
@@ -3971,9 +4025,28 @@ document.addEventListener('pointermove', function(e) {
   }
 });
 
+function ptCleanupTouch(pointerId) {
+  ptTouches.delete(pointerId);
+  if (ptTouches.size < 2) ptPinch = null;
+  if (ptTouches.size === 0) {
+    ptPan = null;
+    document.getElementById('pt-battlefield')?.classList.remove('pt-panning');
+  }
+}
+
+document.addEventListener('pointercancel', function(e) {
+  if (e.pointerType === 'touch') ptCleanupTouch(e.pointerId);
+});
+
 document.addEventListener('pointerup', async function(e) {
+  // Touch cleanup
+  if (e.pointerType === 'touch') {
+    const wasPinching = !!ptPinch;
+    ptCleanupTouch(e.pointerId);
+    if (wasPinching) return; // pinch-end, not a tap
+  }
   // Battlefield pan end
-  if (ptPan) {
+  if (ptPan && e.pointerType !== 'touch') {
     ptPan = null;
     document.getElementById('pt-battlefield')?.classList.remove('pt-panning');
     return;
@@ -4005,8 +4078,8 @@ document.addEventListener('pointerup', async function(e) {
         const canvasEl = document.getElementById('pt-bf-canvas');
         const canvasRect = canvasEl ? canvasEl.getBoundingClientRect() : bfRect;
         const CARD_W = ptCardW(), CARD_H = Math.round(CARD_W * 88 / 63);
-        let x = Math.max(0, e.clientX - canvasRect.left - CARD_W / 2);
-        let y = Math.max(0, e.clientY - canvasRect.top  - CARD_H / 2);
+        let x = Math.max(0, (e.clientX - canvasRect.left) / ptScale - CARD_W / 2);
+        let y = Math.max(0, (e.clientY - canvasRect.top)  / ptScale - CARD_H / 2);
         if (state.snapToGrid) { x = Math.round(x/ptCardW())*ptCardW(); y = Math.round(y/ptCardW())*ptCardW(); }
         await ptPlayCardAt(drag.cardId, x, y);
       }
@@ -5516,10 +5589,22 @@ window.ptCloseZone = ptCloseZone;
 window.ptPointerDown = ptPointerDown;
 window.ptHandPointerDown = ptHandPointerDown;
 window.ptBfPanStart = ptBfPanStart;
+
+// Scroll-to-zoom on battlefield (also handles trackpad pinch via ctrlKey+wheel)
+document.addEventListener('wheel', function(e) {
+  const bfEl = document.getElementById('pt-battlefield');
+  if (!bfEl) return;
+  const r = bfEl.getBoundingClientRect();
+  if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) return;
+  e.preventDefault();
+  const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
+  applyScale(factor, e.clientX, e.clientY);
+}, { passive: false });
 window.ptZoomHover = ptZoomHover;
 window.ptZoomHide = ptZoomHide;
 window.ptHideHandPreview = ptHideHandPreview;
 window.ptSetSize = ptSetSize;
+window.ptResetZoom = ptResetZoom;
 window.ptToggleSettings = ptToggleSettings;
 window.ptPlayCardAt = ptPlayCardAt;
 window.ptCreateToken = ptCreateToken;
