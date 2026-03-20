@@ -2099,7 +2099,7 @@ function groupCardsByType(cards, commanderName) {
   const groups = {};
   TYPE_ORDER.forEach(t => groups[t] = []);
   cards.forEach(c => {
-    const cached = scryfallCache[c.name.toLowerCase()];
+    const cached = scryfallCache[scryfallKey(c.name)];
     const typeLine = cached ? cached.typeLine : null;
     const group = getCardGroup(c.name, typeLine, commanderName);
     groups[group].push(c);
@@ -2119,7 +2119,7 @@ function renderTypeGroupText(cards, commanderName) {
       <div class="dl-group-header">${typeLabel} <span class="dl-group-count">(${total})</span></div>
       <div class="dl-group-entries">`;
     group.forEach(c => {
-      const cached = scryfallCache[c.name.toLowerCase()];
+      const cached = scryfallCache[scryfallKey(c.name)];
       const cost = cached ? escHtml(cached.manaCost || '') : '';
       html += `<div class="dl-entry">
         <span class="dl-entry-qty">${c.qty}</span>
@@ -2161,7 +2161,7 @@ function renderTypeGroupImages(cards, commanderName) {
     html += `<div class="dl-group-header" style="margin:18px 0 8px">${label} <span class="dl-group-count">(${total})</span></div>`;
     html += '<div class="dl-image-grid">';
     group.forEach(c => {
-      const cached = scryfallCache[c.name.toLowerCase()];
+      const cached = scryfallCache[scryfallKey(c.name)];
       const imgFront = cached?.imageUrl || '';
       const imgBack = cached?.imageUrlBack || '';
       const isDFC = !!(cached?.isDoubleFaced && imgBack);
@@ -2210,10 +2210,15 @@ function renderImageGrid(sections, deck) {
   return html;
 }
 
+// Normalize card names for cache keys — collapses Unicode apostrophe variants to straight '
+function scryfallKey(name) {
+  return name.toLowerCase().replace(/[\u2018\u2019\u02bc\u02b9\u02bb\u2032\u0060\u00b4]/g, "'");
+}
+
 async function fetchScryfallBatch(cards) {
   // Accept array of card objects {name, set?, collectorNumber?} or plain name strings
   const normalized = cards.map(c => typeof c === 'string' ? { name: c } : c);
-  const uncached = normalized.filter(c => !(c.name.toLowerCase() in scryfallCache));
+  const uncached = normalized.filter(c => !(scryfallKey(c.name) in scryfallCache));
   if (!uncached.length) return;
   const batches = [];
   for (let i = 0; i < uncached.length; i += 75) batches.push(uncached.slice(i, i + 75));
@@ -2223,7 +2228,8 @@ async function fetchScryfallBatch(cards) {
       // Use set+collectorNumber when available for exact printing; fall back to name
       const identifiers = batches[i].map(c => {
         if (c.set && c.collectorNumber) return { set: c.set.toLowerCase(), collector_number: String(c.collectorNumber) };
-        const name = c.name.includes(' // ') ? c.name.split(' // ')[0].trim() : c.name;
+        // Normalize apostrophes so Scryfall exact-matches names like Be'lakor correctly
+        const name = scryfallKey(c.name.includes(' // ') ? c.name.split(' // ')[0].trim() : c.name);
         return { name };
       });
       const res = await fetch("https://api.scryfall.com/cards/collection", {
@@ -2251,20 +2257,21 @@ async function fetchScryfallBatch(cards) {
           colors: card.colors || card.card_faces?.[0]?.colors || [],
           tokenIds: (card.all_parts || []).filter(p => p.component === 'token').map(p => p.id),
         };
-        scryfallCache[card.name.toLowerCase()] = cacheEntry;
+        scryfallCache[scryfallKey(card.name)] = cacheEntry;
         if (card.card_faces?.[0]?.name) {
-          scryfallCache[card.card_faces[0].name.toLowerCase()] = cacheEntry;
+          scryfallCache[scryfallKey(card.card_faces[0].name)] = cacheEntry;
         }
       });
       // Mark any still-uncached cards as null (not found / invalid set+collnum)
       batches[i].forEach(c => {
-        if (!(c.name.toLowerCase() in scryfallCache)) scryfallCache[c.name.toLowerCase()] = null;
+        const key = scryfallKey(c.name);
+        if (!(key in scryfallCache)) scryfallCache[key] = null;
       });
       // Back-fill DFC names (e.g. "Bloodline Keeper // Lord of Lineage") from front-face cache
       batches[i].forEach(c => {
-        const key = c.name.toLowerCase();
+        const key = scryfallKey(c.name);
         if (scryfallCache[key] === null && c.name.includes(' // ')) {
-          const frontKey = c.name.split(' // ')[0].trim().toLowerCase();
+          const frontKey = scryfallKey(c.name.split(' // ')[0].trim());
           if (scryfallCache[frontKey]) scryfallCache[key] = scryfallCache[frontKey];
         }
       });
@@ -2311,7 +2318,7 @@ async function loadAndRenderImages(deckId) {
   const sects = parseDecklistSections(deck.decklist);
   const cards = [...sects.main, ...sects.sideboard, ...sects.maybeboard];
   if (!cards.length) { render(); return; }
-  const hasUncached = cards.some(c => !(c.name.toLowerCase() in scryfallCache));
+  const hasUncached = cards.some(c => !(scryfallKey(c.name) in scryfallCache));
   if (hasUncached) {
     state.decklistImportStatus = "loading-images";
     render();
@@ -2329,7 +2336,7 @@ function getDeckTokens(deckId) {
   const tokenIds = new Set();
   const sourceMap = {}; // tokenId → [cardName, ...]
   cards.forEach(c => {
-    const cached = scryfallCache[c.name.toLowerCase()];
+    const cached = scryfallCache[scryfallKey(c.name)];
     if (!cached) return;
     (cached.tokenIds || []).forEach(id => {
       tokenIds.add(id);
@@ -2506,7 +2513,7 @@ function getManaDistribution(cards, commanderName) {
   const buckets = { '0': 0, '1': 0, '2': 0, '3': 0, '4': 0, '5': 0, '6': 0, '7+': 0 };
   cards.forEach(c => {
     if (c.name === commanderName) return;
-    const cached = scryfallCache[c.name.toLowerCase()];
+    const cached = scryfallCache[scryfallKey(c.name)];
     if (!cached) return;
     if ((cached.typeLine || '').includes('Land')) return;
     const cmc = Math.floor(cached.cmc ?? 0);
@@ -2520,7 +2527,7 @@ function getTypeDistribution(cards, commanderName) {
   const counts = { Creature: 0, Instant: 0, Sorcery: 0, Enchantment: 0, Artifact: 0, Planeswalker: 0, Land: 0, Other: 0 };
   cards.forEach(c => {
     if (c.name === commanderName) return;
-    const cached = scryfallCache[c.name.toLowerCase()];
+    const cached = scryfallCache[scryfallKey(c.name)];
     const tl = cached?.typeLine || '';
     const qty = c.qty || 1;
     if (tl.includes('Creature')) counts.Creature += qty;
@@ -2539,7 +2546,7 @@ function getColorDistribution(cards, commanderName) {
   const counts = { W: 0, U: 0, B: 0, R: 0, G: 0, C: 0 };
   cards.forEach(c => {
     if (c.name === commanderName) return;
-    const cached = scryfallCache[c.name.toLowerCase()];
+    const cached = scryfallCache[scryfallKey(c.name)];
     if (!cached) return;
     if ((cached.typeLine || '').includes('Land')) return;
     const colors = cached.colors || [];
@@ -2551,7 +2558,7 @@ function getColorDistribution(cards, commanderName) {
 }
 
 function renderDeckStats(cards, deck) {
-  const hasData = cards.some(c => scryfallCache[c.name.toLowerCase()]);
+  const hasData = cards.some(c => scryfallCache[scryfallKey(c.name)]);
   if (!hasData) {
     return `<div style="text-align:center;padding:32px 20px;color:var(--text-muted);font-size:13px">
       No card data yet — import a decklist first, then switch to Images view to load stats.
@@ -2626,7 +2633,7 @@ function renderDeckDetail(deck) {
   const sections = parseDecklistSections(deck.decklist);
   const cards = sections.main; // used for stats
   const totalCards = sections.main.reduce((s, c) => {
-    const tl = scryfallCache[c.name.toLowerCase()]?.typeLine || '';
+    const tl = scryfallCache[scryfallKey(c.name)]?.typeLine || '';
     return tl.startsWith('Token') ? s : s + c.qty;
   }, 0);
 
@@ -2832,7 +2839,7 @@ function deckToCardObjects(deck) {
   const sections = parseDecklistSections(deck.decklist || '');
   const cards = [];
   sections.main.forEach(c => {
-    const cached = scryfallCache[c.name.toLowerCase()] || scryfallCache[c.name.split(' // ')[0].trim().toLowerCase()];
+    const cached = scryfallCache[scryfallKey(c.name)] || scryfallCache[scryfallKey(c.name.split(' // ')[0].trim())];
     for (let i = 0; i < (c.qty || 1); i++) {
       cards.push({
         cardId: genId(),
@@ -2926,7 +2933,7 @@ async function ptStart() {
       const sections = parseDecklistSections(deck.decklist || '');
       return [...sections.main, ...sections.sideboard, ...sections.maybeboard];
     });
-    const uncached = allCardNames.filter(c => !(c.name.toLowerCase() in scryfallCache));
+    const uncached = allCardNames.filter(c => !(scryfallKey(c.name) in scryfallCache));
     if (uncached.length) {
       state.playtestLoading = `Fetching card art… (${uncached.length} cards)`;
       render();
