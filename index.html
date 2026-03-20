@@ -380,13 +380,13 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 .pt-zone-btn:hover,.pt-zone-btn.drop-target,.pt-zone-btn.pt-drop-hover { background:var(--accent-dim);color:#fff;border-color:var(--accent);transform:scale(1.1); }
 .pt-battlefield.pt-drop-active .pt-battlefield-canvas { outline:2px dashed var(--accent);outline-offset:-2px;background:rgba(167,139,250,0.04); }
 .pt-bf-empty { position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:13px;pointer-events:none; }
-.pt-bf-card { position:absolute;cursor:grab;border-radius:5px;transition:transform 0.12s ease,filter 0.15s,box-shadow 0.15s;touch-action:none;user-select:none;transform-origin:center bottom; }
+.pt-bf-card { position:absolute;cursor:grab;border-radius:5px;transition:transform 0.12s ease,filter 0.15s,box-shadow 0.15s;touch-action:none;user-select:none;transform-origin:center center; }
 .pt-bf-card:active { cursor:grabbing; }
-.pt-bf-card.pt-dragging-src { opacity:0.3; }
+.pt-bf-card.pt-dragging-src { opacity:0.3;transform:none !important;transition:none;z-index:100; }
 .pt-bf-card:hover { transform:scale(2.8);z-index:50;transition:transform 0.12s ease 0.1s,filter 0.15s; }
 .pt-tapped { transform:rotate(90deg); }
-.pt-tapped.pt-bf-card { transform:rotate(90deg) translateY(-10px); }
-.pt-tapped.pt-bf-card:hover { transform:rotate(90deg) translateY(-10px) scale(2.8);z-index:50; }
+.pt-tapped.pt-bf-card { transform:rotate(90deg); }
+.pt-tapped.pt-bf-card:hover { transform:rotate(90deg) scale(2.8);z-index:50; }
 .pt-card-selected { outline:2px solid var(--accent);outline-offset:2px; }
 .pt-card-back { width:72px;height:100px;background:linear-gradient(135deg,#1a1535,#0d0b1a);border:1px solid var(--border);border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--text-muted);text-align:center;padding:4px;word-break:break-word; }
 .pt-hand-card-back { width:90px;height:126px;background:linear-gradient(135deg,#1a1535,#0d0b1a);border:1px solid var(--border);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--text-muted);text-align:center;padding:6px;word-break:break-word; }
@@ -397,8 +397,8 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 .pt-action-bar::-webkit-scrollbar { display:none; }
 .pt-action-btn { font-size:12px;padding:7px 14px;white-space:nowrap;flex-shrink:0;border-radius:var(--radius-sm); }
 .pt-action-danger { color:var(--tier-s-text) !important;border-color:rgba(226,75,74,0.5) !important; }
-.pt-hand-wrap { position:relative;flex-shrink:0; }
-.pt-hand { display:flex;gap:3px;padding:6px 8px 8px;background:transparent;border:none;overflow-x:auto;flex-shrink:0;min-height:110px;max-height:130px;scrollbar-width:none; }
+.pt-hand-wrap { position:relative;flex-shrink:0;width:100%; }
+.pt-hand { display:flex;gap:3px;padding:6px 8px 8px;background:transparent;border:none;overflow-x:auto;flex-shrink:0;min-height:110px;max-height:130px;scrollbar-width:none;justify-content:center; }
 .pt-hand::-webkit-scrollbar { display:none; }
 .pt-hand.fan-mode { overflow:visible;gap:0; }
 .pt-hand-card { flex-shrink:0;cursor:grab;border-radius:6px;transition:transform 0.12s ease,margin-left 0.12s ease;touch-action:none;user-select:none;position:relative; }
@@ -3886,8 +3886,24 @@ document.addEventListener('pointermove', function(e) {
       if (srcEl) srcEl.classList.add('pt-dragging-src');
     }
     if (ptHandDragGhost) {
-      ptHandDragGhost.style.left = e.clientX + 'px';
-      ptHandDragGhost.style.top = e.clientY + 'px';
+      let ghostX = e.clientX, ghostY = e.clientY;
+      if (state.snapToGrid) {
+        const canvasEl = document.getElementById('pt-bf-canvas');
+        const bfEl2b = document.getElementById('pt-battlefield');
+        if (canvasEl && bfEl2b) {
+          const cr = canvasEl.getBoundingClientRect();
+          const cw = ptCardW();
+          const ch = Math.round(cw * 88 / 63);
+          let sx = e.clientX - cr.left + bfEl2b.scrollLeft - cw / 2;
+          let sy = e.clientY - cr.top  + bfEl2b.scrollTop  - ch / 2;
+          sx = Math.round(sx / cw) * cw;
+          sy = Math.round(sy / cw) * cw;
+          ghostX = cr.left - bfEl2b.scrollLeft + sx + cw / 2;
+          ghostY = cr.top  - bfEl2b.scrollTop  + sy + ch / 2;
+        }
+      }
+      ptHandDragGhost.style.left = ghostX + 'px';
+      ptHandDragGhost.style.top = ghostY + 'px';
     }
     // Highlight battlefield
     const bfEl2 = document.getElementById('pt-battlefield');
@@ -3918,8 +3934,13 @@ document.addEventListener('pointermove', function(e) {
     const r = btn.getBoundingClientRect();
     btn.classList.toggle('pt-drop-hover', e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom);
   });
-  const newX = Math.max(0, ptDrag.origCardX + dx);
-  const newY = Math.max(0, ptDrag.origCardY + dy);
+  let newX = Math.max(0, ptDrag.origCardX + dx);
+  let newY = Math.max(0, ptDrag.origCardY + dy);
+  if (state.snapToGrid) {
+    const cw = ptCardW();
+    newX = Math.round(newX / cw) * cw;
+    newY = Math.round(newY / cw) * cw;
+  }
   const el = document.querySelector(`[data-card-id="${ptDrag.cardId}"]`);
   if (el) {
     el.classList.add('pt-dragging-src');
