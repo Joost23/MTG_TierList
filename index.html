@@ -3680,21 +3680,12 @@ function ptInitHandHover() {
     if (ptHandDrag || ptDrag) return;
     const cards = Array.from(this.querySelectorAll('.pt-hand-card'));
     if (!cards.length) return;
-    const hw = ptHandW();
-    const isFan = this.classList.contains('fan-mode');
-    let idx;
-    if (isFan) {
-      // Use actual rendered positions — rightmost card whose left edge is ≤ cursor
-      idx = 0;
-      for (let i = 0; i < cards.length; i++) {
-        const cr = cards[i].getBoundingClientRect();
-        if (e.clientX >= cr.left - 2) idx = i;
-        else break;
-      }
-    } else {
-      const containerRect = this.getBoundingClientRect();
-      const relX = e.clientX - containerRect.left + this.scrollLeft;
-      idx = Math.max(0, Math.min(Math.floor(relX / (hw + 3)), cards.length - 1));
+    // Use actual rendered card positions — works for both centered and fan layouts
+    let idx = 0;
+    for (let i = 0; i < cards.length; i++) {
+      const cr = cards[i].getBoundingClientRect();
+      if (e.clientX >= cr.left - 2) idx = i;
+      else break;
     }
     cards.forEach((c, i) => c.classList.toggle('pt-hand-active', i === idx));
     const card = cards[idx];
