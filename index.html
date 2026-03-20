@@ -406,6 +406,8 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 .pt-hand-card.pt-hand-active { transform:translateY(-14px) scale(1.06);z-index:60; }
 .pt-hand.fan-mode .pt-hand-card.pt-hand-active { margin-left:8px !important;margin-right:8px; }
 .pt-hand-card.pt-dragging-src { opacity:0.3; }
+.pt-hand-card.pt-hand-reorder-target::before { content:'';position:absolute;left:-3px;top:0;bottom:0;width:3px;background:var(--accent);border-radius:2px;z-index:5; }
+.pt-hand-card.pt-hand-reorder-end::after { content:'';position:absolute;right:-3px;top:0;bottom:0;width:3px;background:var(--accent);border-radius:2px;z-index:5; }
 .pt-hand-badge { position:absolute;top:-8px;left:8px;background:var(--accent);color:#fff;font-size:10px;font-weight:700;padding:1px 7px;border-radius:99px;font-family:'JetBrains Mono',monospace;z-index:10;pointer-events:none; }
 .pt-hand-expand-btn { position:absolute;top:-22px;right:6px;font-size:10px;padding:2px 8px;background:rgba(0,0,0,0.7);border:1px solid var(--border);border-radius:99px;color:var(--text-muted);cursor:pointer;z-index:10; }
 /* Hand expanded overlay */
@@ -3316,12 +3318,13 @@ function renderPTGame() {
 
   // Hand (own board only)
   const hand = state.playtestPrivate?.hand || [];
-  const FAN_THRESHOLD = 8;
-  const isFan = hand.length >= FAN_THRESHOLD;
   const hw = ptHandW();
+  // Fan mode when cards would overflow: threshold = how many fit at normal spacing
+  const FAN_THRESHOLD = Math.max(3, Math.floor((window.innerWidth - 20) / (hw + 3)));
+  const isFan = hand.length > FAN_THRESHOLD;
   let fanMargin = 3;
   if (isFan && hand.length > 1) {
-    const containerW = Math.min(window.innerWidth, 600) - 20;
+    const containerW = window.innerWidth - 20;
     const availableW = containerW - hw;
     const overlapPerCard = availableW / (hand.length - 1);
     const margin = overlapPerCard - hw;
@@ -3989,6 +3992,37 @@ document.addEventListener('pointermove', function(e) {
       ptHandDragGhost.style.left = ghostX + 'px';
       ptHandDragGhost.style.top = ghostY + 'px';
     }
+    // Reorder indicator within hand
+    const handEl = document.querySelector('.pt-hand');
+    document.querySelectorAll('.pt-hand-reorder-target,.pt-hand-reorder-end').forEach(c => c.classList.remove('pt-hand-reorder-target','pt-hand-reorder-end'));
+    if (handEl) {
+      const hr = handEl.getBoundingClientRect();
+      const overHand = e.clientY >= hr.top - 30 && e.clientY <= hr.bottom + 30
+                    && e.clientX >= hr.left && e.clientX <= hr.right + 40;
+      if (overHand) {
+        const handCards = Array.from(handEl.querySelectorAll('.pt-hand-card'));
+        let insertBefore = null; // null = end
+        let marked = false;
+        for (const hc of handCards) {
+          if (hc.dataset.handCardId === ptHandDrag.cardId) continue;
+          const cr = hc.getBoundingClientRect();
+          if (e.clientX < cr.left + cr.width / 2) {
+            insertBefore = parseInt(hc.dataset.handIdx);
+            hc.classList.add('pt-hand-reorder-target');
+            marked = true;
+            break;
+          }
+        }
+        if (!marked) {
+          // Insert at end — mark last non-dragged card with right indicator
+          const last = [...handCards].reverse().find(c => c.dataset.handCardId !== ptHandDrag.cardId);
+          if (last) last.classList.add('pt-hand-reorder-end');
+        }
+        ptHandDrag.insertBefore = insertBefore;
+      } else {
+        ptHandDrag.insertBefore = undefined; // not over hand = bf/zone drop
+      }
+    }
     // Highlight battlefield
     const bfEl2 = document.getElementById('pt-battlefield');
     if (bfEl2) {
@@ -4070,6 +4104,7 @@ document.addEventListener('pointerup', async function(e) {
     if (srcEl) srcEl.classList.remove('pt-dragging-src');
     document.getElementById('pt-battlefield')?.classList.remove('pt-drop-active');
     document.querySelectorAll('[data-pt-drop-zone]').forEach(b => b.classList.remove('pt-drop-hover'));
+    document.querySelectorAll('.pt-hand-reorder-target,.pt-hand-reorder-end').forEach(c => c.classList.remove('pt-hand-reorder-target','pt-hand-reorder-end'));
     if (!drag.moved) {
       ptOpenMenu(drag.cardId, 'hand', e);
       return;
@@ -4092,6 +4127,23 @@ document.addEventListener('pointerup', async function(e) {
         let y = Math.max(0, (e.clientY - canvasRect.top)  / ptScale - CARD_H / 2);
         if (state.snapToGrid) { x = Math.round(x/ptCardW())*ptCardW(); y = Math.round(y/ptCardW())*ptCardW(); }
         await ptPlayCardAt(drag.cardId, x, y);
+        return;
+      }
+    }
+    // Reorder within hand
+    if (drag.insertBefore !== undefined) {
+      const priv = state.playtestPrivate;
+      if (priv) {
+        const hand = [...(priv.hand || [])];
+        const fromIdx = hand.findIndex(c => c.cardId === drag.cardId);
+        if (fromIdx !== -1) {
+          const [card] = hand.splice(fromIdx, 1);
+          let toIdx = drag.insertBefore !== null
+            ? (drag.insertBefore > fromIdx ? drag.insertBefore - 1 : drag.insertBefore)
+            : hand.length;
+          hand.splice(toIdx, 0, card);
+          await ptPriv({ ...priv, hand });
+        }
       }
     }
     return;
