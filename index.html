@@ -414,19 +414,35 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 .pt-mull-type-btn.active { background:var(--accent);color:#fff;border-color:var(--accent); }
 .pt-mull-waiting { background:rgba(0,0,0,0.5);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 14px;font-size:12px;color:var(--text-muted);text-align:center;max-width:540px;width:100%;flex-shrink:0; }
 /* Stack panel */
-.pt-stack-panel { position:absolute;top:8px;left:50%;transform:translateX(-50%);min-width:180px;max-width:240px;z-index:20;display:flex;flex-direction:column;gap:3px;pointer-events:auto; }
-.pt-stack-header { font-size:9px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);text-align:center;padding:2px 0 4px;font-weight:600; }
-.pt-stack-item { display:flex;align-items:center;gap:7px;background:rgba(0,0,0,0.84);border:1px solid var(--border);border-radius:var(--radius-sm);padding:5px 7px;backdrop-filter:blur(6px);transition:border-color 0.12s; }
-.pt-stack-item:first-of-type { border-color:var(--accent-dim); }
-.pt-stack-item-img { width:28px;height:39px;border-radius:3px;object-fit:cover;flex-shrink:0; }
-.pt-stack-item-back { width:28px;height:39px;border-radius:3px;background:linear-gradient(135deg,#1a1535,#0d0b1a);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:7px;color:var(--text-muted);text-align:center;padding:2px; }
+.pt-stack-panel { position:absolute;top:8px;left:50%;transform:translateX(-50%);min-width:220px;max-width:280px;z-index:20;display:flex;flex-direction:column;gap:4px;pointer-events:auto; }
+.pt-stack-header { font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:var(--accent);text-align:center;padding:3px 0 5px;font-weight:700; }
+.pt-stack-item { display:flex;align-items:center;gap:9px;background:rgba(0,0,0,0.88);border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 9px;backdrop-filter:blur(8px);transition:border-color 0.12s;cursor:pointer; }
+.pt-stack-item.pt-stack-top { border-color:var(--accent-dim); }
+.pt-stack-item-img { width:48px;height:67px;border-radius:4px;object-fit:cover;flex-shrink:0; }
+.pt-stack-item-back { width:48px;height:67px;border-radius:4px;background:linear-gradient(135deg,#1a1535,#0d0b1a);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:8px;color:var(--text-muted);text-align:center;padding:3px; }
 .pt-stack-item-info { flex:1;min-width:0; }
-.pt-stack-item-name { font-size:11px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text); }
-.pt-stack-item-caster { font-size:9px;color:var(--text-muted); }
-.pt-stack-x-btn { font-size:11px;padding:1px 4px;background:transparent;border:none;color:var(--text-muted);cursor:pointer;flex-shrink:0;line-height:1; }
-.pt-stack-x-btn:hover { color:var(--tier-s-text); }
-.pt-stack-resolve-btn { width:100%;font-size:11px;padding:5px 0;background:rgba(167,139,250,0.15);border:1px solid var(--accent-dim);color:var(--accent);border-radius:var(--radius-sm);cursor:pointer;backdrop-filter:blur(4px);margin-top:2px;transition:background 0.12s; }
-.pt-stack-resolve-btn:hover { background:var(--accent);color:#fff; }
+.pt-stack-item-name { font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text); }
+.pt-stack-item-caster { font-size:10px;color:var(--text-muted);margin-top:2px; }
+.pt-stack-action-row { display:flex;gap:4px;margin-top:2px; }
+.pt-stack-action-btn { flex:1;font-size:11px;padding:7px 0;border-radius:var(--radius-sm);cursor:pointer;backdrop-filter:blur(4px);transition:background 0.12s,color 0.12s;font-weight:600; }
+.pt-stack-resolve-btn { background:rgba(167,139,250,0.15);border:1px solid var(--accent-dim);color:var(--accent); }
+.pt-stack-resolve-btn:hover { background:var(--accent);color:#fff;border-color:var(--accent); }
+.pt-stack-counter-btn { background:rgba(226,75,74,0.1);border:1px solid rgba(226,75,74,0.35);color:var(--tier-s-text); }
+.pt-stack-counter-btn:hover { background:var(--tier-s-text);color:#fff;border-color:var(--tier-s-text); }
+/* Phase bar */
+.pt-phase-bar { display:flex;align-items:center;gap:0;padding:4px 10px;background:var(--bg-card);border-bottom:1px solid var(--border);overflow-x:auto;flex-shrink:0;scrollbar-width:none; }
+.pt-phase-bar::-webkit-scrollbar { display:none; }
+.pt-phase-step { font-size:10px;padding:3px 7px;border-radius:99px;color:var(--text-muted);white-space:nowrap;border:1px solid transparent;transition:all 0.12s;flex-shrink:0; }
+.pt-phase-step.active { background:var(--accent-dim);color:var(--accent);border-color:var(--accent-dim);font-weight:600; }
+.pt-phase-step.clickable { cursor:pointer; }
+.pt-phase-step.clickable:hover { background:var(--accent);color:#fff;border-color:var(--accent); }
+.pt-phase-sep { color:var(--border);font-size:10px;padding:0 2px;flex-shrink:0; }
+.pt-phase-who { margin-left:auto;font-size:10px;color:var(--text-muted);padding-left:8px;white-space:nowrap;flex-shrink:0; }
+/* Priority indicator on player tab */
+.pt-tab.pt-tab-priority { outline:2px solid var(--accent);outline-offset:1px;box-shadow:0 0 10px rgba(167,139,250,0.4); }
+/* Pass button emphasis */
+.pt-action-btn.pt-action-pass { background:var(--accent);color:#fff;border-color:var(--accent);font-weight:700; }
+.pt-action-btn.pt-action-pass:hover { background:var(--accent-dim); }
 .pt-bf-empty { position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:13px;pointer-events:none; }
 .pt-bf-card { position:absolute;cursor:grab;border-radius:5px;transition:transform 0.12s ease,filter 0.15s,box-shadow 0.15s;touch-action:none;user-select:none;transform-origin:center center; }
 .pt-bf-card:active { cursor:grabbing; }
@@ -2942,7 +2958,7 @@ async function ptCreate() {
   try {
     await setDoc(doc(db, 'gameSessions', sessionId), {
       hostId: myUid, status: 'waiting', turn: 1, sessionType: 'playtest',
-      mullType: 'london',
+      mullType: 'london', phase: 'main1', activePlayer: myUid, priority: myUid, passed: [],
       players: { [myUid]: ptBuildPlayer(myUid, deck) },
       createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
     });
@@ -3279,12 +3295,13 @@ async function ptResolveTop() {
   if (!session?.stack?.length) return;
   const [top, ...rest] = session.stack;
   const player = session.players?.[top.casterId];
-  if (!player) { await ptPub({ stack: rest }); return; }
+  const activePlayer = session.activePlayer || top.casterId;
+  if (!player) { await ptPub({ stack: rest, passed: [], priority: activePlayer }); return; }
   const typeLine = (scryfallCache[scryfallKey(top.name)]?.typeLine || '').toLowerCase();
   const isSpell = typeLine.includes('instant') || typeLine.includes('sorcery');
   const card = { cardId: top.cardId, name: top.name, imageUrl: top.imageUrl || null,
     tapped: false, counters: 0, isCommander: false, isToken: false };
-  const updates = { stack: rest };
+  const updates = { stack: rest, passed: [], priority: activePlayer };
   if (isSpell) {
     updates[`players.${top.casterId}.graveyard`] = [...(player.graveyard || []), { ...card, zone: 'graveyard' }];
   } else {
@@ -3307,24 +3324,66 @@ async function ptCounterSpell(cardId) {
 function renderPTStackPanel() {
   const stack = state.playtestGame?.stack || [];
   if (!stack.length) return '';
+  const top = stack[0];
   return `<div class="pt-stack-panel" onclick="event.stopPropagation()">
-    <div class="pt-stack-header">The Stack (${stack.length})</div>
-    ${stack.map(item => `<div class="pt-stack-item">
+    <div class="pt-stack-header">⚡ Stack (${stack.length})</div>
+    ${stack.map((item, i) => `<div class="pt-stack-item${i===0?' pt-stack-top':''}"
+      onpointerenter="ptZoomHover(event,${JSON.stringify(item.imageUrl||'')},${JSON.stringify(item.name)})"
+      onpointerleave="ptZoomHide()">
       ${item.imageUrl
         ? `<img class="pt-stack-item-img" src="${escHtml(item.imageUrl)}" loading="lazy">`
-        : `<div class="pt-stack-item-back">${escHtml(item.name.slice(0,8))}</div>`}
+        : `<div class="pt-stack-item-back">${escHtml(item.name.slice(0,10))}</div>`}
       <div class="pt-stack-item-info">
-        <div class="pt-stack-item-name">${escHtml(item.name.slice(0,20))}</div>
+        <div class="pt-stack-item-name">${escHtml(item.name.slice(0,22))}</div>
         <div class="pt-stack-item-caster">${escHtml(item.casterName)}</div>
       </div>
-      <button class="pt-stack-x-btn" onclick="ptCounterSpell('${item.cardId}')" title="Counter — send to GY">✕</button>
     </div>`).join('')}
-    <button class="pt-stack-resolve-btn" onclick="ptResolveTop()">Resolve top ↓</button>
+    <div class="pt-stack-action-row">
+      <button class="pt-stack-action-btn pt-stack-resolve-btn" onclick="ptResolveTop()">Resolve ↓</button>
+      <button class="pt-stack-action-btn pt-stack-counter-btn" onclick="ptCounterSpell('${top.cardId}')">Counter ✕</button>
+    </div>
   </div>`;
 }
 
-async function ptNextTurn() {
-  await ptPub({ turn: (state.playtestGame?.turn || 1) + 1 });
+async function ptNextPhase() {
+  const session = state.playtestGame;
+  const uid = state.currentUser?.uid;
+  if (!session || !uid) return;
+  const curIdx = PT_PHASES.indexOf(session.phase || 'main1');
+  const isLast = curIdx === PT_PHASES.length - 1;
+  if (isLast) {
+    // End of turn → next player becomes active
+    const activePlayers = Object.keys(session.players || {}).filter(p => !session.players[p].conceded);
+    const activeIdx = activePlayers.indexOf(session.activePlayer || uid);
+    const nextActive = activePlayers[(activeIdx + 1) % activePlayers.length];
+    const nextPlayer = session.players[nextActive];
+    const updates = { phase: 'untap', activePlayer: nextActive, priority: nextActive, passed: [], turn: (session.turn || 1) + 1 };
+    if (nextPlayer?.battlefield?.length) {
+      updates[`players.${nextActive}.battlefield`] = nextPlayer.battlefield.map(c => ({ ...c, tapped: false }));
+    }
+    await ptPub(updates);
+  } else {
+    const nextPhase = PT_PHASES[curIdx + 1];
+    await ptPub({ phase: nextPhase, priority: session.activePlayer || uid, passed: [] });
+  }
+}
+async function ptPassPriority() {
+  const uid = state.currentUser?.uid;
+  const session = state.playtestGame;
+  if (!uid || !session) return;
+  const activePlayers = Object.keys(session.players || {}).filter(p => !session.players[p].conceded);
+  const passed = [...new Set([...(session.passed || []), uid])];
+  if (passed.length >= activePlayers.length) {
+    if (session.stack?.length) {
+      await ptResolveTop(); // ptResolveTop resets passed/priority internally
+    } else {
+      await ptNextPhase();
+    }
+    return;
+  }
+  const myIdx = activePlayers.indexOf(uid);
+  const nextIdx = (myIdx + 1) % activePlayers.length;
+  await ptPub({ passed, priority: activePlayers[nextIdx] });
 }
 
 async function ptAdjustLife(delta) {
@@ -3356,11 +3415,28 @@ async function ptPlayCard(cardId) {
   const idx = hand.findIndex(c => c.cardId === cardId);
   if (idx === -1) return;
   const [card] = hand.splice(idx, 1);
-  const existingBf = player.battlefield || [];
-  const pos = ptDefaultPos(existingBf);
-  const battlefield = [...existingBf, { ...card, zone: 'battlefield', tapped: false, ...pos }];
-  await ptPriv({ ...priv, hand });
-  await ptPub({ [`players.${uid}.battlefield`]: battlefield });
+  const typeLine = (scryfallCache[scryfallKey(card.name)]?.typeLine || '').toLowerCase();
+  const isLand = typeLine.includes('land');
+  if (isLand) {
+    // Lands go directly to battlefield — no stack, no priority
+    const existingBf = player.battlefield || [];
+    const pos = ptDefaultPos(existingBf);
+    const battlefield = [...existingBf, { ...card, zone: 'battlefield', tapped: false, ...pos }];
+    await ptPriv({ ...priv, hand });
+    await ptPub({ [`players.${uid}.battlefield`]: battlefield });
+  } else {
+    // Non-lands go to the stack; opponents get priority to respond
+    const session = state.playtestGame;
+    const stackItem = { cardId: card.cardId, name: card.name, imageUrl: card.imageUrl || null,
+      casterId: uid, casterName: player.displayName || 'Player', fromZone: 'hand',
+      addedAt: new Date().toISOString() };
+    const newStack = [stackItem, ...(session?.stack || [])];
+    const activePlayers = Object.keys(session?.players || {}).filter(p => !session?.players[p].conceded);
+    const myIdx = activePlayers.indexOf(uid);
+    const nextPriority = activePlayers.length > 1 ? activePlayers[(myIdx + 1) % activePlayers.length] : uid;
+    await ptPriv({ ...priv, hand });
+    await ptPub({ stack: newStack, priority: nextPriority, passed: [uid] });
+  }
   ptCloseMenu();
 }
 
@@ -3587,6 +3663,9 @@ function renderPTLobby() {
 }
 
 // ── Render: Game ──────────────────────────────────────
+const PT_PHASES = ['untap','upkeep','draw','main1','combat','main2','end'];
+const PT_PHASE_LABELS = { untap:'Untap', upkeep:'Upkeep', draw:'Draw', main1:'Main 1', combat:'Combat', main2:'Main 2', end:'End' };
+
 function renderPTMullOverlay() {
   const myUid = state.currentUser?.uid;
   const session = state.playtestGame;
@@ -3676,7 +3755,8 @@ function renderPTGame() {
       const col = PT_COLORS[i % PT_COLORS.length];
       const isActive = uid === viewUid;
       const lifeCol = (p.life??40) <= 5 ? 'var(--tier-s)' : (p.life??40) <= 15 ? 'var(--tier-a)' : col;
-      return `<button class="pt-tab${isActive?' pt-tab-active':''}" style="--tab-col:${col}" onclick="state.playtestViewUid='${uid}';render()">
+      const hasPriority = uid === (session.priority || session.activePlayer);
+      return `<button class="pt-tab${isActive?' pt-tab-active':''}${hasPriority?' pt-tab-priority':''}" style="--tab-col:${col}" onclick="state.playtestViewUid='${uid}';render()">
         <div class="pt-tab-name">${escHtml(p.displayName)}</div>
         <div class="pt-tab-life" style="color:${lifeCol}">${p.life??40}</div>
         ${p.poison>0?`<div class="pt-tab-poison">☠${p.poison}</div>`:''}
@@ -3691,6 +3771,20 @@ function renderPTGame() {
   const deckBar = `<div class="pt-deckbar">
     <span class="pt-deckbar-commander">${escHtml(viewedPlayer?.commander || '—')}</span>
     <span class="pt-deckbar-meta">📚${libCount} ✋${isMyBoard?handCount:'?'} Turn ${session.turn||1}</span>
+  </div>`;
+
+  // Phase bar
+  const curPhase = session.phase || 'main1';
+  const isActiveTurn = (session.activePlayer || myUid) === myUid;
+  const phaseBar = `<div class="pt-phase-bar">
+    ${PT_PHASES.map((p,i) => {
+      const isActive = curPhase === p;
+      const canAdvance = isActive && isMyBoard && isActiveTurn;
+      return `${i>0?'<span class="pt-phase-sep">›</span>':''}
+      <div class="pt-phase-step${isActive?' active':''}${canAdvance?' clickable':''}"
+        ${canAdvance?`onclick="ptNextPhase()"`:''}>${PT_PHASE_LABELS[p]}</div>`;
+    }).join('')}
+    <div class="pt-phase-who">${escHtml(session.players?.[session.activePlayer||'']?.displayName||'')}${isActiveTurn?' (you)':''}</div>
   </div>`;
 
   // Battlefield
@@ -3771,7 +3865,8 @@ function renderPTGame() {
     <button class="pt-action-btn" onclick="ptPromptScry()">Scry</button>
     <button class="pt-action-btn" onclick="ptPromptMill()">Mill</button>
     <button class="pt-action-btn" onclick="ptShuffle()">Shuffle</button>
-    <button class="pt-action-btn" onclick="ptNextTurn()">Next Turn</button>
+    ${isActiveTurn?`<button class="pt-action-btn" onclick="ptNextPhase()">Next Phase</button>`:''}
+    <button class="pt-action-btn${myUid===(session.priority||session.activePlayer)?' pt-action-pass':''}" onclick="ptPassPriority()">Pass ⏩</button>
     <button class="pt-action-btn${state.playtestTokenPanel?' active':''}" onclick="event.stopPropagation();state.playtestTokenPanel=!state.playtestTokenPanel;state.playtestSettings=false;render()">Token</button>
     <button class="pt-action-btn${state.playtestSettings?' active':''}" onclick="event.stopPropagation();ptToggleSettings()" style="padding:7px 10px">⚙</button>
   </div>${settingsHtml}` : '';
@@ -3837,7 +3932,7 @@ function renderPTGame() {
   const cardMenuHtml = state.playtestCardMenu ? renderPTCardMenu() : '';
   const menuBackdrop = state.playtestCardMenu ? `<div style="position:fixed;inset:0;z-index:499" onclick="ptCloseMenu()"></div>` : '';
   const settingsBackdrop = state.playtestSettings ? `<div style="position:fixed;inset:0;z-index:498" onclick="event.stopPropagation();state.playtestSettings=false;render()"></div>` : '';
-  return `<div class="pt-playmat">${tabsHtml}${deckBar}${actionBar}${battlefieldHtml}${handHtml}${overlayHtml}${scryHtml}${millHtml}${numberHtml}${settingsBackdrop}${menuBackdrop}${cardMenuHtml}${waitingBanner}${mullOverlayHtml}</div>`;
+  return `<div class="pt-playmat">${tabsHtml}${deckBar}${phaseBar}${actionBar}${battlefieldHtml}${handHtml}${overlayHtml}${scryHtml}${millHtml}${numberHtml}${settingsBackdrop}${menuBackdrop}${cardMenuHtml}${waitingBanner}${mullOverlayHtml}</div>`;
 }
 
 function renderPTCardMenu() {
@@ -6216,7 +6311,8 @@ window.ptAddToStack = ptAddToStack;
 window.ptResolveTop = ptResolveTop;
 window.ptCounterSpell = ptCounterSpell;
 window.ptShuffle = ptShuffle;
-window.ptNextTurn = ptNextTurn;
+window.ptNextPhase = ptNextPhase;
+window.ptPassPriority = ptPassPriority;
 window.ptAdjustLife = ptAdjustLife;
 window.ptConcede = ptConcede;
 window.ptPlayCard = ptPlayCard;
