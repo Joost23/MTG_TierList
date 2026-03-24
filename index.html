@@ -376,10 +376,22 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 .pt-battlefield.pt-panning { cursor:grabbing; }
 .pt-battlefield-canvas { position:absolute;top:0;left:0;width:4000px;height:4000px;transform-origin:0 0; }
 .pt-drop-highlight { outline:2px dashed var(--accent);background:rgba(167,139,250,0.04) !important; }
-.pt-zone-btns { position:absolute;top:8px;right:8px;display:flex;flex-direction:column;gap:4px;z-index:10; }
-.pt-zone-btn { font-size:10px;padding:5px 9px;background:rgba(0,0,0,0.7);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-secondary);cursor:pointer;backdrop-filter:blur(4px);white-space:nowrap; }
-.pt-zone-btn:hover,.pt-zone-btn.drop-target,.pt-zone-btn.pt-drop-hover { background:var(--accent-dim);color:#fff;border-color:var(--accent);transform:scale(1.1); }
+.pt-zone-sidebar { position:absolute;top:8px;right:8px;display:flex;flex-direction:column;gap:4px;z-index:10; }
+.pt-zone-panel { width:58px;cursor:pointer;border-radius:6px;background:rgba(0,0,0,0.72);border:1px solid rgba(255,255,255,0.1);overflow:hidden;transition:border-color 0.12s,transform 0.12s;backdrop-filter:blur(4px);flex-shrink:0; }
+.pt-zone-panel:hover,.pt-zone-panel.pt-drop-hover { border-color:var(--accent);transform:scale(1.06); }
+.pt-zone-panel-img { position:relative;width:100%; }
+.pt-zone-panel-img img { width:100%;aspect-ratio:63/88;object-fit:cover;display:block; }
+.pt-zone-panel-count { position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.82);text-align:center;font-size:11px;font-weight:700;color:#fff;padding:2px 0;line-height:1.4; }
+.pt-zone-panel-label { font-size:9px;text-align:center;color:var(--text-muted);padding:2px 0 3px;text-transform:uppercase;letter-spacing:0.4px; }
+.pt-zone-panel-empty { width:100%;aspect-ratio:63/88;display:flex;align-items:center;justify-content:center;font-size:18px;background:rgba(255,255,255,0.03); }
+.pt-zone-card-back { width:100%;aspect-ratio:63/88;background:linear-gradient(135deg,#1a1535 0%,#2d1f5e 50%,#0d0b1a 100%);display:block; }
+.pt-zone-life-btn { font-size:11px;padding:4px 0;background:rgba(0,0,0,0.65);border:1px solid rgba(255,255,255,0.1);border-radius:4px;cursor:pointer;width:100%;transition:border-color 0.12s;backdrop-filter:blur(4px); }
+.pt-zone-life-btn:hover { border-color:var(--border-hover); }
 .pt-battlefield.pt-drop-active .pt-battlefield-canvas { outline:2px dashed var(--accent);outline-offset:-2px;background:rgba(167,139,250,0.04); }
+.pt-lib-search { padding:10px 12px 8px;border-bottom:1px solid var(--border);flex-shrink:0; }
+.pt-lib-type-filters { display:flex;gap:4px;flex-wrap:wrap;margin-top:6px; }
+.pt-lib-type-btn { font-size:10px;padding:2px 8px;border-radius:99px;border:1px solid var(--border);background:transparent;color:var(--text-muted);cursor:pointer;transition:all 0.1s; }
+.pt-lib-type-btn.active { background:var(--accent);color:#fff;border-color:var(--accent); }
 .pt-bf-empty { position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:13px;pointer-events:none; }
 .pt-bf-card { position:absolute;cursor:grab;border-radius:5px;transition:transform 0.12s ease,filter 0.15s,box-shadow 0.15s;touch-action:none;user-select:none;transform-origin:center center; }
 .pt-bf-card:active { cursor:grabbing; }
@@ -455,7 +467,7 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 .pt-overlay { width:100%;max-height:72vh;background:var(--bg-card);border-radius:18px 18px 0 0;display:flex;flex-direction:column; }
 .pt-overlay-header { display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);flex-shrink:0; }
 .pt-overlay-title { font-weight:600;font-size:14px; }
-.pt-overlay-cards { display:flex;gap:10px;padding:14px;overflow-x:auto;align-items:flex-start;scrollbar-width:none;flex-wrap:wrap; }
+.pt-overlay-cards { display:flex;gap:10px;padding:14px;overflow-y:auto;align-items:flex-start;scrollbar-width:none;flex-wrap:wrap;flex:1; }
 .pt-overlay-cards::-webkit-scrollbar { display:none; }
 .pt-overlay-card { display:flex;flex-direction:column;align-items:center;gap:5px; }
 .pt-overlay-card-btn { font-size:10px;padding:3px 8px;border-radius:99px; }
@@ -788,6 +800,8 @@ let state = {
   playtestSessions: [],
   playtestCardMenu: null,
   playtestZoneOverlay: null,
+  ptLibSearch: '',
+  ptLibTypeFilter: 'all',
   playtestLoading: '',
   playtestMoreMenu: false,
   playtestScryData: null,
@@ -2944,10 +2958,20 @@ async function ptJoin(sessionId) {
 // Each player deals their own hand — avoids cross-uid Firestore permission errors
 async function ptDealOwnHand(sessionId, uid, player) {
   const deck = state.decks.find(d => d.id === player.deckId);
-  const all = deck ? deckToCardObjects(deck) : [];
+  if (!deck) { console.error(`ptDealOwnHand: deck "${player.deckId}" not found — player ${uid} will have empty hand`); return; }
+  // Pre-fetch card images before building objects so imageUrls are populated
+  const sections = parseDecklistSections(deck.decklist || '');
+  const allCardNames = [...sections.main, ...sections.sideboard, ...sections.maybeboard];
+  const uncached = allCardNames.filter(c => !(scryfallKey(c.name) in scryfallCache));
+  if (uncached.length) {
+    console.log(`ptDealOwnHand: fetching art for ${uncached.length} cards in "${deck.name}"`);
+    await fetchScryfallBatch(allCardNames);
+  }
+  const all = deckToCardObjects(deck);
   const commanders = all.filter(c => c.isCommander);
   const library = shuffleArr(all.filter(c => !c.isCommander));
   const hand = library.splice(0, Math.min(7, library.length)).map(c => ({ ...c, zone: 'hand' }));
+  console.log(`ptDealOwnHand [${player.displayName||uid}]: ${hand.length} hand · ${library.length} library · ${commanders.length} cmdr`);
   try {
     await setDoc(doc(db, 'gameSessions', sessionId, 'privateZones', uid), { hand, library });
     await updateDoc(doc(db, 'gameSessions', sessionId), {
@@ -3267,7 +3291,7 @@ function ptOpenMenu(cardId, zone, e) {
 }
 function ptCloseMenu() { state.playtestCardMenu = null; render(); }
 function ptOpenZone(uid, zone) { state.playtestZoneOverlay = { uid, zone }; render(); }
-function ptCloseZone() { state.playtestZoneOverlay = null; render(); }
+function ptCloseZone() { state.playtestZoneOverlay = null; state.ptLibSearch = ''; state.ptLibTypeFilter = 'all'; render(); }
 function openPlaytester() { state.showPlaytester = true; ptListenSessions(); render(); }
 
 // ── Render: Session Browser ────────────────────────────
@@ -3447,17 +3471,46 @@ function renderPTGame() {
 
   // Battlefield
   const bf = viewedPlayer?.battlefield || [];
-  const gvLen = (viewedPlayer?.graveyard||[]).length;
-  const exLen = (viewedPlayer?.exile||[]).length;
-  const czLen = (viewedPlayer?.commandZone||[]).length;
-  const battlefieldHtml = `<div class="pt-battlefield" id="pt-battlefield" onclick="ptCloseMenu()" onpointerdown="ptBfPanStart(event)">
-    <div class="pt-zone-btns">
-      <button class="pt-zone-btn" onclick="event.stopPropagation();ptOpenZone('${viewUid}','commandZone')">⭐ ${czLen}</button>
-      <button class="pt-zone-btn" data-pt-drop-zone="graveyard" onclick="event.stopPropagation();ptOpenZone('${viewUid}','graveyard')">GY ${gvLen}</button>
-      <button class="pt-zone-btn" data-pt-drop-zone="exile" onclick="event.stopPropagation();ptOpenZone('${viewUid}','exile')">EX ${exLen}</button>
-      ${isMyBoard ? `<button class="pt-zone-btn" onclick="event.stopPropagation();ptAdjustLife(1)" style="color:var(--tier-b-text)">♥+</button>
-      <button class="pt-zone-btn" onclick="event.stopPropagation();ptAdjustLife(-1)" style="color:var(--tier-s-text)">♥−</button>` : ''}
+  const graveyard = viewedPlayer?.graveyard || [];
+  const exileArr = viewedPlayer?.exile || [];
+  const commandArr = viewedPlayer?.commandZone || [];
+  const gvLen = graveyard.length;
+  const exLen = exileArr.length;
+  const czLen = commandArr.length;
+  const topGY    = graveyard[graveyard.length - 1];
+  const topExile = exileArr[exileArr.length - 1];
+  const topCmdr  = commandArr[0];
+  const zoneSidebar = `<div class="pt-zone-sidebar">
+    <div class="pt-zone-panel" data-pt-drop-zone="library" onclick="event.stopPropagation();ptOpenZone('${viewUid}','library')">
+      <div class="pt-zone-panel-img"><div class="pt-zone-card-back"></div><div class="pt-zone-panel-count">${libCount}</div></div>
+      <div class="pt-zone-panel-label">Library</div>
     </div>
+    <div class="pt-zone-panel" data-pt-drop-zone="graveyard" onclick="event.stopPropagation();ptOpenZone('${viewUid}','graveyard')">
+      <div class="pt-zone-panel-img">
+        ${topGY?.imageUrl ? `<img src="${escHtml(topGY.imageUrl)}" loading="lazy">` : `<div class="pt-zone-panel-empty">⚰</div>`}
+        ${gvLen > 0 ? `<div class="pt-zone-panel-count">${gvLen}</div>` : ''}
+      </div>
+      <div class="pt-zone-panel-label">GY</div>
+    </div>
+    <div class="pt-zone-panel" data-pt-drop-zone="exile" onclick="event.stopPropagation();ptOpenZone('${viewUid}','exile')">
+      <div class="pt-zone-panel-img">
+        ${topExile?.imageUrl ? `<img src="${escHtml(topExile.imageUrl)}" loading="lazy">` : `<div class="pt-zone-panel-empty">✧</div>`}
+        ${exLen > 0 ? `<div class="pt-zone-panel-count">${exLen}</div>` : ''}
+      </div>
+      <div class="pt-zone-panel-label">Exile</div>
+    </div>
+    <div class="pt-zone-panel" onclick="event.stopPropagation();ptOpenZone('${viewUid}','commandZone')">
+      <div class="pt-zone-panel-img">
+        ${topCmdr?.imageUrl ? `<img src="${escHtml(topCmdr.imageUrl)}" loading="lazy">` : `<div class="pt-zone-panel-empty">⭐</div>`}
+        ${czLen > 1 ? `<div class="pt-zone-panel-count">${czLen}</div>` : ''}
+      </div>
+      <div class="pt-zone-panel-label">Cmdr</div>
+    </div>
+    ${isMyBoard ? `<button class="pt-zone-life-btn" onclick="event.stopPropagation();ptAdjustLife(1)" style="color:var(--tier-b-text)">♥ +1</button>
+    <button class="pt-zone-life-btn" onclick="event.stopPropagation();ptAdjustLife(-1)" style="color:var(--tier-s-text)">♥ −1</button>` : ''}
+  </div>`;
+  const battlefieldHtml = `<div class="pt-battlefield" id="pt-battlefield" onclick="ptCloseMenu()" onpointerdown="ptBfPanStart(event)">
+    ${zoneSidebar}
     <div class="pt-battlefield-canvas" id="pt-bf-canvas" style="transform:translate(${ptPanX}px,${ptPanY}px) scale(${ptScale})">
       ${bf.length===0 ? `<div class="pt-bf-empty">Drag cards here from hand</div>` : ''}
       ${bf.map(card => {
@@ -3616,26 +3669,56 @@ function renderPTZoneOverlay() {
   const allCards = (zone==='hand'||zone==='library') ? (state.playtestPrivate?.[zone]||[]) : (player?.[zone]||[]);
   const cards = overlay.topN != null ? (overlay.cards || allCards.slice(0, overlay.topN)) : allCards;
   const zoneLabel = overlay.topN != null ? `Library Top ${overlay.topN}` : (ZONE_NAMES[zone]||zone);
+  // Library search & filter
+  const isLibSearch = zone === 'library' && overlay.topN == null && isOwn;
+  const searchVal = state.ptLibSearch || '';
+  const typeFilter = state.ptLibTypeFilter || 'all';
+  const TYPE_FILTERS = ['all','creature','instant','sorcery','enchantment','artifact','planeswalker','land'];
+  let displayCards = cards;
+  if (isLibSearch) {
+    if (searchVal) displayCards = displayCards.filter(c => c.name.toLowerCase().includes(searchVal.toLowerCase()));
+    if (typeFilter !== 'all') displayCards = displayCards.filter(c => {
+      const tl = (scryfallCache[scryfallKey(c.name)]?.typeLine || '').toLowerCase();
+      return tl.includes(typeFilter);
+    });
+  }
+  const countLabel = isLibSearch && displayCards.length !== cards.length
+    ? `${displayCards.length} / ${cards.length}` : `${displayCards.length}`;
+  const searchBar = isLibSearch ? `<div class="pt-lib-search">
+    <input type="text" placeholder="Search by name…" value="${escHtml(searchVal)}"
+      style="width:100%;padding:7px 10px;font-size:13px;border-radius:var(--radius-sm)"
+      oninput="state.ptLibSearch=this.value;render()" autocomplete="off">
+    <div class="pt-lib-type-filters">
+      ${TYPE_FILTERS.map(t=>`<button class="pt-lib-type-btn${typeFilter===t?' active':''}" onclick="state.ptLibTypeFilter='${t}';render()">${t[0].toUpperCase()+t.slice(1)}</button>`).join('')}
+    </div>
+  </div>` : '';
+  const footerHtml = isLibSearch && isOwn ? `<div style="padding:8px 12px;border-top:1px solid var(--border);flex-shrink:0;display:flex;justify-content:flex-end;gap:8px">
+    <button onclick="ptShuffle();ptCloseZone()" style="font-size:12px;padding:5px 14px">🔀 Shuffle Library</button>
+  </div>` : '';
   return `<div class="pt-overlay-bg" onclick="ptCloseZone()">
     <div class="pt-overlay" onclick="event.stopPropagation()">
       <div class="pt-overlay-header">
-        <span class="pt-overlay-title">${escHtml(player?.displayName||'')} · ${zoneLabel} (${cards.length})</span>
+        <span class="pt-overlay-title">${escHtml(player?.displayName||'')} · ${zoneLabel} (${countLabel})</span>
         <button onclick="ptCloseZone()" style="font-size:20px;padding:4px 10px;background:none;border:none;color:var(--text-muted)">✕</button>
       </div>
+      ${searchBar}
       <div class="pt-overlay-cards">
-        ${cards.length===0?`<div style="color:var(--text-muted);font-size:13px;padding:20px;width:100%;text-align:center">Empty</div>`:''}
-        ${cards.map(card=>{
+        ${displayCards.length===0?`<div style="color:var(--text-muted);font-size:13px;padding:20px;width:100%;text-align:center">${searchVal||typeFilter!=='all'?'No cards match':'Empty'}</div>`:''}
+        ${displayCards.map(card=>{
           const img = card.imageUrl
             ? `<img src="${escHtml(card.imageUrl)}" style="width:100px;border-radius:6px;display:block" loading="lazy">`
             : `<div style="width:100px;height:140px;background:var(--bg-surface);border:1px solid var(--border);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--text-muted);text-align:center;padding:6px">${escHtml(card.name)}</div>`;
           return `<div class="pt-overlay-card">
             ${img}
             <div style="font-size:9px;color:var(--text-muted);text-align:center;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(card.name)}</div>
-            ${isOwn&&zone!=='library'?`<button class="pt-overlay-card-btn" onclick="ptMoveCard('${card.cardId}','${zone}','battlefield');ptCloseZone()">→ BF</button>`:''}
-            ${isOwn&&zone!=='hand'?`<button class="pt-overlay-card-btn" onclick="ptMoveCard('${card.cardId}','${zone}','hand');ptCloseZone()">→ Hand</button>`:''}
+            ${isOwn&&zone==='library'?`<button class="pt-overlay-card-btn" onclick="ptMoveCard('${card.cardId}','library','hand');ptCloseZone()">→ Hand</button>`:''}
+            ${isOwn&&zone==='library'?`<button class="pt-overlay-card-btn" onclick="ptMoveCard('${card.cardId}','library','battlefield');ptCloseZone()">→ BF</button>`:''}
+            ${isOwn&&zone!=='library'&&zone!=='hand'?`<button class="pt-overlay-card-btn" onclick="ptMoveCard('${card.cardId}','${zone}','battlefield');ptCloseZone()">→ BF</button>`:''}
+            ${isOwn&&zone!=='library'&&zone!=='hand'?`<button class="pt-overlay-card-btn" onclick="ptMoveCard('${card.cardId}','${zone}','hand');ptCloseZone()">→ Hand</button>`:''}
           </div>`;
         }).join('')}
       </div>
+      ${footerHtml}
     </div>
   </div>`;
 }
