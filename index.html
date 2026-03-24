@@ -392,6 +392,27 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 .pt-lib-type-filters { display:flex;gap:4px;flex-wrap:wrap;margin-top:6px; }
 .pt-lib-type-btn { font-size:10px;padding:2px 8px;border-radius:99px;border:1px solid var(--border);background:transparent;color:var(--text-muted);cursor:pointer;transition:all 0.1s; }
 .pt-lib-type-btn.active { background:var(--accent);color:#fff;border-color:var(--accent); }
+/* Mulligan overlay */
+.pt-mull-overlay { position:fixed;inset:0;background:rgba(8,6,20,0.96);z-index:600;display:flex;flex-direction:column;align-items:center;padding:16px 12px;gap:14px;overflow-y:auto;backdrop-filter:blur(6px); }
+.pt-mull-header { text-align:center;flex-shrink:0; }
+.pt-mull-title { font-size:18px;font-weight:700;margin-bottom:4px; }
+.pt-mull-sub { font-size:12px;color:var(--text-muted); }
+.pt-mull-cards { display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-width:900px;flex-shrink:0; }
+.pt-mull-card { position:relative;cursor:pointer;border-radius:8px;border:2px solid transparent;transition:border-color 0.12s,transform 0.12s,opacity 0.12s; }
+.pt-mull-card:hover { transform:translateY(-4px); }
+.pt-mull-card.selected { border-color:var(--tier-s-text);opacity:0.45; }
+.pt-mull-card img { width:100px;border-radius:6px;display:block; }
+.pt-mull-card-back { width:100px;height:140px;background:linear-gradient(135deg,#1a1535,#2d1f5e,#0d0b1a);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--text-muted);text-align:center;padding:6px; }
+.pt-mull-bottom-zone { border:2px dashed var(--border);border-radius:var(--radius);padding:10px 14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;background:rgba(0,0,0,0.3);max-width:900px;width:100%;min-height:72px;flex-shrink:0; }
+.pt-mull-bottom-zone.ready { border-color:var(--accent); }
+.pt-mull-bottom-zone-label { font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;width:100%;text-align:center; }
+.pt-mull-bottom-card img { width:52px;border-radius:4px;display:block; }
+.pt-mull-bottom-card-back { width:52px;height:73px;background:linear-gradient(135deg,#1a1535,#2d1f5e,#0d0b1a);border-radius:4px; }
+.pt-mull-actions { display:flex;gap:10px;flex-shrink:0;flex-wrap:wrap;justify-content:center;align-items:center; }
+.pt-mull-type-row { display:flex;gap:6px;flex-wrap:wrap;justify-content:center;flex-shrink:0;padding:4px 0; }
+.pt-mull-type-btn { font-size:11px;padding:4px 12px;border-radius:99px;border:1px solid var(--border);background:transparent;color:var(--text-muted);cursor:pointer;transition:all 0.1s; }
+.pt-mull-type-btn.active { background:var(--accent);color:#fff;border-color:var(--accent); }
+.pt-mull-waiting { background:rgba(0,0,0,0.5);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 14px;font-size:12px;color:var(--text-muted);text-align:center;max-width:540px;width:100%;flex-shrink:0; }
 .pt-bf-empty { position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:13px;pointer-events:none; }
 .pt-bf-card { position:absolute;cursor:grab;border-radius:5px;transition:transform 0.12s ease,filter 0.15s,box-shadow 0.15s;touch-action:none;user-select:none;transform-origin:center center; }
 .pt-bf-card:active { cursor:grabbing; }
@@ -802,6 +823,7 @@ let state = {
   playtestZoneOverlay: null,
   ptLibSearch: '',
   ptLibTypeFilter: 'all',
+  ptMullBottom: [],  // cardIds selected to go to bottom of library during mulligan
   playtestLoading: '',
   playtestMoreMenu: false,
   playtestScryData: null,
@@ -2892,7 +2914,7 @@ function ptBuildPlayer(uid, deck) {
     deckId: deck.id, commander: deck.commander, colors: deck.colors || '',
     life: 40, poison: 0, commanderDamage: {},
     battlefield: [], graveyard: [], exile: [], commandZone: [],
-    mulliganCount: 0, conceded: false,
+    mulliganCount: 0, handKept: false, conceded: false,
     isLoaned,
   };
 }
@@ -2906,6 +2928,7 @@ async function ptCreate() {
   try {
     await setDoc(doc(db, 'gameSessions', sessionId), {
       hostId: myUid, status: 'waiting', turn: 1, sessionType: 'playtest',
+      mullType: 'london',
       players: { [myUid]: ptBuildPlayer(myUid, deck) },
       createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
     });
@@ -2970,10 +2993,12 @@ async function ptDealOwnHand(sessionId, uid, player) {
   const all = deckToCardObjects(deck);
   const commanders = all.filter(c => c.isCommander);
   const library = shuffleArr(all.filter(c => !c.isCommander));
-  const hand = library.splice(0, Math.min(7, library.length)).map(c => ({ ...c, zone: 'hand' }));
+  const mullType = state.playtestGame?.mullType || 'london';
+  const drawCount = mullType === 'draw10' ? 10 : 7;
+  const hand = library.splice(0, Math.min(drawCount, library.length)).map(c => ({ ...c, zone: 'hand' }));
   console.log(`ptDealOwnHand [${player.displayName||uid}]: ${hand.length} hand · ${library.length} library · ${commanders.length} cmdr`);
   try {
-    await setDoc(doc(db, 'gameSessions', sessionId, 'privateZones', uid), { hand, library });
+    await setDoc(doc(db, 'gameSessions', sessionId, 'privateZones', uid), { hand, library, handKept: false });
     await updateDoc(doc(db, 'gameSessions', sessionId), {
       [`players.${uid}.commandZone`]: commanders,
       updatedAt: new Date().toISOString(),
@@ -3171,6 +3196,42 @@ async function ptShuffle() {
   const priv = state.playtestPrivate;
   if (!priv) return;
   await ptPriv({ ...priv, library: shuffleArr([...(priv.library || [])]) });
+}
+
+// ── Mulligan overlay ──────────────────────────────────
+function ptMullToggleBottom(cardId) {
+  const b = state.ptMullBottom || [];
+  state.ptMullBottom = b.includes(cardId) ? b.filter(id => id !== cardId) : [...b, cardId];
+  render();
+}
+async function ptMullKeep() {
+  const uid = state.currentUser?.uid;
+  const priv = state.playtestPrivate;
+  if (!priv || !uid) return;
+  const bottomIds = state.ptMullBottom || [];
+  const hand = (priv.hand || []).filter(c => !bottomIds.includes(c.cardId));
+  const bottomCards = (priv.hand || []).filter(c => bottomIds.includes(c.cardId)).map(c => ({ ...c, zone: 'library' }));
+  const library = [...(priv.library || []), ...bottomCards];
+  state.ptMullBottom = [];
+  await setDoc(doc(db, 'gameSessions', state.playtestGameId, 'privateZones', uid), { hand, library, handKept: true });
+  await ptPub({ [`players.${uid}.handKept`]: true });
+}
+async function ptMullRedraw() {
+  const uid = state.currentUser?.uid;
+  const player = state.playtestGame?.players?.[uid];
+  const priv = state.playtestPrivate;
+  const mullType = state.playtestGame?.mullType || 'london';
+  if (!player || !priv || !uid) return;
+  state.ptMullBottom = [];
+  const drawCount = mullType === 'draw10' ? 10 : 7;
+  const library = shuffleArr([...(priv.library || []), ...(priv.hand || []).map(c => ({ ...c, zone: 'library' }))]);
+  const hand = library.splice(0, Math.min(drawCount, library.length)).map(c => ({ ...c, zone: 'hand' }));
+  const newMullCount = mullType === 'london' ? (player.mulliganCount || 0) + 1 : (player.mulliganCount || 0);
+  await setDoc(doc(db, 'gameSessions', state.playtestGameId, 'privateZones', uid), { hand, library, handKept: false });
+  if (mullType === 'london') await ptPub({ [`players.${uid}.mulliganCount`]: newMullCount });
+}
+async function ptMullSetType(type) {
+  await ptPub({ mullType: type });
 }
 
 async function ptNextTurn() {
@@ -3437,6 +3498,80 @@ function renderPTLobby() {
 }
 
 // ── Render: Game ──────────────────────────────────────
+function renderPTMullOverlay() {
+  const myUid = state.currentUser?.uid;
+  const session = state.playtestGame;
+  const myPlayer = session?.players?.[myUid];
+  const priv = state.playtestPrivate;
+  const hand = priv?.hand || [];
+  const mullType = session?.mullType || 'london';
+  const mullCount = myPlayer?.mulliganCount || 0;
+  const bottomIds = state.ptMullBottom || [];
+  const isHost = session?.hostId === myUid;
+
+  // How many cards need to go to bottom before Keep is enabled
+  let bottomNeeded = 0;
+  if (mullType === 'london') bottomNeeded = mullCount;
+  else if (mullType === 'draw10') bottomNeeded = 3;
+  // free = 0 always
+
+  const canKeep = bottomIds.length === bottomNeeded;
+  const bottomReady = bottomIds.length === bottomNeeded && bottomNeeded > 0;
+
+  const typeLabels = { london: 'London Mulligan', draw10: 'Draw 10', free: 'Free Mulligan' };
+  const subText = mullType === 'london'
+    ? (mullCount === 0 ? 'London Mulligan — keep any 7, or mulligan' : `London Mulligan — ${mullCount} mulligan${mullCount>1?'s':''} taken · put ${bottomNeeded} card${bottomNeeded>1?'s':''} on bottom`)
+    : mullType === 'draw10'
+    ? `Draw 10 · Put 3 on bottom of library`
+    : 'Free Mulligan — no penalty';
+
+  // Cards waiting in the hand (not yet selected for bottom)
+  const handCards = hand.filter(c => !bottomIds.includes(c.cardId));
+  const bottomCards = hand.filter(c => bottomIds.includes(c.cardId));
+
+  // Waiting for other players
+  const players = Object.entries(session?.players || {});
+  const waitingFor = players.filter(([uid, p]) => uid !== myUid && !p.handKept).map(([, p]) => p.displayName);
+
+  return `<div class="pt-mull-overlay">
+    <div class="pt-mull-header">
+      <div class="pt-mull-title">Opening Hand</div>
+      <div class="pt-mull-sub">${escHtml(subText)}</div>
+    </div>
+    ${isHost ? `<div class="pt-mull-type-row">
+      ${['london','draw10','free'].map(t=>`<button class="pt-mull-type-btn${mullType===t?' active':''}" onclick="ptMullSetType('${t}')">${escHtml({london:'London',draw10:'Draw 10',free:'Free'}[t])}</button>`).join('')}
+    </div>` : ''}
+    <div class="pt-mull-cards">
+      ${handCards.map(card => {
+        const img = card.imageUrl
+          ? `<img src="${escHtml(card.imageUrl)}" loading="lazy">`
+          : `<div class="pt-mull-card-back">${escHtml(card.name.slice(0,16))}</div>`;
+        return `<div class="pt-mull-card${bottomIds.includes(card.cardId)?' selected':''}" onclick="ptMullToggleBottom('${card.cardId}')" title="${escHtml(card.name)}">${img}</div>`;
+      }).join('')}
+      ${handCards.length === 0 && bottomNeeded === 0 ? `<div style="color:var(--text-muted);font-size:13px;padding:20px">No cards in hand</div>` : ''}
+    </div>
+    ${bottomNeeded > 0 ? `<div class="pt-mull-bottom-zone${bottomReady?' ready':''}">
+      <div class="pt-mull-bottom-zone-label">${bottomIds.length}/${bottomNeeded} · Bottom of Library ${bottomReady?'✓':''}</div>
+      ${bottomCards.map(card => {
+        const img = card.imageUrl
+          ? `<img src="${escHtml(card.imageUrl)}" loading="lazy">`
+          : `<div class="pt-mull-bottom-card-back"></div>`;
+        return `<div class="pt-mull-bottom-card" onclick="ptMullToggleBottom('${card.cardId}')" title="${escHtml(card.name)} — click to return">${img}</div>`;
+      }).join('')}
+      ${bottomCards.length === 0 ? `<div style="font-size:11px;color:var(--text-muted)">Click cards above to put them on bottom</div>` : ''}
+    </div>` : ''}
+    <div class="pt-mull-actions">
+      <button class="btn-primary" onclick="ptMullKeep()" ${canKeep?'':'disabled'} style="padding:10px 28px;font-size:14px">
+        Keep ✓
+      </button>
+      <button onclick="ptMullRedraw()" style="padding:10px 22px;font-size:14px">
+        Mulligan${mullType==='london'&&mullCount>0?` (${mullCount})`:''}
+      </button>
+    </div>
+    ${waitingFor.length > 0 ? `<div class="pt-mull-waiting">Waiting for ${escHtml(waitingFor.join(', '))} to keep their hand…</div>` : ''}
+  </div>`;
+}
+
 function renderPTGame() {
   const session = state.playtestGame;
   const myUid = state.currentUser?.uid;
@@ -3595,10 +3730,23 @@ function renderPTGame() {
   // Zone overlay
   const overlayHtml = state.playtestZoneOverlay ? renderPTZoneOverlay() : '';
 
+  // Mulligan overlay: show when player has a dealt hand that hasn't been kept yet
+  const showMullOverlay = state.playtestPrivate?.handKept === false;
+  const mullOverlayHtml = showMullOverlay ? renderPTMullOverlay() : '';
+
+  // Waiting banner: own hand is kept but some others haven't kept yet
+  const waitingPlayers = !showMullOverlay
+    ? Object.values(session.players || {}).filter(p => p.uid !== myUid && !p.handKept && !p.conceded)
+    : [];
+  const waitingBanner = waitingPlayers.length > 0
+    ? `<div style="position:fixed;top:0;left:50%;transform:translateX(-50%);background:var(--bg-card);border:1px solid var(--border);border-radius:0 0 var(--radius) var(--radius);padding:6px 14px;font-size:11px;color:var(--text-muted);z-index:200;white-space:nowrap">
+        Waiting for ${escHtml(waitingPlayers.map(p=>p.displayName).join(', '))} to keep…
+      </div>` : '';
+
   const cardMenuHtml = state.playtestCardMenu ? renderPTCardMenu() : '';
   const menuBackdrop = state.playtestCardMenu ? `<div style="position:fixed;inset:0;z-index:499" onclick="ptCloseMenu()"></div>` : '';
   const settingsBackdrop = state.playtestSettings ? `<div style="position:fixed;inset:0;z-index:498" onclick="event.stopPropagation();state.playtestSettings=false;render()"></div>` : '';
-  return `<div class="pt-playmat">${tabsHtml}${deckBar}${actionBar}${battlefieldHtml}${handHtml}${overlayHtml}${scryHtml}${millHtml}${numberHtml}${settingsBackdrop}${menuBackdrop}${cardMenuHtml}</div>`;
+  return `<div class="pt-playmat">${tabsHtml}${deckBar}${actionBar}${battlefieldHtml}${handHtml}${overlayHtml}${scryHtml}${millHtml}${numberHtml}${settingsBackdrop}${menuBackdrop}${cardMenuHtml}${waitingBanner}${mullOverlayHtml}</div>`;
 }
 
 function renderPTCardMenu() {
@@ -5967,6 +6115,10 @@ window.ptDeleteSession = ptDeleteSession;
 window.ptDraw = ptDraw;
 window.ptUntapAll = ptUntapAll;
 window.ptMulligan = ptMulligan;
+window.ptMullToggleBottom = ptMullToggleBottom;
+window.ptMullKeep = ptMullKeep;
+window.ptMullRedraw = ptMullRedraw;
+window.ptMullSetType = ptMullSetType;
 window.ptShuffle = ptShuffle;
 window.ptNextTurn = ptNextTurn;
 window.ptAdjustLife = ptAdjustLife;
