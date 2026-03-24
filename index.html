@@ -443,6 +443,10 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 /* Pass button emphasis */
 .pt-action-btn.pt-action-pass { background:var(--accent);color:#fff;border-color:var(--accent);font-weight:700; }
 .pt-action-btn.pt-action-pass:hover { background:var(--accent-dim); }
+.pt-action-btn.pt-hold-active { background:rgba(251,191,36,0.15);color:rgb(251,191,36);border-color:rgba(251,191,36,0.5); }
+.pt-action-btn.pt-hold-active:hover { background:rgba(251,191,36,0.3); }
+.pt-prio-dot { display:inline-block;width:7px;height:7px;border-radius:50%;background:rgb(251,191,36);margin-right:4px;animation:prio-pulse 1s ease-in-out infinite; }
+@keyframes prio-pulse { 0%,100%{opacity:1}50%{opacity:0.4} }
 .pt-bf-empty { position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:13px;pointer-events:none; }
 .pt-bf-card { position:absolute;cursor:grab;border-radius:5px;transition:transform 0.12s ease,filter 0.15s,box-shadow 0.15s;touch-action:none;user-select:none;transform-origin:center center; }
 .pt-bf-card:active { cursor:grabbing; }
@@ -854,6 +858,7 @@ let state = {
   ptLibSearch: '',
   ptLibTypeFilter: 'all',
   ptMullBottom: [],  // cardIds selected to go to bottom of library during mulligan
+  ptHoldPriority: localStorage.getItem('pt_hold_prio') === 'true',
   playtestLoading: '',
   playtestMoreMenu: false,
   playtestScryData: null,
@@ -3386,6 +3391,12 @@ async function ptPassPriority() {
   await ptPub({ passed, priority: activePlayers[nextIdx] });
 }
 
+function ptToggleHoldPriority() {
+  state.ptHoldPriority = !state.ptHoldPriority;
+  localStorage.setItem('pt_hold_prio', state.ptHoldPriority ? 'true' : 'false');
+  render();
+}
+
 async function ptAdjustLife(delta) {
   const uid = state.currentUser?.uid;
   const player = state.playtestGame?.players?.[uid];
@@ -3435,7 +3446,13 @@ async function ptPlayCard(cardId) {
     const myIdx = activePlayers.indexOf(uid);
     const nextPriority = activePlayers.length > 1 ? activePlayers[(myIdx + 1) % activePlayers.length] : uid;
     await ptPriv({ ...priv, hand });
-    await ptPub({ stack: newStack, priority: nextPriority, passed: [uid] });
+    if (state.ptHoldPriority) {
+      // Caster keeps priority (hold priority mode — like Arena's "hold priority" toggle)
+      await ptPub({ stack: newStack, priority: uid, passed: [] });
+    } else {
+      // Auto-pass: next opponent gets priority
+      await ptPub({ stack: newStack, priority: nextPriority, passed: [uid] });
+    }
   }
   ptCloseMenu();
 }
@@ -3866,7 +3883,8 @@ function renderPTGame() {
     <button class="pt-action-btn" onclick="ptPromptMill()">Mill</button>
     <button class="pt-action-btn" onclick="ptShuffle()">Shuffle</button>
     ${isActiveTurn?`<button class="pt-action-btn" onclick="ptNextPhase()">Next Phase</button>`:''}
-    <button class="pt-action-btn${myUid===(session.priority||session.activePlayer)?' pt-action-pass':''}" onclick="ptPassPriority()">Pass ⏩</button>
+    <button class="pt-action-btn${myUid===(session.priority||session.activePlayer)?' pt-action-pass':''}" onclick="ptPassPriority()">${state.ptHoldPriority&&myUid===(session.priority||session.activePlayer)?'<span class="pt-prio-dot"></span>':''} Pass ⏩</button>
+    <button class="pt-action-btn${state.ptHoldPriority?' pt-hold-active':''}" onclick="ptToggleHoldPriority()" title="Toggle hold priority (like Arena)">${state.ptHoldPriority?'🔒 Hold Prio':'⚡ Auto Pass'}</button>
     <button class="pt-action-btn${state.playtestTokenPanel?' active':''}" onclick="event.stopPropagation();state.playtestTokenPanel=!state.playtestTokenPanel;state.playtestSettings=false;render()">Token</button>
     <button class="pt-action-btn${state.playtestSettings?' active':''}" onclick="event.stopPropagation();ptToggleSettings()" style="padding:7px 10px">⚙</button>
   </div>${settingsHtml}` : '';
@@ -6313,6 +6331,7 @@ window.ptCounterSpell = ptCounterSpell;
 window.ptShuffle = ptShuffle;
 window.ptNextPhase = ptNextPhase;
 window.ptPassPriority = ptPassPriority;
+window.ptToggleHoldPriority = ptToggleHoldPriority;
 window.ptAdjustLife = ptAdjustLife;
 window.ptConcede = ptConcede;
 window.ptPlayCard = ptPlayCard;
