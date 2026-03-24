@@ -413,6 +413,20 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 .pt-mull-type-btn { font-size:11px;padding:4px 12px;border-radius:99px;border:1px solid var(--border);background:transparent;color:var(--text-muted);cursor:pointer;transition:all 0.1s; }
 .pt-mull-type-btn.active { background:var(--accent);color:#fff;border-color:var(--accent); }
 .pt-mull-waiting { background:rgba(0,0,0,0.5);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 14px;font-size:12px;color:var(--text-muted);text-align:center;max-width:540px;width:100%;flex-shrink:0; }
+/* Stack panel */
+.pt-stack-panel { position:absolute;top:8px;left:50%;transform:translateX(-50%);min-width:180px;max-width:240px;z-index:20;display:flex;flex-direction:column;gap:3px;pointer-events:auto; }
+.pt-stack-header { font-size:9px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);text-align:center;padding:2px 0 4px;font-weight:600; }
+.pt-stack-item { display:flex;align-items:center;gap:7px;background:rgba(0,0,0,0.84);border:1px solid var(--border);border-radius:var(--radius-sm);padding:5px 7px;backdrop-filter:blur(6px);transition:border-color 0.12s; }
+.pt-stack-item:first-of-type { border-color:var(--accent-dim); }
+.pt-stack-item-img { width:28px;height:39px;border-radius:3px;object-fit:cover;flex-shrink:0; }
+.pt-stack-item-back { width:28px;height:39px;border-radius:3px;background:linear-gradient(135deg,#1a1535,#0d0b1a);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:7px;color:var(--text-muted);text-align:center;padding:2px; }
+.pt-stack-item-info { flex:1;min-width:0; }
+.pt-stack-item-name { font-size:11px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text); }
+.pt-stack-item-caster { font-size:9px;color:var(--text-muted); }
+.pt-stack-x-btn { font-size:11px;padding:1px 4px;background:transparent;border:none;color:var(--text-muted);cursor:pointer;flex-shrink:0;line-height:1; }
+.pt-stack-x-btn:hover { color:var(--tier-s-text); }
+.pt-stack-resolve-btn { width:100%;font-size:11px;padding:5px 0;background:rgba(167,139,250,0.15);border:1px solid var(--accent-dim);color:var(--accent);border-radius:var(--radius-sm);cursor:pointer;backdrop-filter:blur(4px);margin-top:2px;transition:background 0.12s; }
+.pt-stack-resolve-btn:hover { background:var(--accent);color:#fff; }
 .pt-bf-empty { position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:13px;pointer-events:none; }
 .pt-bf-card { position:absolute;cursor:grab;border-radius:5px;transition:transform 0.12s ease,filter 0.15s,box-shadow 0.15s;touch-action:none;user-select:none;transform-origin:center center; }
 .pt-bf-card:active { cursor:grabbing; }
@@ -3234,6 +3248,81 @@ async function ptMullSetType(type) {
   await ptPub({ mullType: type });
 }
 
+// ── Stack (casual mode) ───────────────────────────────
+async function ptAddToStack(cardId, fromZone) {
+  const uid = state.currentUser?.uid;
+  const player = state.playtestGame?.players?.[uid];
+  const priv = state.playtestPrivate;
+  if (!uid || !player) return;
+  let card;
+  if (fromZone === 'hand') card = (priv?.hand || []).find(c => c.cardId === cardId);
+  else card = (player[fromZone] || []).find(c => c.cardId === cardId);
+  if (!card) return;
+  const stackItem = { cardId: card.cardId, name: card.name, imageUrl: card.imageUrl || null,
+    casterId: uid, casterName: player.displayName || 'Player', fromZone,
+    addedAt: new Date().toISOString() };
+  const newStack = [stackItem, ...(state.playtestGame?.stack || [])];
+  if (fromZone === 'hand') {
+    const newHand = (priv.hand || []).filter(c => c.cardId !== cardId);
+    await ptPriv({ ...priv, hand: newHand });
+    await ptPub({ stack: newStack });
+  } else {
+    const newZone = (player[fromZone] || []).filter(c => c.cardId !== cardId);
+    const updates = { stack: newStack };
+    updates[`players.${uid}.${fromZone}`] = newZone;
+    await ptPub(updates);
+  }
+  state.playtestCardMenu = null; render();
+}
+async function ptResolveTop() {
+  const session = state.playtestGame;
+  if (!session?.stack?.length) return;
+  const [top, ...rest] = session.stack;
+  const player = session.players?.[top.casterId];
+  if (!player) { await ptPub({ stack: rest }); return; }
+  const typeLine = (scryfallCache[scryfallKey(top.name)]?.typeLine || '').toLowerCase();
+  const isSpell = typeLine.includes('instant') || typeLine.includes('sorcery');
+  const card = { cardId: top.cardId, name: top.name, imageUrl: top.imageUrl || null,
+    tapped: false, counters: 0, isCommander: false, isToken: false };
+  const updates = { stack: rest };
+  if (isSpell) {
+    updates[`players.${top.casterId}.graveyard`] = [...(player.graveyard || []), { ...card, zone: 'graveyard' }];
+  } else {
+    const pos = ptDefaultPos(player.battlefield || []);
+    updates[`players.${top.casterId}.battlefield`] = [...(player.battlefield || []), { ...card, ...pos, zone: 'battlefield' }];
+  }
+  await ptPub(updates);
+}
+async function ptCounterSpell(cardId) {
+  const session = state.playtestGame;
+  if (!session?.stack) return;
+  const item = session.stack.find(s => s.cardId === cardId);
+  if (!item) return;
+  const rest = session.stack.filter(s => s.cardId !== cardId);
+  const player = session.players?.[item.casterId];
+  const updates = { stack: rest };
+  if (player) updates[`players.${item.casterId}.graveyard`] = [...(player.graveyard || []), { cardId: item.cardId, name: item.name, imageUrl: item.imageUrl || null, zone: 'graveyard' }];
+  await ptPub(updates);
+}
+function renderPTStackPanel() {
+  const stack = state.playtestGame?.stack || [];
+  if (!stack.length) return '';
+  return `<div class="pt-stack-panel" onclick="event.stopPropagation()">
+    <div class="pt-stack-header">The Stack (${stack.length})</div>
+    ${stack.map(item => `<div class="pt-stack-item">
+      ${item.imageUrl
+        ? `<img class="pt-stack-item-img" src="${escHtml(item.imageUrl)}" loading="lazy">`
+        : `<div class="pt-stack-item-back">${escHtml(item.name.slice(0,8))}</div>`}
+      <div class="pt-stack-item-info">
+        <div class="pt-stack-item-name">${escHtml(item.name.slice(0,20))}</div>
+        <div class="pt-stack-item-caster">${escHtml(item.casterName)}</div>
+      </div>
+      <button class="pt-stack-x-btn" onclick="ptCounterSpell('${item.cardId}')" title="Counter — send to GY">✕</button>
+    </div>`).join('')}
+    <button class="pt-stack-resolve-btn" onclick="ptResolveTop()">Resolve top ↓</button>
+  </div>`;
+}
+
 async function ptNextTurn() {
   await ptPub({ turn: (state.playtestGame?.turn || 1) + 1 });
 }
@@ -3644,8 +3733,10 @@ function renderPTGame() {
     ${isMyBoard ? `<button class="pt-zone-life-btn" onclick="event.stopPropagation();ptAdjustLife(1)" style="color:var(--tier-b-text)">♥ +1</button>
     <button class="pt-zone-life-btn" onclick="event.stopPropagation();ptAdjustLife(-1)" style="color:var(--tier-s-text)">♥ −1</button>` : ''}
   </div>`;
+  const stackPanelHtml = renderPTStackPanel();
   const battlefieldHtml = `<div class="pt-battlefield" id="pt-battlefield" onclick="ptCloseMenu()" onpointerdown="ptBfPanStart(event)">
     ${zoneSidebar}
+    ${stackPanelHtml}
     <div class="pt-battlefield-canvas" id="pt-bf-canvas" style="transform:translate(${ptPanX}px,${ptPanY}px) scale(${ptScale})">
       ${bf.length===0 ? `<div class="pt-bf-empty">Drag cards here from hand</div>` : ''}
       ${bf.map(card => {
@@ -3761,6 +3852,7 @@ function renderPTCardMenu() {
   const actions = [];
   if (zone==='hand') {
     actions.push({label:'▶ Play to Battlefield', fn:`ptPlayCard('${cardId}')`});
+    actions.push({label:'↑ Put on Stack', fn:`ptAddToStack('${cardId}','hand')`});
     actions.push({label:'→ Graveyard', fn:`ptMoveCard('${cardId}','hand','graveyard')`});
     actions.push({label:'→ Exile', fn:`ptMoveCard('${cardId}','hand','exile')`});
     actions.push({label:'→ Top of Library', fn:`ptMoveCard('${cardId}','hand','library')`});
@@ -3768,6 +3860,7 @@ function renderPTCardMenu() {
     actions.push({label:card.tapped?'↺ Untap':'⤵ Tap', fn:`ptTapCard('${cardId}')`});
     actions.push({label:'➕ Add Counter', fn:`ptAddCounter('${cardId}','battlefield',1)`});
     if(card.counters>0) actions.push({label:'➖ Remove Counter', fn:`ptAddCounter('${cardId}','battlefield',-1)`});
+    actions.push({label:'↑ Put on Stack', fn:`ptAddToStack('${cardId}','battlefield')`});
     actions.push({label:'→ Hand', fn:`ptMoveCard('${cardId}','battlefield','hand')`});
     actions.push({label:'→ Graveyard', fn:`ptMoveCard('${cardId}','battlefield','graveyard')`});
     actions.push({label:'→ Exile', fn:`ptMoveCard('${cardId}','battlefield','exile')`});
@@ -6119,6 +6212,9 @@ window.ptMullToggleBottom = ptMullToggleBottom;
 window.ptMullKeep = ptMullKeep;
 window.ptMullRedraw = ptMullRedraw;
 window.ptMullSetType = ptMullSetType;
+window.ptAddToStack = ptAddToStack;
+window.ptResolveTop = ptResolveTop;
+window.ptCounterSpell = ptCounterSpell;
 window.ptShuffle = ptShuffle;
 window.ptNextTurn = ptNextTurn;
 window.ptAdjustLife = ptAdjustLife;
