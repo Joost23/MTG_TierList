@@ -858,7 +858,7 @@ let state = {
   ptLibSearch: '',
   ptLibTypeFilter: 'all',
   ptMullBottom: [],  // cardIds selected to go to bottom of library during mulligan
-  ptHoldPriority: localStorage.getItem('pt_hold_prio') === 'true',
+  ptHoldPriority: localStorage.getItem('pt_hold_prio') !== 'false', // default ON — rules-correct (caster keeps priority after casting)
   playtestLoading: '',
   playtestMoreMenu: false,
   playtestScryData: null,
