@@ -4389,7 +4389,8 @@ function ptZoomHide() {
 }
 function ptZoomHover(e, imageUrl, name) {
   clearTimeout(ptZoomTimer);
-  ptZoomTimer = setTimeout(() => ptZoomShow(imageUrl, name, e.currentTarget), 300);
+  const anchor = e.currentTarget; // capture before event finishes dispatching (currentTarget becomes null async)
+  ptZoomTimer = setTimeout(() => ptZoomShow(imageUrl, name, anchor), 300);
 }
 
 // ── Hand hover preview (fixed-position overlay, X-position detection) ─────
@@ -4427,9 +4428,9 @@ function ptInitHandHover() {
     // Apply Arena-style wave: scale falls off with distance from hovered card
     cards.forEach((c, i) => {
       const dist = Math.abs(i - idx);
-      if (dist === 0)      { c.style.transform = 'translateY(-24px) scale(1.55)'; c.style.zIndex = '60'; }
-      else if (dist === 1) { c.style.transform = 'translateY(-10px) scale(1.14)'; c.style.zIndex = '50'; }
-      else if (dist === 2) { c.style.transform = 'translateY(-3px) scale(1.04)';  c.style.zIndex = '40'; }
+      if (dist === 0)      { c.style.transform = 'translateY(-36px) scale(1.9)';  c.style.zIndex = '60'; }
+      else if (dist === 1) { c.style.transform = 'translateY(-14px) scale(1.2)';  c.style.zIndex = '50'; }
+      else if (dist === 2) { c.style.transform = 'translateY(-4px) scale(1.06)';  c.style.zIndex = '40'; }
       else                 { c.style.transform = '';                               c.style.zIndex = ''; }
     });
   });
