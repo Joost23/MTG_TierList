@@ -1254,9 +1254,9 @@ const REC_COLOR_NAMES = { W: 'White', U: 'Blue', B: 'Black', R: 'Red', G: 'Green
 const REC_COLOR_BG    = { W: '#C8A84B', U: '#1070C8', B: '#4B4B4B', R: '#D0392A', G: '#1A7A3C' };
 
 function getRecommendations() {
-  const myName = currentUserName();
-  if (!myName) return [];
-  const myDecks = state.decks.filter(d => d.player === myName);
+  if (!currentUserName()) return [];
+  const myDecks = getMyDecks();
+  const myUid = state.currentUser?.uid;
   const recs = [];
   const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
@@ -1301,7 +1301,7 @@ function getRecommendations() {
   // 3. Brew challenge: color missing from your collection but present in the pod
   const myColors = new Set(myDecks.flatMap(d => (d.colors || '').split('')).filter(c => 'WUBRG'.includes(c)));
   const podColorCount = {};
-  state.decks.filter(d => d.player !== myName).forEach(d => {
+  state.decks.filter(d => myUid ? d.ownerUid !== myUid : d.player !== currentUserName()).forEach(d => {
     (d.colors || '').split('').forEach(c => { if ('WUBRG'.includes(c)) podColorCount[c] = (podColorCount[c] || 0) + 1; });
   });
   const missingWithPod = ['W','U','B','R','G']
