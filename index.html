@@ -552,9 +552,9 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 .pt-menu-btn { display:block;width:100%;text-align:left;padding:8px 10px;font-size:13px;border:none;background:transparent;color:var(--text);border-radius:var(--radius-sm);cursor:pointer; }
 .pt-menu-btn:hover { background:var(--bg-hover); }
 .pt-menu-cancel { color:var(--text-muted);border-top:1px solid var(--border);margin-top:4px;padding-top:8px; }
-#pt-card-zoom { position:fixed;pointer-events:none;z-index:999;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,0.6);opacity:0;transform:scale(0.9);transition:opacity 0.15s,transform 0.15s;display:none; }
-#pt-card-zoom.visible { opacity:1;transform:scale(1); }
-#pt-card-zoom img { width:240px;border-radius:12px;display:block; }
+#pt-card-zoom { position:fixed;pointer-events:none;z-index:9999;border-radius:12px;box-shadow:0 16px 48px rgba(0,0,0,0.75);opacity:0;transform:scale(0.88) translateY(6px);transition:opacity 0.12s ease,transform 0.12s ease;display:none; }
+#pt-card-zoom.visible { opacity:1;transform:scale(1) translateY(0); }
+#pt-card-zoom img { width:320px;border-radius:12px;display:block; }
 .pt-settings-popover { position:fixed;background:var(--bg-card);border:1px solid var(--border-hover);border-radius:var(--radius);padding:12px 14px;z-index:500;min-width:190px;box-shadow:0 8px 32px rgba(0,0,0,0.6);animation:ptFadeSlide 0.15s ease; }
 .pt-settings-popover label { display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:4px 0;color:var(--text-secondary); }
 .pt-settings-row { display:flex;gap:6px;margin-bottom:10px; }
@@ -3628,7 +3628,7 @@ function renderPTStackPanel() {
     ${[...stack].reverse().map((item, i) => {
       const isTop = i === stack.length - 1;
       return `<div class="pt-stack-item${isTop?' pt-stack-top':''}"
-        onpointerenter="ptZoomHover(event,${JSON.stringify(item.imageUrl||'')},${JSON.stringify(item.name)})"
+        onpointerenter="ptZoomHover(event,${JSON.stringify(item.imageUrl||'')},${JSON.stringify(item.name)},true)"
         onpointerleave="ptZoomHide()">
         <span class="pt-stack-pos">${i+1}</span>
         ${item.imageUrl
@@ -4816,17 +4816,18 @@ function ptToggleSettings() { state.playtestSettings = !state.playtestSettings; 
 
 // ── Zoom preview ───────────────────────────────────────
 let ptZoomTimer = null;
-function ptZoomShow(imageUrl, name, anchorEl) {
+function ptZoomShow(imageUrl, name, cx, cy) {
+  // cx/cy = cursor client coordinates (numbers — safe across async timers & re-renders)
   if (!imageUrl) return;
   const el = document.getElementById('pt-card-zoom');
   if (!el) return;
   const img = el.querySelector('img');
   img.src = imageUrl; img.alt = name || '';
-  const rect = anchorEl.getBoundingClientRect();
   const vw = window.innerWidth, vh = window.innerHeight;
-  const pw = 240, ph = Math.round(240 * 88 / 63);
-  let left = rect.left > vw / 2 ? rect.left - pw - 12 : rect.right + 12;
-  let top  = rect.top  > vh / 2 ? rect.bottom - ph    : rect.top;
+  const pw = 320, ph = Math.round(320 * 88 / 63);
+  // Arena-style: opposite side of cursor, centered on cursor Y
+  let left = cx > vw / 2 ? cx - pw - 24 : cx + 24;
+  let top  = cy - ph / 2;
   left = Math.max(8, Math.min(left, vw - pw - 8));
   top  = Math.max(8, Math.min(top,  vh - ph - 8));
   el.style.left = left + 'px'; el.style.top = top + 'px';
@@ -4840,10 +4841,10 @@ function ptZoomHide() {
   el.classList.remove('visible');
   setTimeout(() => { if (!el.classList.contains('visible')) el.style.display = 'none'; }, 150);
 }
-function ptZoomHover(e, imageUrl, name) {
+function ptZoomHover(e, imageUrl, name, fast) {
   clearTimeout(ptZoomTimer);
-  const anchor = e.currentTarget; // capture before event finishes dispatching (currentTarget becomes null async)
-  ptZoomTimer = setTimeout(() => ptZoomShow(imageUrl, name, anchor), 300);
+  const cx = e.clientX, cy = e.clientY; // capture numbers — survive DOM re-renders
+  ptZoomTimer = setTimeout(() => ptZoomShow(imageUrl, name, cx, cy), fast ? 50 : 250);
 }
 
 // ── Hand hover preview (fixed-position overlay, X-position detection) ─────
