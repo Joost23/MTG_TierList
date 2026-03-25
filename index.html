@@ -445,6 +445,11 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 .pt-action-btn.pt-action-pass:hover { background:var(--accent-dim); }
 .pt-action-btn.pt-hold-active { background:rgba(251,191,36,0.15);color:rgb(251,191,36);border-color:rgba(251,191,36,0.5); }
 .pt-action-btn.pt-hold-active:hover { background:rgba(251,191,36,0.3); }
+.pt-mana-pool { display:flex;align-items:center;gap:3px;padding:3px 6px;background:rgba(0,0,0,0.35);border-radius:20px;flex-shrink:0; }
+.pt-mana-pip { display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;font-size:11px;font-weight:800;cursor:pointer;user-select:none;border:1.5px solid rgba(0,0,0,0.4);transition:transform 0.1s;flex-shrink:0; }
+.pt-mana-pip:hover { transform:scale(1.25); }
+.pt-mana-clear { font-size:10px;color:var(--text-muted);cursor:pointer;padding:0 2px;line-height:1;opacity:0.6; }
+.pt-mana-clear:hover { opacity:1;color:var(--tier-s-text); }
 .pt-prio-dot { display:inline-block;width:7px;height:7px;border-radius:50%;background:rgb(251,191,36);margin-right:4px;animation:prio-pulse 1s ease-in-out infinite; }
 @keyframes prio-pulse { 0%,100%{opacity:1}50%{opacity:0.4} }
 .pt-bf-empty { position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:13px;pointer-events:none; }
@@ -860,6 +865,8 @@ let state = {
   ptMullBottom: [],  // cardIds selected to go to bottom of library during mulligan
   ptHoldPriority: localStorage.getItem('pt_hold_prio') !== 'false', // default ON — rules-correct (caster keeps priority after casting)
   ptLibraryMenu: null,
+  ptCmdrMenu: null,
+  ptManaPool: { W: 0, U: 0, B: 0, R: 0, G: 0, C: 0 },
   playtestLoading: '',
   playtestMoreMenu: false,
   playtestScryData: null,
@@ -2342,6 +2349,7 @@ async function fetchScryfallBatch(cards) {
           cmc: card.cmc ?? 0,
           colors: card.colors || card.card_faces?.[0]?.colors || [],
           tokenIds: (card.all_parts || []).filter(p => p.component === 'token').map(p => p.id),
+          producedMana: card.produced_mana || [],
         };
         scryfallCache[scryfallKey(card.name)] = cacheEntry;
         if (card.card_faces?.[0]?.name) {
@@ -3080,12 +3088,32 @@ function ptListen(sessionId) {
   unsubscribePlaytest = onSnapshot(doc(db, 'gameSessions', sessionId), async snap => {
     if (snap.exists()) {
       const prevStatus = state.playtestGame?.status;
+      const prevMullType = state.playtestGame?.mullType;
       state.playtestGame = { id: snap.id, ...snap.data() };
       render();
       // When game goes active, each player deals their own private zone
       if (prevStatus === 'waiting' && state.playtestGame.status === 'active' && myUid) {
         const myPlayer = state.playtestGame.players?.[myUid];
         if (myPlayer) await ptDealOwnHand(sessionId, myUid, myPlayer);
+      }
+      // When host switches to draw10, every player who hasn't kept yet tops up to 10 cards
+      if (prevMullType !== 'draw10' && state.playtestGame.mullType === 'draw10' && myUid) {
+        const myPlayer = state.playtestGame.players?.[myUid];
+        if (myPlayer && !myPlayer.handKept) {
+          const priv = state.playtestPrivate;
+          if (priv) {
+            const hand = [...(priv.hand || [])];
+            const library = [...(priv.library || [])];
+            const needed = 10 - hand.length;
+            if (needed > 0) {
+              const drawn = library.splice(0, Math.min(needed, library.length));
+              drawn.forEach(c => hand.push({ ...c, zone: 'hand' }));
+              state.playtestPrivate = { ...priv, hand, library };
+              render();
+              await ptPriv({ ...priv, hand, library });
+            }
+          }
+        }
       }
     }
   });
@@ -3352,6 +3380,35 @@ function renderPTLibMenu() {
   </div>`;
 }
 
+// ── Commander zone quick-menu ─────────────────────────
+function ptCmdrClick(e) {
+  state.ptCmdrMenu = { x: e.clientX, y: e.clientY };
+  render();
+}
+function ptCloseCmdrMenu() { state.ptCmdrMenu = null; render(); }
+function renderPTCmdrMenu() {
+  if (!state.ptCmdrMenu) return '';
+  const { x, y } = state.ptCmdrMenu;
+  const uid = state.currentUser?.uid;
+  const cmdrs = state.playtestGame?.players?.[uid]?.commandZone || [];
+  if (!cmdrs.length) { state.ptCmdrMenu = null; return ''; }
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const menuW = 220, menuH = Math.min(cmdrs.length * 90 + 80, 400);
+  let left = x - menuW - 8;
+  let top = Math.max(8, Math.min(y - menuH / 2, vh - menuH - 8));
+  if (left < 8) left = x + 8;
+  return `<div class="pt-card-menu" style="left:${left}px;top:${top}px;z-index:500" onclick="event.stopPropagation()">
+    <div class="pt-card-menu-name">Command Zone</div>
+    ${cmdrs.map(card => `
+      <div style="font-size:10px;color:var(--text-muted);padding:4px 14px 2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(card.name)}</div>
+      <button class="pt-menu-btn" onclick="ptMoveCard('${card.cardId}','commandZone','battlefield');ptCloseCmdrMenu()">▶ Play to Battlefield</button>
+      <button class="pt-menu-btn" onclick="ptMoveCard('${card.cardId}','commandZone','hand');ptCloseCmdrMenu()">→ Return to Hand</button>
+    `).join('')}
+    <button class="pt-menu-btn" onclick="ptOpenZone('${uid}','commandZone');ptCloseCmdrMenu()" style="margin-top:4px;border-top:1px solid var(--border);padding-top:8px">📋 View Zone</button>
+    <button class="pt-menu-btn pt-menu-cancel" onclick="ptCloseCmdrMenu()">Cancel</button>
+  </div>`;
+}
+
 // ── Mulligan hover preview ────────────────────────────
 function ptMullCardHover(e, imageUrl) {
   if (e.pointerType !== 'mouse') return;
@@ -3470,6 +3527,8 @@ async function ptNextPhase() {
     if (nextPlayer?.battlefield?.length) {
       updates[`players.${nextActive}.battlefield`] = nextPlayer.battlefield.map(c => ({ ...c, tapped: false }));
     }
+    // Clear mana pool on new turn
+    state.ptManaPool = { W: 0, U: 0, B: 0, R: 0, G: 0, C: 0 };
     await ptPub(updates);
   } else {
     const nextPhase = PT_PHASES[curIdx + 1];
@@ -3545,6 +3604,7 @@ async function ptPlayCard(cardId) {
     await ptPub({ [`players.${uid}.battlefield`]: battlefield });
   } else {
     // Non-lands go to the stack; priority determined by hold-priority toggle
+    ptSpendManaForCost(scryfallCache[scryfallKey(card.name)]?.manaCost || '');
     const session = state.playtestGame;
     const stackItem = { cardId: card.cardId, name: card.name, imageUrl: card.imageUrl || null,
       casterId: uid, casterName: player.displayName || 'Player', fromZone: 'hand',
@@ -3565,10 +3625,58 @@ async function ptPlayCard(cardId) {
   ptCloseMenu();
 }
 
+// ── Mana tracking ─────────────────────────────────────
+const MANA_COLORS_HEX = { W:'#f5f0d8', U:'#4a90d9', B:'#8b6fa0', R:'#d9534a', G:'#3a8a4a', C:'#aaaaaa' };
+const BASIC_LAND_MANA = { plains:'W', island:'U', swamp:'B', mountain:'R', forest:'G', wastes:'C' };
+
+function ptInferMana(name, cached) {
+  if (cached?.producedMana?.length) return cached.producedMana;
+  // Try basic land name match
+  const lower = name.toLowerCase();
+  for (const [k, v] of Object.entries(BASIC_LAND_MANA)) {
+    if (lower.includes(k)) return [v];
+  }
+  // Fall back to card's color identity
+  if (cached?.colors?.length) return cached.colors;
+  return ['C'];
+}
+
+function ptSpendManaForCost(manaCost) {
+  if (!manaCost) return;
+  const pool = state.ptManaPool;
+  const symbols = (manaCost.match(/\{([^}]+)\}/g) || []).map(s => s.slice(1,-1));
+  let generic = 0;
+  for (const sym of symbols) {
+    if (/^\d+$/.test(sym)) { generic += parseInt(sym); continue; }
+    if (sym === 'X' || sym === 'S') continue;
+    // Hybrid: try first color of pair
+    const color = sym.includes('/') ? sym.split('/')[0] : sym;
+    if (color in pool && pool[color] > 0) pool[color]--;
+    else generic++;
+  }
+  // Pay generic: colorless first, then G R B U W
+  for (const color of ['C','G','R','B','U','W']) {
+    while (generic > 0 && pool[color] > 0) { pool[color]--; generic--; }
+  }
+}
+
 async function ptTapCard(cardId) {
   const uid = state.currentUser?.uid;
   const player = state.playtestGame?.players?.[uid];
   if (!player) return;
+  const card = (player.battlefield || []).find(c => c.cardId === cardId);
+  if (card && uid === (state.playtestGame?.activePlayer || uid)) {
+    const cached = scryfallCache[scryfallKey(card.name)];
+    const typeLine = (cached?.typeLine || '').toLowerCase();
+    if (typeLine.includes('land')) {
+      const mana = ptInferMana(card.name, cached);
+      if (!card.tapped) {
+        mana.forEach(m => { if (m in state.ptManaPool) state.ptManaPool[m]++; });
+      } else {
+        mana.forEach(m => { if (m in state.ptManaPool) state.ptManaPool[m] = Math.max(0, state.ptManaPool[m] - 1); });
+      }
+    }
+  }
   await ptPub({ [`players.${uid}.battlefield`]: (player.battlefield || []).map(c => c.cardId === cardId ? { ...c, tapped: !c.tapped } : c) });
   ptCloseMenu();
 }
@@ -3948,7 +4056,7 @@ function renderPTGame() {
       </div>
       <div class="pt-zone-panel-label">Exile</div>
     </div>
-    <div class="pt-zone-panel" onclick="event.stopPropagation();ptOpenZone('${viewUid}','commandZone')">
+    <div class="pt-zone-panel" onclick="event.stopPropagation();${isMyBoard ? 'ptCmdrClick(event)' : `ptOpenZone('${viewUid}','commandZone')`}">
       <div class="pt-zone-panel-img">
         ${topCmdr?.imageUrl ? `<img src="${escHtml(topCmdr.imageUrl)}" loading="lazy">` : `<div class="pt-zone-panel-empty">⭐</div>`}
         ${czLen > 1 ? `<div class="pt-zone-panel-count">${czLen}</div>` : ''}
@@ -3990,6 +4098,13 @@ function renderPTGame() {
   // Action bar (own board only)
   const mullCount = myPlayer?.mulliganCount || 0;
   const settingsHtml = state.playtestSettings ? renderPTSettings(mullCount) : '';
+  const manaPool = state.ptManaPool;
+  const manaEntries = Object.entries(manaPool).filter(([,v]) => v > 0);
+  const manaPoolHtml = manaEntries.length > 0
+    ? `<div class="pt-mana-pool" title="Floating mana — click a pip to spend 1">${manaEntries.map(([k,v]) =>
+        `<span class="pt-mana-pip" style="background:${MANA_COLORS_HEX[k]};color:${k==='W'?'#333':'#fff'}" onclick="state.ptManaPool['${k}']=Math.max(0,state.ptManaPool['${k}']-1);render()" title="Spend 1 ${k}">${v}</span>`
+      ).join('')}<span class="pt-mana-clear" onclick="state.ptManaPool={W:0,U:0,B:0,R:0,G:0,C:0};render()" title="Clear all mana">✕</span></div>`
+    : '';
   const actionBar = isMyBoard ? `<div class="pt-action-bar">
     <button class="pt-action-btn" onclick="ptDraw()">Draw</button>
     <button class="pt-action-btn" onclick="ptUntapAll()">Untap All</button>
@@ -3997,6 +4112,7 @@ function renderPTGame() {
     <button class="pt-action-btn" onclick="ptPromptMill()">Mill</button>
     <button class="pt-action-btn" onclick="ptShuffle()">Shuffle</button>
     ${isActiveTurn?`<button class="pt-action-btn" onclick="ptNextPhase()">Next Phase</button>`:''}
+    ${manaPoolHtml}
     <button class="pt-action-btn${myUid===(session.priority||session.activePlayer)?' pt-action-pass':''}" onclick="ptPassPriority()">${state.ptHoldPriority&&myUid===(session.priority||session.activePlayer)?'<span class="pt-prio-dot"></span>':''} Pass ⏩</button>
     <button class="pt-action-btn${state.ptHoldPriority?' pt-hold-active':''}" onclick="ptToggleHoldPriority()" title="Toggle hold priority (like Arena)">${state.ptHoldPriority?'🔒 Hold Prio':'⚡ Auto Pass'}</button>
     <button class="pt-action-btn${state.playtestTokenPanel?' active':''}" onclick="event.stopPropagation();state.playtestTokenPanel=!state.playtestTokenPanel;state.playtestSettings=false;render()">Token</button>
@@ -4065,8 +4181,10 @@ function renderPTGame() {
   const menuBackdrop = state.playtestCardMenu ? `<div style="position:fixed;inset:0;z-index:499" onclick="ptCloseMenu()"></div>` : '';
   const libMenuHtml = state.ptLibraryMenu ? renderPTLibMenu() : '';
   const libMenuBackdrop = state.ptLibraryMenu ? `<div style="position:fixed;inset:0;z-index:498" onclick="ptCloseLibMenu()"></div>` : '';
+  const cmdrMenuHtml = state.ptCmdrMenu ? renderPTCmdrMenu() : '';
+  const cmdrMenuBackdrop = state.ptCmdrMenu ? `<div style="position:fixed;inset:0;z-index:498" onclick="ptCloseCmdrMenu()"></div>` : '';
   const settingsBackdrop = state.playtestSettings ? `<div style="position:fixed;inset:0;z-index:498" onclick="event.stopPropagation();state.playtestSettings=false;render()"></div>` : '';
-  return `<div class="pt-playmat">${tabsHtml}${deckBar}${phaseBar}${actionBar}${battlefieldHtml}${handHtml}${overlayHtml}${scryHtml}${millHtml}${numberHtml}${settingsBackdrop}${libMenuBackdrop}${libMenuHtml}${menuBackdrop}${cardMenuHtml}${waitingBanner}${mullOverlayHtml}</div>`;
+  return `<div class="pt-playmat">${tabsHtml}${deckBar}${phaseBar}${actionBar}${battlefieldHtml}${handHtml}${overlayHtml}${scryHtml}${millHtml}${numberHtml}${settingsBackdrop}${cmdrMenuBackdrop}${cmdrMenuHtml}${libMenuBackdrop}${libMenuHtml}${menuBackdrop}${cardMenuHtml}${waitingBanner}${mullOverlayHtml}</div>`;
 }
 
 function renderPTCardMenu() {
@@ -5031,6 +5149,7 @@ async function ptPlayCardAt(cardId, x, y) {
     await ptPub({ [`players.${uid}.battlefield`]: battlefield });
   } else {
     // Non-lands go to the stack with priority logic (same as menu "Play" button)
+    ptSpendManaForCost(scryfallCache[scryfallKey(card.name)]?.manaCost || '');
     const session = state.playtestGame;
     const stackItem = { cardId: card.cardId, name: card.name, imageUrl: card.imageUrl || null,
       casterId: uid, casterName: player.displayName || 'Player', fromZone: 'hand',
@@ -6497,6 +6616,9 @@ window.ptLibraryTutor = ptLibraryTutor;
 window.ptLookAtTop = ptLookAtTop;
 window.ptMullCardHover = ptMullCardHover;
 window.ptMullCardHoverEnd = ptMullCardHoverEnd;
+window.ptCmdrClick = ptCmdrClick;
+window.ptCloseCmdrMenu = ptCloseCmdrMenu;
+window.ptSpendManaForCost = ptSpendManaForCost;
 
 // Scroll-to-zoom on battlefield (also handles trackpad pinch via ctrlKey+wheel)
 document.addEventListener('wheel', function(e) {
