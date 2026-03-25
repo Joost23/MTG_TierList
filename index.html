@@ -433,10 +433,18 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 .pt-stack-counter-btn { background:rgba(226,75,74,0.1);border:1px solid rgba(226,75,74,0.35);color:var(--tier-s-text); }
 .pt-stack-counter-btn:hover { background:var(--tier-s-text);color:#fff;border-color:var(--tier-s-text); }
 /* Priority bar (large Take Action / Decline above hand) */
-.pt-priority-bar { display:flex;align-items:center;gap:8px;padding:6px 12px;background:rgba(0,0,0,0.92);border-top:1px solid var(--accent-dim);flex-shrink:0;backdrop-filter:blur(8px); }
-.pt-priority-take-btn { flex:2;font-size:14px;font-weight:700;padding:10px;border-radius:var(--radius-sm);background:var(--accent);color:#fff;border:none;cursor:pointer;transition:opacity 0.12s;font-family:inherit; }
+.pt-priority-bar { display:flex;align-items:center;gap:10px;padding:8px 14px;background:rgba(10,8,22,0.96);border-top:2px solid var(--accent);flex-shrink:0;backdrop-filter:blur(10px);flex-wrap:wrap; }
+.pt-priority-bar-waiting { border-top-color:var(--border);opacity:0.8; }
+.pt-priority-context { display:flex;flex-direction:column;gap:1px;flex:1;min-width:0; }
+.pt-priority-headline { font-size:10px;font-weight:800;letter-spacing:1.5px;color:var(--accent);text-transform:uppercase; }
+.pt-priority-cardname { font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+.pt-priority-cardname-dim { font-size:12px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1; }
+.pt-priority-tally { font-size:10px;color:var(--text-muted); }
+.pt-priority-waiting-icon { font-size:16px; }
+.pt-priority-btns { display:flex;gap:8px;flex-shrink:0; }
+.pt-priority-take-btn { font-size:13px;font-weight:700;padding:9px 18px;border-radius:var(--radius-sm);background:var(--accent);color:#fff;border:none;cursor:pointer;transition:opacity 0.12s;font-family:inherit;white-space:nowrap; }
 .pt-priority-take-btn:hover { opacity:0.85; }
-.pt-priority-decline-btn { flex:1;font-size:13px;font-weight:600;padding:10px;border-radius:var(--radius-sm);background:rgba(255,255,255,0.06);color:var(--text-muted);border:1px solid var(--border);cursor:pointer;transition:background 0.12s;font-family:inherit; }
+.pt-priority-decline-btn { font-size:13px;font-weight:600;padding:9px 16px;border-radius:var(--radius-sm);background:rgba(255,255,255,0.06);color:var(--text-muted);border:1px solid var(--border);cursor:pointer;transition:background 0.12s;font-family:inherit;white-space:nowrap; }
 .pt-priority-decline-btn:hover { background:rgba(255,255,255,0.14); }
 .pt-priority-waiting { font-size:12px;color:var(--text-muted);text-align:center;flex:1;font-style:italic;padding:8px 0; }
 /* Phase stop indicator */
@@ -3569,14 +3577,21 @@ async function ptAddToStack(cardId, fromZone) {
   const stackItem = { cardId: card.cardId, name: card.name, imageUrl: card.imageUrl || null,
     casterId: uid, casterName: player.displayName || 'Player', fromZone,
     addedAt: new Date().toISOString() };
-  const newStack = [stackItem, ...(state.playtestGame?.stack || [])];
+  const session = state.playtestGame;
+  const newStack = [stackItem, ...(session?.stack || [])];
+  // Update priority/passed so responding player gets to act next
+  const activePlayers = Object.keys(session?.players || {}).filter(p => !session?.players[p].conceded);
+  const myIdx = activePlayers.indexOf(uid);
+  const nextPriority = activePlayers.length > 1 ? activePlayers[(myIdx + 1) % activePlayers.length] : uid;
+  const newPriority = state.ptHoldPriority ? uid : nextPriority;
+  const newPassed   = state.ptHoldPriority ? [] : [uid];
   if (fromZone === 'hand') {
     const newHand = (priv.hand || []).filter(c => c.cardId !== cardId);
     await ptPriv({ ...priv, hand: newHand });
-    await ptPub({ stack: newStack });
+    await ptPub({ stack: newStack, priority: newPriority, passed: newPassed });
   } else {
     const newZone = (player[fromZone] || []).filter(c => c.cardId !== cardId);
-    const updates = { stack: newStack };
+    const updates = { stack: newStack, priority: newPriority, passed: newPassed };
     updates[`players.${uid}.${fromZone}`] = newZone;
     await ptPub(updates);
   }
@@ -3643,10 +3658,10 @@ function renderPTStackPanel() {
     ${priorityEnabled
       ? hasPriority
         ? `<div class="pt-stack-priority-row">
-            <button class="pt-stack-take-btn" onclick="ptStackTakeAction()">Take Action</button>
-            <button class="pt-stack-decline-btn" onclick="ptPassPriority()">Decline</button>
+            <button class="pt-stack-take-btn" onclick="ptStackTakeAction()">⚡ Respond</button>
+            <button class="pt-stack-decline-btn" onclick="ptPassPriority()">Let Resolve</button>
           </div>`
-        : `<div class="pt-stack-waiting">Waiting for ${waitingName}…</div>`
+        : `<div class="pt-stack-waiting">⏳ ${waitingName} has priority</div>`
       : `<div class="pt-stack-action-row">
           <button class="pt-stack-action-btn pt-stack-resolve-btn" onclick="ptResolveTop()">Resolve ↓</button>
           <button class="pt-stack-action-btn pt-stack-counter-btn" onclick="ptCounterSpell('${top.cardId}')">Counter ✕</button>
@@ -3663,14 +3678,30 @@ function renderPTPriorityBar() {
   if (!priorityEnabled) return '';
   if (state.playtestViewUid !== myUid) return '';
   const hasPriority = myUid === (session.priority || session.activePlayer);
+  const top = session.stack[0];
+  const topLabel = escHtml(top ? `${top.name} — by ${top.casterName}` : '');
+  const activePlayers = Object.keys(session.players || {}).filter(p => !session.players[p].conceded);
+  const passedCount = (session.passed || []).length;
+  const totalCount = activePlayers.length;
   if (hasPriority) {
     return `<div class="pt-priority-bar">
-      <button class="pt-priority-take-btn" onclick="ptStackTakeAction()">Take Action</button>
-      <button class="pt-priority-decline-btn" onclick="ptPassPriority()">Decline</button>
+      <div class="pt-priority-context">
+        <span class="pt-priority-headline">⚡ PRIORITY</span>
+        <span class="pt-priority-cardname">${topLabel}</span>
+        ${totalCount > 1 ? `<span class="pt-priority-tally">${passedCount}/${totalCount} ready to resolve</span>` : ''}
+      </div>
+      <div class="pt-priority-btns">
+        <button class="pt-priority-decline-btn" onclick="ptPassPriority()">Let Resolve ✓</button>
+        <button class="pt-priority-take-btn" onclick="ptStackTakeAction()">Respond ⚡</button>
+      </div>
     </div>`;
   }
   const waitingName = escHtml(session.players?.[session.priority||'']?.displayName || '…');
-  return `<div class="pt-priority-bar"><span class="pt-priority-waiting">Waiting for ${waitingName}…</span></div>`;
+  return `<div class="pt-priority-bar pt-priority-bar-waiting">
+    <span class="pt-priority-waiting-icon">⏳</span>
+    <span class="pt-priority-waiting">${waitingName} has priority</span>
+    <span class="pt-priority-cardname-dim">${topLabel}</span>
+  </div>`;
 }
 
 function renderPTDiscardOverlay(hand) {
