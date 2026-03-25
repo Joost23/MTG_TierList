@@ -859,6 +859,7 @@ let state = {
   ptLibTypeFilter: 'all',
   ptMullBottom: [],  // cardIds selected to go to bottom of library during mulligan
   ptHoldPriority: localStorage.getItem('pt_hold_prio') !== 'false', // default ON — rules-correct (caster keeps priority after casting)
+  ptLibraryMenu: null,
   playtestLoading: '',
   playtestMoreMenu: false,
   playtestScryData: null,
@@ -3204,7 +3205,7 @@ async function ptDraw(count = 1) {
   const drawn = library.splice(0, count);
   if (!drawn.length) return;
   drawn.forEach(c => hand.push({ ...c, zone: 'hand' }));
-  await ptPriv({ hand, library });
+  await ptPriv({ ...priv, hand, library });
 }
 
 async function ptUntapAll() {
@@ -3266,12 +3267,110 @@ async function ptMullRedraw() {
   if (mullType === 'london') await ptPub({ [`players.${uid}.mulliganCount`]: newMullCount });
 }
 async function ptMullSetType(type) {
-  // Update locally first so ptMullRedraw reads the right type immediately
   if (state.playtestGame) state.playtestGame.mullType = type;
   render();
   await ptPub({ mullType: type });
-  // Immediately redeal with the new type so the user sees the new hand count at once
-  await ptMullRedraw();
+  // Switching to draw10: top-up existing hand with extra cards from library (same 7 + 3 new)
+  if (type === 'draw10') {
+    const priv = state.playtestPrivate;
+    if (priv) {
+      const hand = [...(priv.hand || [])];
+      const library = [...(priv.library || [])];
+      const needed = 10 - hand.length;
+      if (needed > 0) {
+        const drawn = library.splice(0, Math.min(needed, library.length));
+        drawn.forEach(c => hand.push({ ...c, zone: 'hand' }));
+        if (state.playtestPrivate) state.playtestPrivate = { ...state.playtestPrivate, hand, library };
+        render();
+        await ptPriv({ ...priv, hand, library });
+      }
+    }
+  }
+}
+
+// ── Library zone panel interactions ───────────────────
+let ptLibLongPressed = false;
+let ptLibLongPressTimer = null;
+function ptLibPointerDown(e) {
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
+  ptLibLongPressed = false;
+  if (ptLibLongPressTimer) clearTimeout(ptLibLongPressTimer);
+  ptLibLongPressTimer = setTimeout(() => {
+    ptLibLongPressed = true;
+    ptLibLongPressTimer = null;
+    ptShowLibMenu(e);
+  }, 550);
+}
+function ptLibPointerUp(e) {
+  if (ptLibLongPressTimer) { clearTimeout(ptLibLongPressTimer); ptLibLongPressTimer = null; }
+}
+function ptLibClick(e) {
+  if (ptLibLongPressed) { ptLibLongPressed = false; return; }
+  ptDraw(1);
+}
+function ptShowLibMenu(e) {
+  state.ptLibraryMenu = { x: e.clientX, y: e.clientY };
+  render();
+}
+function ptCloseLibMenu() { state.ptLibraryMenu = null; render(); }
+function ptLibraryTutor() {
+  state.ptLibraryMenu = null;
+  state.playtestZoneOverlay = { uid: state.currentUser?.uid, zone: 'library' };
+  state.ptLibSearch = '';
+  state.ptLibTypeFilter = 'all';
+  render();
+}
+function ptLookAtTop(n) {
+  const uid = state.currentUser?.uid;
+  state.ptLibraryMenu = null;
+  const priv = state.playtestPrivate;
+  const topCards = (priv?.library || []).slice(0, n);
+  state.playtestZoneOverlay = { uid, zone: 'library', topN: n, cards: topCards };
+  render();
+}
+function renderPTLibMenu() {
+  const { x, y } = state.ptLibraryMenu;
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const menuW = 200, menuH = 280;
+  let left = x - menuW / 2;
+  let top = y - menuH - 8;
+  if (left + menuW > vw - 8) left = vw - menuW - 8;
+  if (left < 8) left = 8;
+  if (top < 8) top = y + 16;
+  if (top + menuH > vh - 8) top = vh - menuH - 8;
+  const libCount = state.playtestPrivate?.library?.length ?? 0;
+  return `<div class="pt-card-menu" style="left:${left}px;top:${top}px;z-index:500" onclick="event.stopPropagation()">
+    <div class="pt-card-menu-name">Library (${libCount})</div>
+    <button class="pt-menu-btn" onclick="ptDraw(1);ptCloseLibMenu()">Draw 1</button>
+    <button class="pt-menu-btn" onclick="ptDraw(3);ptCloseLibMenu()">Draw 3</button>
+    <button class="pt-menu-btn" onclick="ptLibraryTutor()">🔍 Tutor (search)</button>
+    <button class="pt-menu-btn" onclick="ptLookAtTop(1)">👁 Look at top 1</button>
+    <button class="pt-menu-btn" onclick="ptLookAtTop(3)">👁 Look at top 3</button>
+    <button class="pt-menu-btn" onclick="ptLookAtTop(7)">👁 Look at top 7</button>
+    <button class="pt-menu-btn" onclick="ptShuffle();ptCloseLibMenu()">🔀 Shuffle</button>
+    <button class="pt-menu-btn pt-menu-cancel" onclick="ptCloseLibMenu()">Cancel</button>
+  </div>`;
+}
+
+// ── Mulligan hover preview ────────────────────────────
+function ptMullCardHover(e, imageUrl) {
+  if (e.pointerType !== 'mouse') return;
+  const el = document.getElementById('pt-mull-hover');
+  if (!el || !imageUrl) return;
+  el.querySelector('img').src = imageUrl;
+  const vw = window.innerWidth, vh = window.innerHeight;
+  let left = e.clientX + 20;
+  let top = e.clientY - 100;
+  if (left + 186 > vw - 8) left = e.clientX - 206;
+  if (top < 8) top = 8;
+  if (top + 260 > vh - 8) top = vh - 268;
+  el.style.left = left + 'px';
+  el.style.top = top + 'px';
+  el.style.display = 'block';
+}
+function ptMullCardHoverEnd() {
+  const el = document.getElementById('pt-mull-hover');
+  if (el) el.style.display = 'none';
 }
 
 // ── Stack (casual mode) ───────────────────────────────
@@ -3315,7 +3414,7 @@ async function ptResolveTop() {
   if (isSpell) {
     updates[`players.${top.casterId}.graveyard`] = [...(player.graveyard || []), { ...card, zone: 'graveyard' }];
   } else {
-    const pos = ptDefaultPos(player.battlefield || []);
+    const pos = (top.dropX != null && top.dropY != null) ? { x: top.dropX, y: top.dropY } : ptDefaultPos(player.battlefield || []);
     updates[`players.${top.casterId}.battlefield`] = [...(player.battlefield || []), { ...card, ...pos, zone: 'battlefield' }];
   }
   await ptPub(updates);
@@ -3375,6 +3474,10 @@ async function ptNextPhase() {
   } else {
     const nextPhase = PT_PHASES[curIdx + 1];
     await ptPub({ phase: nextPhase, priority: session.activePlayer || uid, passed: [] });
+    // Auto-draw when entering draw step on the active player's turn
+    if (nextPhase === 'draw' && uid === (session.activePlayer || uid)) {
+      await ptDraw(1);
+    }
   }
 }
 async function ptPassPriority() {
@@ -3736,7 +3839,7 @@ function renderPTMullOverlay() {
         const img = card.imageUrl
           ? `<img src="${escHtml(card.imageUrl)}" loading="lazy">`
           : `<div class="pt-mull-card-back">${escHtml(card.name.slice(0,16))}</div>`;
-        return `<div class="pt-mull-card${bottomIds.includes(card.cardId)?' selected':''}" onclick="ptMullToggleBottom('${card.cardId}')" title="${escHtml(card.name)}">${img}</div>`;
+        return `<div class="pt-mull-card${bottomIds.includes(card.cardId)?' selected':''}" onclick="ptMullToggleBottom('${card.cardId}')" title="${escHtml(card.name)}" onpointerenter="ptMullCardHover(event,${JSON.stringify(card.imageUrl||'')})" onpointerleave="ptMullCardHoverEnd()">${img}</div>`;
       }).join('')}
       ${handCards.length === 0 && bottomNeeded === 0 ? `<div style="color:var(--text-muted);font-size:13px;padding:20px">No cards in hand</div>` : ''}
     </div>
@@ -3746,7 +3849,7 @@ function renderPTMullOverlay() {
         const img = card.imageUrl
           ? `<img src="${escHtml(card.imageUrl)}" loading="lazy">`
           : `<div class="pt-mull-bottom-card-back"></div>`;
-        return `<div class="pt-mull-bottom-card" onclick="ptMullToggleBottom('${card.cardId}')" title="${escHtml(card.name)} — click to return">${img}</div>`;
+        return `<div class="pt-mull-bottom-card" onclick="ptMullToggleBottom('${card.cardId}')" title="${escHtml(card.name)} — click to return" onpointerenter="ptMullCardHover(event,${JSON.stringify(card.imageUrl||'')})" onpointerleave="ptMullCardHoverEnd()">${img}</div>`;
       }).join('')}
       ${bottomCards.length === 0 ? `<div style="font-size:11px;color:var(--text-muted)">Click cards above to put them on bottom</div>` : ''}
     </div>` : ''}
@@ -3759,7 +3862,8 @@ function renderPTMullOverlay() {
       </button>
     </div>
     ${waitingFor.length > 0 ? `<div class="pt-mull-waiting">Waiting for ${escHtml(waitingFor.join(', '))} to keep their hand…</div>` : ''}
-  </div>`;
+  </div>
+  <div id="pt-mull-hover" style="display:none;position:fixed;z-index:700;pointer-events:none;width:186px;border-radius:10px;box-shadow:0 16px 48px rgba(0,0,0,0.85);transition:opacity 0.1s"><img style="width:100%;border-radius:10px;display:block" src=""></div>`;
 }
 
 function renderPTGame() {
@@ -3821,7 +3925,12 @@ function renderPTGame() {
   const topExile = exileArr[exileArr.length - 1];
   const topCmdr  = commandArr[0];
   const zoneSidebar = `<div class="pt-zone-sidebar">
-    <div class="pt-zone-panel" data-pt-drop-zone="library" onclick="event.stopPropagation();ptOpenZone('${viewUid}','library')">
+    <div class="pt-zone-panel" data-pt-drop-zone="library"
+      onclick="event.stopPropagation();${isMyBoard ? 'ptLibClick(event)' : `ptOpenZone('${viewUid}','library')`}"
+      oncontextmenu="event.preventDefault();event.stopPropagation();${isMyBoard ? 'ptShowLibMenu(event)' : ''}"
+      onpointerdown="${isMyBoard ? 'ptLibPointerDown(event)' : ''}"
+      onpointerup="${isMyBoard ? 'ptLibPointerUp(event)' : ''}"
+      onpointercancel="${isMyBoard ? 'ptLibPointerUp(event)' : ''}">
       <div class="pt-zone-panel-img"><div class="pt-zone-card-back"></div><div class="pt-zone-panel-count">${libCount}</div></div>
       <div class="pt-zone-panel-label">Library</div>
     </div>
@@ -3954,8 +4063,10 @@ function renderPTGame() {
 
   const cardMenuHtml = state.playtestCardMenu ? renderPTCardMenu() : '';
   const menuBackdrop = state.playtestCardMenu ? `<div style="position:fixed;inset:0;z-index:499" onclick="ptCloseMenu()"></div>` : '';
+  const libMenuHtml = state.ptLibraryMenu ? renderPTLibMenu() : '';
+  const libMenuBackdrop = state.ptLibraryMenu ? `<div style="position:fixed;inset:0;z-index:498" onclick="ptCloseLibMenu()"></div>` : '';
   const settingsBackdrop = state.playtestSettings ? `<div style="position:fixed;inset:0;z-index:498" onclick="event.stopPropagation();state.playtestSettings=false;render()"></div>` : '';
-  return `<div class="pt-playmat">${tabsHtml}${deckBar}${phaseBar}${actionBar}${battlefieldHtml}${handHtml}${overlayHtml}${scryHtml}${millHtml}${numberHtml}${settingsBackdrop}${menuBackdrop}${cardMenuHtml}${waitingBanner}${mullOverlayHtml}</div>`;
+  return `<div class="pt-playmat">${tabsHtml}${deckBar}${phaseBar}${actionBar}${battlefieldHtml}${handHtml}${overlayHtml}${scryHtml}${millHtml}${numberHtml}${settingsBackdrop}${libMenuBackdrop}${libMenuHtml}${menuBackdrop}${cardMenuHtml}${waitingBanner}${mullOverlayHtml}</div>`;
 }
 
 function renderPTCardMenu() {
@@ -4922,6 +5033,7 @@ async function ptPlayCardAt(cardId, x, y) {
     const session = state.playtestGame;
     const stackItem = { cardId: card.cardId, name: card.name, imageUrl: card.imageUrl || null,
       casterId: uid, casterName: player.displayName || 'Player', fromZone: 'hand',
+      dropX: x, dropY: y,
       addedAt: new Date().toISOString() };
     const newStack = [stackItem, ...(session?.stack || [])];
     const activePlayers = Object.keys(session?.players || {}).filter(p => !session?.players[p].conceded);
@@ -6375,6 +6487,15 @@ window.ptCloseZone = ptCloseZone;
 window.ptPointerDown = ptPointerDown;
 window.ptHandPointerDown = ptHandPointerDown;
 window.ptBfPanStart = ptBfPanStart;
+window.ptLibClick = ptLibClick;
+window.ptShowLibMenu = ptShowLibMenu;
+window.ptCloseLibMenu = ptCloseLibMenu;
+window.ptLibPointerDown = ptLibPointerDown;
+window.ptLibPointerUp = ptLibPointerUp;
+window.ptLibraryTutor = ptLibraryTutor;
+window.ptLookAtTop = ptLookAtTop;
+window.ptMullCardHover = ptMullCardHover;
+window.ptMullCardHoverEnd = ptMullCardHoverEnd;
 
 // Scroll-to-zoom on battlefield (also handles trackpad pinch via ctrlKey+wheel)
 document.addEventListener('wheel', function(e) {
