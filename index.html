@@ -3266,7 +3266,12 @@ async function ptMullRedraw() {
   if (mullType === 'london') await ptPub({ [`players.${uid}.mulliganCount`]: newMullCount });
 }
 async function ptMullSetType(type) {
+  // Update locally first so ptMullRedraw reads the right type immediately
+  if (state.playtestGame) state.playtestGame.mullType = type;
+  render();
   await ptPub({ mullType: type });
+  // Immediately redeal with the new type so the user sees the new hand count at once
+  await ptMullRedraw();
 }
 
 // ── Stack (casual mode) ───────────────────────────────
@@ -3436,7 +3441,7 @@ async function ptPlayCard(cardId) {
     await ptPriv({ ...priv, hand });
     await ptPub({ [`players.${uid}.battlefield`]: battlefield });
   } else {
-    // Non-lands go to the stack; opponents get priority to respond
+    // Non-lands go to the stack; priority determined by hold-priority toggle
     const session = state.playtestGame;
     const stackItem = { cardId: card.cardId, name: card.name, imageUrl: card.imageUrl || null,
       casterId: uid, casterName: player.displayName || 'Player', fromZone: 'hand',
@@ -3445,14 +3450,14 @@ async function ptPlayCard(cardId) {
     const activePlayers = Object.keys(session?.players || {}).filter(p => !session?.players[p].conceded);
     const myIdx = activePlayers.indexOf(uid);
     const nextPriority = activePlayers.length > 1 ? activePlayers[(myIdx + 1) % activePlayers.length] : uid;
+    const newPriority = state.ptHoldPriority ? uid : nextPriority;
+    const newPassed  = state.ptHoldPriority ? [] : [uid];
+    // Optimistic update — show stack immediately without waiting for Firestore round-trip
+    if (state.playtestGame) state.playtestGame = { ...state.playtestGame, stack: newStack, priority: newPriority, passed: newPassed };
+    if (state.playtestPrivate) state.playtestPrivate = { ...state.playtestPrivate, hand };
+    render();
     await ptPriv({ ...priv, hand });
-    if (state.ptHoldPriority) {
-      // Caster keeps priority (hold priority mode — like Arena's "hold priority" toggle)
-      await ptPub({ stack: newStack, priority: uid, passed: [] });
-    } else {
-      // Auto-pass: next opponent gets priority
-      await ptPub({ stack: newStack, priority: nextPriority, passed: [uid] });
-    }
+    await ptPub({ stack: newStack, priority: newPriority, passed: newPassed });
   }
   ptCloseMenu();
 }
@@ -4902,9 +4907,34 @@ async function ptPlayCardAt(cardId, x, y) {
   const idx = hand.findIndex(c => c.cardId === cardId);
   if (idx === -1) return;
   const [card] = hand.splice(idx, 1);
-  const battlefield = [...(player.battlefield || []), { ...card, zone: 'battlefield', tapped: false, x, y }];
-  await ptPriv({ ...priv, hand });
-  await ptPub({ [`players.${uid}.battlefield`]: battlefield });
+  const typeLine = (scryfallCache[scryfallKey(card.name)]?.typeLine || '').toLowerCase();
+  const isLand = typeLine.includes('land');
+  if (isLand) {
+    // Lands go directly to the dropped position — no stack
+    const battlefield = [...(player.battlefield || []), { ...card, zone: 'battlefield', tapped: false, x, y }];
+    if (state.playtestPrivate) state.playtestPrivate = { ...state.playtestPrivate, hand };
+    if (state.playtestGame?.players?.[uid]) state.playtestGame.players[uid].battlefield = battlefield;
+    render();
+    await ptPriv({ ...priv, hand });
+    await ptPub({ [`players.${uid}.battlefield`]: battlefield });
+  } else {
+    // Non-lands go to the stack with priority logic (same as menu "Play" button)
+    const session = state.playtestGame;
+    const stackItem = { cardId: card.cardId, name: card.name, imageUrl: card.imageUrl || null,
+      casterId: uid, casterName: player.displayName || 'Player', fromZone: 'hand',
+      addedAt: new Date().toISOString() };
+    const newStack = [stackItem, ...(session?.stack || [])];
+    const activePlayers = Object.keys(session?.players || {}).filter(p => !session?.players[p].conceded);
+    const myIdx = activePlayers.indexOf(uid);
+    const nextPriority = activePlayers.length > 1 ? activePlayers[(myIdx + 1) % activePlayers.length] : uid;
+    const newPriority = state.ptHoldPriority ? uid : nextPriority;
+    const newPassed  = state.ptHoldPriority ? [] : [uid];
+    if (state.playtestGame) state.playtestGame = { ...state.playtestGame, stack: newStack, priority: newPriority, passed: newPassed };
+    if (state.playtestPrivate) state.playtestPrivate = { ...state.playtestPrivate, hand };
+    render();
+    await ptPriv({ ...priv, hand });
+    await ptPub({ stack: newStack, priority: newPriority, passed: newPassed });
+  }
 }
 
 // ===== META ANALYSIS =====
