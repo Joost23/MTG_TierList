@@ -364,14 +364,16 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 .pt-playmat { position:fixed;top:0;left:0;right:0;bottom:0;display:flex;flex-direction:column;background:var(--bg);z-index:200;overflow:hidden; }
 .pt-tabs { display:flex;overflow-x:auto;background:var(--bg-card);border-bottom:1px solid var(--border);flex-shrink:0;scrollbar-width:none; }
 .pt-tabs::-webkit-scrollbar { display:none; }
-.pt-tab { display:flex;flex-direction:column;align-items:center;padding:8px 14px;border:none;border-radius:0;border-right:1px solid var(--border);background:transparent;color:var(--text-muted);cursor:pointer;min-width:80px;flex-shrink:0;border-bottom:3px solid transparent;transition:all 0.15s; }
+.pt-tab { display:flex;align-items:center;gap:4px;padding:0 10px;height:36px;border:none;border-radius:0;border-right:1px solid var(--border);background:transparent;color:var(--text-muted);cursor:pointer;flex-shrink:0;border-bottom:2px solid transparent;transition:all 0.15s;white-space:nowrap; }
 .pt-tab-active { color:var(--tab-col,var(--accent));border-bottom-color:var(--tab-col,var(--accent));background:var(--bg-surface); }
-.pt-tab-name { font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:1px; }
-.pt-tab-life { font-size:20px;font-weight:700;font-family:'JetBrains Mono',monospace;line-height:1.1; }
-.pt-tab-poison { font-size:10px;color:var(--tier-b-text);margin-top:1px; }
-.pt-deckbar { display:flex;align-items:center;gap:10px;padding:6px 12px;background:var(--bg-surface);border-bottom:1px solid var(--border);font-size:12px;flex-shrink:0;overflow:hidden; }
-.pt-deckbar-commander { font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
-.pt-deckbar-meta { color:var(--text-muted);flex-shrink:0;font-family:'JetBrains Mono',monospace;font-size:11px; }
+.pt-tab-active-turn { box-shadow:inset 0 -2px 0 var(--tab-col,var(--accent)); }
+.pt-tab-name { font-size:11px;font-weight:600;letter-spacing:0.3px; }
+.pt-tab-life { font-size:14px;font-weight:700;font-family:'JetBrains Mono',monospace; }
+.pt-tab-poison { font-size:9px;color:var(--tier-b-text); }
+.pt-tabs-info { margin-left:auto;padding:0 10px;font-size:10px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:1;min-width:0;align-self:center; }
+.pt-deckbar { display:flex;align-items:center;gap:8px;padding:0 12px;height:22px;background:var(--bg-surface);border-bottom:1px solid var(--border);font-size:10px;flex-shrink:0;overflow:hidden; }
+.pt-deckbar-commander { font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-muted); }
+.pt-deckbar-meta { color:var(--text-muted);flex-shrink:0;font-family:'JetBrains Mono',monospace;font-size:10px;opacity:0.7; }
 .pt-battlefield { flex:1;position:relative;overflow:hidden;background:#090811;cursor:grab;touch-action:none; }
 .pt-battlefield.pt-panning { cursor:grabbing; }
 .pt-battlefield-canvas { position:absolute;top:0;left:0;width:4000px;height:4000px;transform-origin:0 0; }
@@ -430,14 +432,15 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 .pt-stack-counter-btn { background:rgba(226,75,74,0.1);border:1px solid rgba(226,75,74,0.35);color:var(--tier-s-text); }
 .pt-stack-counter-btn:hover { background:var(--tier-s-text);color:#fff;border-color:var(--tier-s-text); }
 /* Phase bar */
-.pt-phase-bar { display:flex;align-items:center;gap:0;padding:4px 10px;background:var(--bg-card);border-bottom:1px solid var(--border);overflow-x:auto;flex-shrink:0;scrollbar-width:none; }
+.pt-phase-bar { display:flex;align-items:center;gap:0;padding:2px 8px;background:var(--bg-card);border-bottom:1px solid var(--border);overflow-x:auto;flex-shrink:0;scrollbar-width:none;min-height:24px; }
 .pt-phase-bar::-webkit-scrollbar { display:none; }
-.pt-phase-step { font-size:10px;padding:3px 7px;border-radius:99px;color:var(--text-muted);white-space:nowrap;border:1px solid transparent;transition:all 0.12s;flex-shrink:0; }
-.pt-phase-step.active { background:var(--accent-dim);color:var(--accent);border-color:var(--accent-dim);font-weight:600; }
+.pt-phase-step { font-size:10px;padding:2px 5px;border-radius:99px;color:var(--text-muted);white-space:nowrap;border:1px solid transparent;transition:all 0.12s;flex-shrink:0; }
+.pt-phase-step.active { background:var(--accent-dim);color:var(--accent);border-color:var(--accent-dim);font-weight:700; }
+.pt-phase-step.past { opacity:0.35; }
 .pt-phase-step.clickable { cursor:pointer; }
 .pt-phase-step.clickable:hover { background:var(--accent);color:#fff;border-color:var(--accent); }
-.pt-phase-sep { color:var(--border);font-size:10px;padding:0 2px;flex-shrink:0; }
-.pt-phase-who { margin-left:auto;font-size:10px;color:var(--text-muted);padding-left:8px;white-space:nowrap;flex-shrink:0; }
+.pt-phase-sep { color:var(--border);font-size:9px;padding:0 1px;flex-shrink:0;opacity:0.5; }
+.pt-phase-who { margin-left:auto;font-size:9px;color:var(--text-muted);padding-left:6px;white-space:nowrap;flex-shrink:0;font-style:italic; }
 /* Priority indicator on player tab */
 .pt-tab.pt-tab-priority { outline:2px solid var(--accent);outline-offset:1px;box-shadow:0 0 10px rgba(167,139,250,0.4); }
 /* Pass button emphasis */
@@ -465,12 +468,29 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 .pt-card-selected { outline:2px solid var(--accent);outline-offset:2px; }
 .pt-card-back { width:72px;height:100px;background:linear-gradient(135deg,#1a1535,#0d0b1a);border:1px solid var(--border);border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--text-muted);text-align:center;padding:4px;word-break:break-word; }
 .pt-hand-card-back { width:90px;height:126px;background:linear-gradient(135deg,#1a1535,#0d0b1a);border:1px solid var(--border);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--text-muted);text-align:center;padding:6px;word-break:break-word; }
-.pt-counter { position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;background:#22c55e;color:#fff;border-radius:99px;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 3px;pointer-events:none; }
+.pt-counter { position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;background:#fbbf24;color:#000;border-radius:99px;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 4px;pointer-events:none;letter-spacing:-0.3px; }
+.pt-stat-line { position:absolute;bottom:5px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.82);border-radius:4px;padding:1px 6px;font-size:10px;font-weight:800;color:#fff;display:flex;align-items:center;pointer-events:none;white-space:nowrap;letter-spacing:0.2px; }
+.pt-stat-slash { opacity:0.4;margin:0 1px; }
+.pt-stat-boosted { color:#fbbf24; }
+.pt-loyalty-badge { position:absolute;bottom:5px;right:4px;min-width:20px;height:20px;background:#3b6fd4;color:#fff;border-radius:4px;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;pointer-events:none;padding:0 3px; }
 .pt-cmd-badge { position:absolute;bottom:-4px;left:2px;font-size:9px;background:rgba(167,139,250,0.8);border-radius:99px;padding:1px 4px;color:#fff;pointer-events:none; }
 .pt-snap-badge { position:absolute;top:8px;left:8px;font-size:9px;padding:3px 7px;background:rgba(0,0,0,0.6);border:1px solid var(--border);border-radius:99px;color:var(--text-muted);cursor:pointer;z-index:10;backdrop-filter:blur(4px); }
-.pt-action-bar { display:flex;gap:6px;padding:8px 10px;background:var(--bg-card);border-bottom:1px solid var(--border);overflow-x:auto;flex-shrink:0;scrollbar-width:none; }
+.pt-action-bar { display:flex;gap:4px;padding:4px 8px;background:var(--bg-card);border-bottom:1px solid var(--border);overflow-x:auto;flex-shrink:0;scrollbar-width:none; }
 .pt-action-bar::-webkit-scrollbar { display:none; }
-.pt-action-btn { font-size:12px;padding:7px 14px;white-space:nowrap;flex-shrink:0;border-radius:var(--radius-sm); }
+.pt-action-btn { font-size:11px;padding:5px 10px;white-space:nowrap;flex-shrink:0;border-radius:var(--radius-sm); }
+/* Stack priority buttons */
+.pt-stack-priority-row { display:flex;gap:6px;padding:8px 10px;border-top:1px solid var(--border); }
+.pt-stack-take-btn { flex:1;padding:9px 10px;font-size:13px;font-weight:700;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);cursor:pointer;transition:opacity 0.12s; }
+.pt-stack-take-btn:hover { opacity:0.85; }
+.pt-stack-decline-btn { flex:1;padding:9px 10px;font-size:13px;font-weight:600;background:transparent;color:var(--text-muted);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;transition:background 0.12s; }
+.pt-stack-decline-btn:hover { background:var(--bg-hover); }
+.pt-stack-waiting { padding:8px 10px;font-size:11px;color:var(--text-muted);text-align:center;border-top:1px solid var(--border);font-style:italic; }
+.pt-stack-pos { font-size:9px;font-weight:700;color:var(--text-muted);min-width:12px;text-align:center;flex-shrink:0; }
+/* Turn transition banner */
+.pt-turn-banner { position:absolute;top:44%;left:50%;transform:translate(-50%,-50%);background:rgba(10,8,20,0.92);border:1px solid var(--accent-dim);border-radius:var(--radius);padding:14px 28px;text-align:center;z-index:350;pointer-events:none;animation:turnFade 2s ease forwards;backdrop-filter:blur(8px); }
+@keyframes turnFade { 0%{opacity:0;transform:translate(-50%,-50%) scale(0.88)} 15%{opacity:1;transform:translate(-50%,-50%) scale(1)} 70%{opacity:1} 100%{opacity:0;transform:translate(-50%,-50%) scale(1)} }
+.pt-turn-banner-name { font-size:17px;font-weight:700;color:var(--accent);margin-bottom:3px; }
+.pt-turn-banner-sub { font-size:11px;color:var(--text-muted); }
 .pt-action-danger { color:var(--tier-s-text) !important;border-color:rgba(226,75,74,0.5) !important; }
 .pt-hand-wrap { position:relative;flex-shrink:0;width:100%; }
 .pt-hand { display:flex;gap:3px;padding:6px 8px 8px;background:transparent;border:none;overflow:visible;flex-shrink:0;min-height:110px;max-height:130px;scrollbar-width:none;justify-content:center; }
@@ -868,6 +888,7 @@ let state = {
   ptCmdrMenu: null,
   ptManaChoice: null,
   ptManaPool: { W: 0, U: 0, B: 0, R: 0, G: 0, C: 0 },
+  ptTurnBanner: null,
   playtestLoading: '',
   playtestMoreMenu: false,
   playtestScryData: null,
@@ -931,6 +952,18 @@ async function claimMyDecks() {
   unclaimed.forEach(d => batch.update(doc(db, 'decks', d.id), { ownerUid: myUid }));
   await batch.commit();
   alert(`Claimed ${unclaimed.length} deck${unclaimed.length !== 1 ? 's' : ''} for ${myName} ✅`);
+}
+
+// Claim decks from a previous display name (after name change)
+async function claimByOldName(oldName) {
+  const myUid = state.currentUser?.uid;
+  if (!myUid || !oldName) return;
+  const unclaimed = state.decks.filter(d => !d.ownerUid && d.player === oldName);
+  if (!unclaimed.length) { alert(`No unclaimed decks found for "${oldName}".`); return; }
+  const batch = writeBatch(db);
+  unclaimed.forEach(d => batch.update(doc(db, 'decks', d.id), { ownerUid: myUid }));
+  await batch.commit();
+  alert(`Claimed ${unclaimed.length} deck${unclaimed.length !== 1 ? 's' : ''} from "${oldName}" ✅`);
 }
 
 // ===== LOGIN SCREEN =====
@@ -1208,16 +1241,28 @@ function setTab(tab) {
 }
 
 function getLeaderboardData() {
-  const players = [...new Set(state.decks.map(d => d.player))].filter(Boolean);
-  return players.map(p => {
-    const pd = state.decks.filter(d => d.player === p);
+  const myUid = state.currentUser?.uid;
+  // Group by ownerUid when available, fall back to player name for legacy decks
+  const groups = new Map();
+  state.decks.filter(d => d.player).forEach(d => {
+    const key = d.ownerUid || `name:${d.player}`;
+    if (!groups.has(key)) groups.set(key, { player: d.player, decks: [] });
+    const g = groups.get(key);
+    g.decks.push(d);
+    g.player = d.player; // last-seen name wins
+  });
+  // Always show current display name for logged-in user's entry
+  if (myUid && groups.has(myUid)) {
+    groups.get(myUid).player = currentUserName() || groups.get(myUid).player;
+  }
+  return [...groups.values()].map(({ player, decks: pd }) => {
     const allGames = pd.flatMap(d => d.games || []).filter(g => !g.loaned);
     const wins = allGames.filter(g => g.result === 'win').length;
     const losses = allGames.filter(g => g.result === 'loss').length;
     const total = wins + losses;
     const winRate = total > 0 ? Math.round((wins / total) * 100) : null;
     const bestDeck = [...pd].sort((a, b) => getOverall(b) - getOverall(a))[0] || null;
-    return { player: p, wins, losses, total, winRate, bestDeck, deckCount: pd.length };
+    return { player, wins, losses, total, winRate, bestDeck, deckCount: pd.length };
   }).sort((a, b) => {
     if (a.winRate === null && b.winRate === null) return b.deckCount - a.deckCount;
     if (a.winRate === null) return 1;
@@ -1230,9 +1275,9 @@ const REC_COLOR_NAMES = { W: 'White', U: 'Blue', B: 'Black', R: 'Red', G: 'Green
 const REC_COLOR_BG    = { W: '#C8A84B', U: '#1070C8', B: '#4B4B4B', R: '#D0392A', G: '#1A7A3C' };
 
 function getRecommendations() {
-  const myName = currentUserName();
-  if (!myName) return [];
-  const myDecks = state.decks.filter(d => d.player === myName);
+  if (!currentUserName()) return [];
+  const myDecks = getMyDecks();
+  const myUid = state.currentUser?.uid;
   const recs = [];
   const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
@@ -1277,7 +1322,7 @@ function getRecommendations() {
   // 3. Brew challenge: color missing from your collection but present in the pod
   const myColors = new Set(myDecks.flatMap(d => (d.colors || '').split('')).filter(c => 'WUBRG'.includes(c)));
   const podColorCount = {};
-  state.decks.filter(d => d.player !== myName).forEach(d => {
+  state.decks.filter(d => myUid ? d.ownerUid !== myUid : d.player !== currentUserName()).forEach(d => {
     (d.colors || '').split('').forEach(c => { if ('WUBRG'.includes(c)) podColorCount[c] = (podColorCount[c] || 0) + 1; });
   });
   const missingWithPod = ['W','U','B','R','G']
@@ -1632,14 +1677,18 @@ function renderAccountTab() {
       </div>` : ''}
 
       <!-- Claim decks (migration) -->
-      ${hasUnclaimed ? `
       <div style="background:var(--bg-card);margin:16px 0 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
         ${sectionLabel('Ownership')}
         <div style="padding:4px 20px 16px">
-          <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px">Some of your decks aren't linked to your account yet. Claim them so they stay yours even if you change your display name.</p>
-          <button onclick="claimMyDecks()" class="btn-primary" style="width:100%;padding:10px;font-size:13px">🔗 Claim my decks</button>
+          ${hasUnclaimed ? `<p style="font-size:13px;color:var(--text-muted);margin-bottom:10px">Some of your decks aren't linked to your account yet.</p>
+          <button onclick="claimMyDecks()" class="btn-primary" style="width:100%;padding:10px;font-size:13px;margin-bottom:14px">🔗 Claim my decks (${escHtml(name)})</button>` : ''}
+          <p style="font-size:13px;color:var(--text-muted);margin-bottom:8px">Changed your display name? Claim decks from your old name:</p>
+          <div style="display:flex;gap:8px">
+            <input id="old-name-input" type="text" placeholder="Old display name" style="flex:1;padding:8px 12px;background:var(--bg-input,var(--bg-hover));border:1px solid var(--border);border-radius:8px;color:var(--text-primary);font-size:13px;outline:none">
+            <button onclick="claimByOldName(document.getElementById('old-name-input').value.trim())" class="btn-secondary" style="padding:8px 14px;font-size:13px;white-space:nowrap">Claim</button>
+          </div>
         </div>
-      </div>` : ''}
+      </div>
 
       <!-- Sign out -->
       <div style="background:var(--bg-card);margin:16px 0 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
@@ -2351,6 +2400,9 @@ async function fetchScryfallBatch(cards) {
           colors: card.colors || card.card_faces?.[0]?.colors || [],
           tokenIds: (card.all_parts || []).filter(p => p.component === 'token').map(p => p.id),
           producedMana: card.produced_mana || [],
+          power: card.power ?? card.card_faces?.[0]?.power ?? null,
+          toughness: card.toughness ?? card.card_faces?.[0]?.toughness ?? null,
+          loyalty: card.loyalty ?? null,
         };
         scryfallCache[scryfallKey(card.name)] = cacheEntry;
         if (card.card_faces?.[0]?.name) {
@@ -3090,6 +3142,7 @@ function ptListen(sessionId) {
     if (snap.exists()) {
       const prevStatus = state.playtestGame?.status;
       const prevMullType = state.playtestGame?.mullType;
+      const prevActivePlayer = state.playtestGame?.activePlayer;
       state.playtestGame = { id: snap.id, ...snap.data() };
       render();
       // When game goes active, each player deals their own private zone
@@ -3115,6 +3168,22 @@ function ptListen(sessionId) {
             }
           }
         }
+      }
+      // Show turn banner when active player changes
+      if (prevActivePlayer && prevActivePlayer !== state.playtestGame.activePlayer) {
+        const newActiveUid = state.playtestGame.activePlayer;
+        const newName = state.playtestGame.players?.[newActiveUid]?.displayName || 'Player';
+        state.ptTurnBanner = { name: newName, isYou: newActiveUid === myUid };
+        render();
+        setTimeout(() => { state.ptTurnBanner = null; render(); }, 2000);
+      }
+      // Auto-advance untap step — no priority window, runs instantly for the active player
+      if (state.playtestGame.phase === 'untap' && state.playtestGame.activePlayer === myUid) {
+        setTimeout(async () => {
+          if (state.playtestGame?.phase === 'untap' && state.playtestGame?.activePlayer === myUid) {
+            await ptNextPhase();
+          }
+        }, 700);
       }
     }
   });
@@ -3510,25 +3579,49 @@ async function ptCounterSpell(cardId) {
 function renderPTStackPanel() {
   const stack = state.playtestGame?.stack || [];
   if (!stack.length) return '';
+  const myUid = state.currentUser?.uid;
+  const session = state.playtestGame;
+  const priorityEnabled = session?.priorityEnabled !== false;
+  const hasPriority = myUid === (session?.priority || session?.activePlayer);
   const top = stack[0];
+  const waitingName = escHtml(session?.players?.[session?.priority||'']?.displayName || '…');
+  // Stack items displayed bottom→top (index 0 = top of stack = resolves first)
   return `<div class="pt-stack-panel" onclick="event.stopPropagation()">
     <div class="pt-stack-header">⚡ Stack (${stack.length})</div>
-    ${stack.map((item, i) => `<div class="pt-stack-item${i===0?' pt-stack-top':''}"
-      onpointerenter="ptZoomHover(event,${JSON.stringify(item.imageUrl||'')},${JSON.stringify(item.name)})"
-      onpointerleave="ptZoomHide()">
-      ${item.imageUrl
-        ? `<img class="pt-stack-item-img" src="${escHtml(item.imageUrl)}" loading="lazy">`
-        : `<div class="pt-stack-item-back">${escHtml(item.name.slice(0,10))}</div>`}
-      <div class="pt-stack-item-info">
-        <div class="pt-stack-item-name">${escHtml(item.name.slice(0,22))}</div>
-        <div class="pt-stack-item-caster">${escHtml(item.casterName)}</div>
-      </div>
-    </div>`).join('')}
-    <div class="pt-stack-action-row">
-      <button class="pt-stack-action-btn pt-stack-resolve-btn" onclick="ptResolveTop()">Resolve ↓</button>
-      <button class="pt-stack-action-btn pt-stack-counter-btn" onclick="ptCounterSpell('${top.cardId}')">Counter ✕</button>
-    </div>
+    ${[...stack].reverse().map((item, i) => {
+      const isTop = i === stack.length - 1;
+      return `<div class="pt-stack-item${isTop?' pt-stack-top':''}"
+        onpointerenter="ptZoomHover(event,${JSON.stringify(item.imageUrl||'')},${JSON.stringify(item.name)})"
+        onpointerleave="ptZoomHide()">
+        <span class="pt-stack-pos">${i+1}</span>
+        ${item.imageUrl
+          ? `<img class="pt-stack-item-img" src="${escHtml(item.imageUrl)}" loading="lazy">`
+          : `<div class="pt-stack-item-back">${escHtml(item.name.slice(0,10))}</div>`}
+        <div class="pt-stack-item-info">
+          <div class="pt-stack-item-name">${escHtml(item.name.slice(0,22))}</div>
+          <div class="pt-stack-item-caster">${escHtml(item.casterName)}</div>
+        </div>
+      </div>`;
+    }).join('')}
+    ${priorityEnabled
+      ? hasPriority
+        ? `<div class="pt-stack-priority-row">
+            <button class="pt-stack-take-btn" onclick="ptStackTakeAction()">Take Action</button>
+            <button class="pt-stack-decline-btn" onclick="ptPassPriority()">Decline</button>
+          </div>`
+        : `<div class="pt-stack-waiting">Waiting for ${waitingName}…</div>`
+      : `<div class="pt-stack-action-row">
+          <button class="pt-stack-action-btn pt-stack-resolve-btn" onclick="ptResolveTop()">Resolve ↓</button>
+          <button class="pt-stack-action-btn pt-stack-counter-btn" onclick="ptCounterSpell('${top.cardId}')">Counter ✕</button>
+        </div>`
+    }
   </div>`;
+}
+
+function ptStackTakeAction() {
+  // Open the hand expanded overlay so the player can cast a response
+  state.ptHandExpanded = true;
+  render();
 }
 
 async function ptNextPhase() {
@@ -3538,26 +3631,43 @@ async function ptNextPhase() {
   const curIdx = PT_PHASES.indexOf(session.phase || 'main1');
   const isLast = curIdx === PT_PHASES.length - 1;
   if (isLast) {
-    // End of turn → next player becomes active
+    // Cleanup done → next player's turn starts at untap
     const activePlayers = Object.keys(session.players || {}).filter(p => !session.players[p].conceded);
     const activeIdx = activePlayers.indexOf(session.activePlayer || uid);
     const nextActive = activePlayers[(activeIdx + 1) % activePlayers.length];
     const nextPlayer = session.players[nextActive];
     const updates = { phase: 'untap', activePlayer: nextActive, priority: nextActive, passed: [], turn: (session.turn || 1) + 1 };
+    // Untap next player's battlefield on turn change
     if (nextPlayer?.battlefield?.length) {
       updates[`players.${nextActive}.battlefield`] = nextPlayer.battlefield.map(c => ({ ...c, tapped: false }));
     }
-    // Clear mana pool on new turn
     state.ptManaPool = { W: 0, U: 0, B: 0, R: 0, G: 0, C: 0 };
     await ptPub(updates);
   } else {
     const nextPhase = PT_PHASES[curIdx + 1];
     await ptPub({ phase: nextPhase, priority: session.activePlayer || uid, passed: [] });
-    // Auto-draw when entering draw step on the active player's turn
-    if (nextPhase === 'draw' && uid === (session.activePlayer || uid)) {
+    // Auto-draw when entering draw step (only for the active player)
+    if (nextPhase === 'draw' && uid === session.activePlayer) {
       await ptDraw(1);
     }
   }
+}
+
+// Skip all remaining phases and pass to the next player
+async function ptPassTurn() {
+  const session = state.playtestGame;
+  const uid = state.currentUser?.uid;
+  if (!session || !uid || uid !== session.activePlayer) return;
+  const activePlayers = Object.keys(session.players || {}).filter(p => !session.players[p].conceded);
+  const activeIdx = activePlayers.indexOf(session.activePlayer || uid);
+  const nextActive = activePlayers[(activeIdx + 1) % activePlayers.length];
+  const nextPlayer = session.players[nextActive];
+  const updates = { phase: 'untap', activePlayer: nextActive, priority: nextActive, passed: [], turn: (session.turn || 1) + 1 };
+  if (nextPlayer?.battlefield?.length) {
+    updates[`players.${nextActive}.battlefield`] = nextPlayer.battlefield.map(c => ({ ...c, tapped: false }));
+  }
+  state.ptManaPool = { W: 0, U: 0, B: 0, R: 0, G: 0, C: 0 };
+  await ptPub(updates);
 }
 async function ptPassPriority() {
   const uid = state.currentUser?.uid;
@@ -3582,6 +3692,13 @@ function ptToggleHoldPriority() {
   state.ptHoldPriority = !state.ptHoldPriority;
   localStorage.setItem('pt_hold_prio', state.ptHoldPriority ? 'true' : 'false');
   render();
+}
+
+// Global priority toggle — any player can disable the stack system for the whole table
+async function ptTogglePrioritySystem(enabled) {
+  if (state.playtestGame) state.playtestGame.priorityEnabled = enabled;
+  render();
+  await ptPub({ priorityEnabled: enabled });
 }
 
 async function ptAdjustLife(delta) {
@@ -3623,24 +3740,36 @@ async function ptPlayCard(cardId) {
     await ptPriv({ ...priv, hand });
     await ptPub({ [`players.${uid}.battlefield`]: battlefield });
   } else {
-    // Non-lands go to the stack; priority determined by hold-priority toggle
     ptSpendManaForCost(scryfallCache[scryfallKey(card.name)]?.manaCost || '');
-    const session = state.playtestGame;
-    const stackItem = { cardId: card.cardId, name: card.name, imageUrl: card.imageUrl || null,
-      casterId: uid, casterName: player.displayName || 'Player', fromZone: 'hand',
-      addedAt: new Date().toISOString() };
-    const newStack = [stackItem, ...(session?.stack || [])];
-    const activePlayers = Object.keys(session?.players || {}).filter(p => !session?.players[p].conceded);
-    const myIdx = activePlayers.indexOf(uid);
-    const nextPriority = activePlayers.length > 1 ? activePlayers[(myIdx + 1) % activePlayers.length] : uid;
-    const newPriority = state.ptHoldPriority ? uid : nextPriority;
-    const newPassed  = state.ptHoldPriority ? [] : [uid];
-    // Optimistic update — show stack immediately without waiting for Firestore round-trip
-    if (state.playtestGame) state.playtestGame = { ...state.playtestGame, stack: newStack, priority: newPriority, passed: newPassed };
-    if (state.playtestPrivate) state.playtestPrivate = { ...state.playtestPrivate, hand };
-    render();
-    await ptPriv({ ...priv, hand });
-    await ptPub({ stack: newStack, priority: newPriority, passed: newPassed });
+    const priorityEnabled = state.playtestGame?.priorityEnabled !== false;
+    if (!priorityEnabled) {
+      // No stack — play directly to battlefield at default position
+      const existingBf = player.battlefield || [];
+      const pos = ptDefaultPos(existingBf);
+      const battlefield = [...existingBf, { ...card, zone: 'battlefield', tapped: false, counters: 0, ...pos }];
+      if (state.playtestPrivate) state.playtestPrivate = { ...state.playtestPrivate, hand };
+      if (state.playtestGame?.players?.[uid]) state.playtestGame.players[uid].battlefield = battlefield;
+      render();
+      await ptPriv({ ...priv, hand });
+      await ptPub({ [`players.${uid}.battlefield`]: battlefield });
+    } else {
+      // Non-lands go to the stack; priority determined by hold-priority toggle
+      const session = state.playtestGame;
+      const stackItem = { cardId: card.cardId, name: card.name, imageUrl: card.imageUrl || null,
+        casterId: uid, casterName: player.displayName || 'Player', fromZone: 'hand',
+        addedAt: new Date().toISOString() };
+      const newStack = [stackItem, ...(session?.stack || [])];
+      const activePlayers = Object.keys(session?.players || {}).filter(p => !session?.players[p].conceded);
+      const myIdx = activePlayers.indexOf(uid);
+      const nextPriority = activePlayers.length > 1 ? activePlayers[(myIdx + 1) % activePlayers.length] : uid;
+      const newPriority = state.ptHoldPriority ? uid : nextPriority;
+      const newPassed  = state.ptHoldPriority ? [] : [uid];
+      if (state.playtestGame) state.playtestGame = { ...state.playtestGame, stack: newStack, priority: newPriority, passed: newPassed };
+      if (state.playtestPrivate) state.playtestPrivate = { ...state.playtestPrivate, hand };
+      render();
+      await ptPriv({ ...priv, hand });
+      await ptPub({ stack: newStack, priority: newPriority, passed: newPassed });
+    }
   }
   ptCloseMenu();
 }
@@ -3919,8 +4048,24 @@ function renderPTLobby() {
 }
 
 // ── Render: Game ──────────────────────────────────────
-const PT_PHASES = ['untap','upkeep','draw','main1','combat','main2','end'];
-const PT_PHASE_LABELS = { untap:'Untap', upkeep:'Upkeep', draw:'Draw', main1:'Main 1', combat:'Combat', main2:'Main 2', end:'End' };
+const PT_PHASES = ['untap','upkeep','draw','main1','begin_combat','attackers','blockers','damage','end_combat','main2','end','cleanup'];
+const PT_PHASE_LABELS = {
+  untap:'Untap', upkeep:'Upkeep', draw:'Draw', main1:'Main 1',
+  begin_combat:'Begin', attackers:'Attackers', blockers:'Blockers', damage:'Damage', end_combat:'End Combat',
+  main2:'Main 2', end:'End', cleanup:'Cleanup'
+};
+const PT_COMBAT_PHASES = new Set(['begin_combat','attackers','blockers','damage','end_combat']);
+// Display groups: combat collapses to one segment when not in combat
+const PT_PHASE_DISPLAY = [
+  {id:'untap',    label:'Untap',   phases:['untap']},
+  {id:'upkeep',   label:'Upkeep',  phases:['upkeep']},
+  {id:'draw',     label:'Draw',    phases:['draw']},
+  {id:'main1',    label:'Main 1',  phases:['main1']},
+  {id:'combat',   label:'⚔ Combat', phases:['begin_combat','attackers','blockers','damage','end_combat']},
+  {id:'main2',    label:'Main 2',  phases:['main2']},
+  {id:'end',      label:'End',     phases:['end']},
+  {id:'cleanup',  label:'Cleanup', phases:['cleanup']},
+];
 
 function renderPTMullOverlay() {
   const myUid = state.currentUser?.uid;
@@ -4008,18 +4153,20 @@ function renderPTGame() {
 
   // Player tabs
   const tabsHtml = `<div class="pt-tabs">
-    ${players.map(([uid, p], i) => {
+    ${players.map(([pUid, p], i) => {
       const col = PT_COLORS[i % PT_COLORS.length];
-      const isActive = uid === viewUid;
+      const isActive = pUid === viewUid;
+      const isActiveTurnPlayer = pUid === session.activePlayer;
+      const hasPriority = pUid === (session.priority || session.activePlayer);
       const lifeCol = (p.life??40) <= 5 ? 'var(--tier-s)' : (p.life??40) <= 15 ? 'var(--tier-a)' : col;
-      const hasPriority = uid === (session.priority || session.activePlayer);
-      return `<button class="pt-tab${isActive?' pt-tab-active':''}${hasPriority?' pt-tab-priority':''}" style="--tab-col:${col}" onclick="state.playtestViewUid='${uid}';render()">
-        <div class="pt-tab-name">${escHtml(p.displayName)}</div>
-        <div class="pt-tab-life" style="color:${lifeCol}">${p.life??40}</div>
-        ${p.poison>0?`<div class="pt-tab-poison">☠${p.poison}</div>`:''}
+      return `<button class="pt-tab${isActive?' pt-tab-active':''}${hasPriority?' pt-tab-priority':''}${isActiveTurnPlayer&&!isActive?' pt-tab-active-turn':''}" style="--tab-col:${col}" onclick="state.playtestViewUid='${pUid}';render()">
+        <span class="pt-tab-name">${escHtml(p.displayName)}</span>
+        <span class="pt-tab-life" style="color:${lifeCol}">${p.life??40}</span>
+        ${p.poison>0?`<span class="pt-tab-poison">☠${p.poison}</span>`:''}
       </button>`;
     }).join('')}
-    <button class="pt-tab" style="min-width:44px;font-size:18px" onclick="ptLeave()">✕</button>
+    <span class="pt-tabs-info">${escHtml(viewedPlayer?.commander||'')} · T${session.turn||1}</span>
+    <button class="pt-tab" style="min-width:36px;font-size:15px;padding:0 8px" onclick="ptLeave()">✕</button>
   </div>`;
 
   // Deck info bar
@@ -4027,21 +4174,36 @@ function renderPTGame() {
   const handCount = isMyBoard ? (state.playtestPrivate?.hand?.length ?? '?') : '?';
   const deckBar = `<div class="pt-deckbar">
     <span class="pt-deckbar-commander">${escHtml(viewedPlayer?.commander || '—')}</span>
-    <span class="pt-deckbar-meta">📚${libCount} ✋${isMyBoard?handCount:'?'} Turn ${session.turn||1}</span>
+    <span class="pt-deckbar-meta">📚${libCount} ✋${isMyBoard?handCount:'?'}</span>
   </div>`;
 
   // Phase bar
   const curPhase = session.phase || 'main1';
   const isActiveTurn = (session.activePlayer || myUid) === myUid;
+  const inCombat = PT_COMBAT_PHASES.has(curPhase);
+  const curPhaseIdx = PT_PHASES.indexOf(curPhase);
+  const activePlayerName = escHtml(session.players?.[session.activePlayer||'']?.displayName || '');
   const phaseBar = `<div class="pt-phase-bar">
-    ${PT_PHASES.map((p,i) => {
-      const isActive = curPhase === p;
-      const canAdvance = isActive && isMyBoard && isActiveTurn;
-      return `${i>0?'<span class="pt-phase-sep">›</span>':''}
-      <div class="pt-phase-step${isActive?' active':''}${canAdvance?' clickable':''}"
-        ${canAdvance?`onclick="ptNextPhase()"`:''}>${PT_PHASE_LABELS[p]}</div>`;
+    ${PT_PHASE_DISPLAY.map((group, gi) => {
+      const groupActive = group.phases.includes(curPhase);
+      const groupPast = PT_PHASES.indexOf(group.phases[group.phases.length-1]) < curPhaseIdx;
+      if (group.id === 'combat' && inCombat) {
+        // Expand combat into sub-steps
+        return group.phases.map((sub, si) => {
+          const isActive = curPhase === sub;
+          const canAdv = isActive && isMyBoard && isActiveTurn;
+          return `${gi>0||si>0?'<span class="pt-phase-sep">·</span>':''}
+            <div class="pt-phase-step${isActive?' active':''}${canAdv?' clickable':''}"
+              ${canAdv?'onclick="ptNextPhase()"':''}>${PT_PHASE_LABELS[sub]}</div>`;
+        }).join('');
+      }
+      const canAdv = groupActive && isMyBoard && isActiveTurn;
+      return `${gi>0?'<span class="pt-phase-sep">·</span>':''}
+        <div class="pt-phase-step${groupActive?' active':''}${groupPast?' past':''}${canAdv?' clickable':''}"
+          ${canAdv?'onclick="ptNextPhase()"':''}>${group.label}</div>`;
     }).join('')}
-    <div class="pt-phase-who">${escHtml(session.players?.[session.activePlayer||'']?.displayName||'')}${isActiveTurn?' (you)':''}</div>
+    <div class="pt-phase-who">${activePlayerName}${isActiveTurn?' (you)':''}</div>
+    ${isActiveTurn&&isMyBoard?`<button class="pt-action-btn" onclick="ptPassTurn()" style="margin-left:4px;font-size:9px;padding:1px 7px;opacity:0.7">Pass Turn</button>`:''}
   </div>`;
 
   // Battlefield
@@ -4104,13 +4266,32 @@ function renderPTGame() {
         const img = card.imageUrl
           ? `<img src="${escHtml(card.imageUrl)}" style="width:${bfw}px;border-radius:5px;display:block;pointer-events:none" loading="lazy">`
           : `<div class="pt-card-back" style="width:${bfw}px;height:${bfh}px;pointer-events:none">${escHtml(card.name.slice(0,14))}</div>`;
+        // P/T stat line (creatures) and loyalty badge (planeswalkers)
+        const cached = scryfallCache[scryfallKey(card.name)];
+        const cardTL = (cached?.typeLine || '').toLowerCase();
+        const plusC = card.counters || 0;
+        let statLineHtml = '';
+        if (cardTL.includes('creature') && cached?.power != null) {
+          const rawP = cached.power, rawT = cached.toughness;
+          const dp = isNaN(rawP) ? rawP : String(parseInt(rawP) + plusC);
+          const dt = isNaN(rawT) ? rawT : String(parseInt(rawT) + plusC);
+          statLineHtml = `<div class="pt-stat-line${plusC>0?' pt-stat-boosted':''}"><span>${dp}</span><span class="pt-stat-slash">/</span><span>${dt}</span></div>`;
+        }
+        let loyaltyHtml = '';
+        if (cardTL.includes('planeswalker') && (cached?.loyalty != null || card.loyalty != null)) {
+          const baseLoy = parseInt(card.loyalty ?? cached?.loyalty ?? 0);
+          loyaltyHtml = `<div class="pt-loyalty-badge">${baseLoy + plusC}</div>`;
+        }
+        const counterHtml = plusC > 0 ? `<div class="pt-counter">${plusC>0?'+':''}${plusC}</div>` : '';
         return `<div class="pt-bf-card${card.tapped?' pt-tapped':''}${menuOpen?' pt-card-selected':''}"
           data-card-id="${card.cardId}"
           style="left:${cardX}px;top:${cardY}px"
           onpointerdown="ptPointerDown(event,'${card.cardId}')"
           onclick="event.stopPropagation()">
           ${img}
-          ${card.counters?`<div class="pt-counter">${card.counters}</div>`:''}
+          ${counterHtml}
+          ${statLineHtml}
+          ${loyaltyHtml}
           ${card.isCommander?`<div class="pt-cmd-badge">⭐</div>`:''}
           ${card.isToken?`<div class="pt-token-badge">T</div>`:''}
         </div>`;
@@ -4128,6 +4309,8 @@ function renderPTGame() {
         `<span class="pt-mana-pip" style="background:${MANA_COLORS_HEX[k]};color:${k==='W'?'#333':'#fff'}" onclick="state.ptManaPool['${k}']=Math.max(0,state.ptManaPool['${k}']-1);render()" title="Spend 1 ${k}">${v}</span>`
       ).join('')}<span class="pt-mana-clear" onclick="state.ptManaPool={W:0,U:0,B:0,R:0,G:0,C:0};render()" title="Clear all mana">✕</span></div>`
     : '';
+  const priorityEnabled = session.priorityEnabled !== false;
+  const hasPriority = myUid === (session.priority || session.activePlayer);
   const actionBar = isMyBoard ? `<div class="pt-action-bar">
     <button class="pt-action-btn" onclick="ptDraw()">Draw</button>
     <button class="pt-action-btn" onclick="ptUntapAll()">Untap All</button>
@@ -4136,8 +4319,7 @@ function renderPTGame() {
     <button class="pt-action-btn" onclick="ptShuffle()">Shuffle</button>
     ${isActiveTurn?`<button class="pt-action-btn" onclick="ptNextPhase()">Next Phase</button>`:''}
     ${manaPoolHtml}
-    <button class="pt-action-btn${myUid===(session.priority||session.activePlayer)?' pt-action-pass':''}" onclick="ptPassPriority()">${state.ptHoldPriority&&myUid===(session.priority||session.activePlayer)?'<span class="pt-prio-dot"></span>':''} Pass ⏩</button>
-    <button class="pt-action-btn${state.ptHoldPriority?' pt-hold-active':''}" onclick="ptToggleHoldPriority()" title="Toggle hold priority (like Arena)">${state.ptHoldPriority?'🔒 Hold Prio':'⚡ Auto Pass'}</button>
+    ${priorityEnabled?`<button class="pt-action-btn${hasPriority?' pt-action-pass':''}" onclick="ptPassPriority()">${state.ptHoldPriority&&hasPriority?'<span class="pt-prio-dot"></span>':''} Pass ⏩</button>`:''}
     <button class="pt-action-btn${state.playtestTokenPanel?' active':''}" onclick="event.stopPropagation();state.playtestTokenPanel=!state.playtestTokenPanel;state.playtestSettings=false;render()">Token</button>
     <button class="pt-action-btn${state.playtestSettings?' active':''}" onclick="event.stopPropagation();ptToggleSettings()" style="padding:7px 10px">⚙</button>
   </div>${settingsHtml}` : '';
@@ -4208,7 +4390,11 @@ function renderPTGame() {
   const cmdrMenuBackdrop = state.ptCmdrMenu ? `<div style="position:fixed;inset:0;z-index:498" onclick="ptCloseCmdrMenu()"></div>` : '';
   const settingsBackdrop = state.playtestSettings ? `<div style="position:fixed;inset:0;z-index:498" onclick="event.stopPropagation();state.playtestSettings=false;render()"></div>` : '';
   const manaChoiceHtml = state.ptManaChoice ? renderPTManaChoice() : '';
-  return `<div class="pt-playmat">${tabsHtml}${deckBar}${phaseBar}${actionBar}${battlefieldHtml}${handHtml}${overlayHtml}${scryHtml}${millHtml}${numberHtml}${settingsBackdrop}${cmdrMenuBackdrop}${cmdrMenuHtml}${libMenuBackdrop}${libMenuHtml}${menuBackdrop}${cardMenuHtml}${waitingBanner}${mullOverlayHtml}${manaChoiceHtml}</div>`;
+  const turnBannerHtml = state.ptTurnBanner ? `<div class="pt-turn-banner">
+    <div class="pt-turn-banner-name">${state.ptTurnBanner.isYou ? 'Your Turn!' : escHtml(state.ptTurnBanner.name) + "'s Turn"}</div>
+    <div class="pt-turn-banner-sub">${PT_PHASE_LABELS[session.phase||'upkeep'] || 'Upkeep'}</div>
+  </div>` : '';
+  return `<div class="pt-playmat">${tabsHtml}${deckBar}${phaseBar}${actionBar}${battlefieldHtml}${handHtml}${overlayHtml}${scryHtml}${millHtml}${numberHtml}${settingsBackdrop}${cmdrMenuBackdrop}${cmdrMenuHtml}${libMenuBackdrop}${libMenuHtml}${menuBackdrop}${cardMenuHtml}${waitingBanner}${mullOverlayHtml}${manaChoiceHtml}${turnBannerHtml}</div>`;
 }
 
 function renderPTCardMenu() {
@@ -4229,8 +4415,11 @@ function renderPTCardMenu() {
     actions.push({label:'→ Top of Library', fn:`ptMoveCard('${cardId}','hand','library')`});
   } else if (zone==='battlefield') {
     actions.push({label:card.tapped?'↺ Untap':'⤵ Tap', fn:`ptTapCard('${cardId}')`});
-    actions.push({label:'➕ Add Counter', fn:`ptAddCounter('${cardId}','battlefield',1)`});
-    if(card.counters>0) actions.push({label:'➖ Remove Counter', fn:`ptAddCounter('${cardId}','battlefield',-1)`});
+    const cachedCm = scryfallCache[scryfallKey(card.name)];
+    const cmTL = (cachedCm?.typeLine || '').toLowerCase();
+    const counterLabel = cmTL.includes('creature') ? '+1/+1' : cmTL.includes('planeswalker') ? 'Loyalty' : 'Counter';
+    actions.push({label:`➕ ${counterLabel}`, fn:`ptAddCounter('${cardId}','battlefield',1)`});
+    if(card.counters>0) actions.push({label:`➖ ${counterLabel} (${card.counters})`, fn:`ptAddCounter('${cardId}','battlefield',-1)`});
     actions.push({label:'↑ Put on Stack', fn:`ptAddToStack('${cardId}','battlefield')`});
     actions.push({label:'→ Hand', fn:`ptMoveCard('${cardId}','battlefield','hand')`});
     actions.push({label:'→ Graveyard', fn:`ptMoveCard('${cardId}','battlefield','graveyard')`});
@@ -4259,11 +4448,13 @@ function renderPTCardMenu() {
 }
 
 function renderPTSettings(mullCount) {
-  const sz = state.ptCardSize || 'M';
-  // Position the popover above the gear button (bottom of action bar)
+  const priorityEnabled = state.playtestGame?.priorityEnabled !== false;
   return `<div class="pt-settings-popover" style="bottom:${document.querySelector('.pt-hand')?.offsetHeight||130}px;right:8px;z-index:499" onclick="event.stopPropagation()">
     <button class="pt-action-btn" onclick="ptResetZoom()" style="width:100%;margin-bottom:8px">Reset Zoom</button>
     <label><input type="checkbox" ${state.snapToGrid?'checked':''} onchange="state.snapToGrid=this.checked;render()"> Snap to grid</label>
+    <hr class="pt-settings-divider">
+    <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" ${priorityEnabled?'checked':''} onchange="ptTogglePrioritySystem(this.checked)"> Priority / Stack system</label>
+    <label style="display:flex;align-items:center;gap:6px;margin-top:6px;opacity:${priorityEnabled?1:0.4}"><input type="checkbox" ${state.ptHoldPriority?'checked':''} onchange="ptToggleHoldPriority()" ${priorityEnabled?'':'disabled'}> Hold priority (Arena-style)</label>
     <hr class="pt-settings-divider">
     <button class="pt-action-btn" onclick="ptMulligan();state.playtestSettings=false;render()" style="width:100%;margin-bottom:4px">Mulligan${mullCount>0?` (→${Math.max(7-mullCount,0)})`:''}</button>
     <button class="pt-action-btn" onclick="ptViewLibTop();state.playtestSettings=false" style="width:100%;margin-bottom:4px">View Library Top</button>
@@ -5246,24 +5437,35 @@ async function ptPlayCardAt(cardId, x, y) {
     await ptPriv({ ...priv, hand });
     await ptPub({ [`players.${uid}.battlefield`]: battlefield });
   } else {
-    // Non-lands go to the stack with priority logic (same as menu "Play" button)
     ptSpendManaForCost(scryfallCache[scryfallKey(card.name)]?.manaCost || '');
-    const session = state.playtestGame;
-    const stackItem = { cardId: card.cardId, name: card.name, imageUrl: card.imageUrl || null,
-      casterId: uid, casterName: player.displayName || 'Player', fromZone: 'hand',
-      dropX: x, dropY: y,
-      addedAt: new Date().toISOString() };
-    const newStack = [stackItem, ...(session?.stack || [])];
-    const activePlayers = Object.keys(session?.players || {}).filter(p => !session?.players[p].conceded);
-    const myIdx = activePlayers.indexOf(uid);
-    const nextPriority = activePlayers.length > 1 ? activePlayers[(myIdx + 1) % activePlayers.length] : uid;
-    const newPriority = state.ptHoldPriority ? uid : nextPriority;
-    const newPassed  = state.ptHoldPriority ? [] : [uid];
-    if (state.playtestGame) state.playtestGame = { ...state.playtestGame, stack: newStack, priority: newPriority, passed: newPassed };
-    if (state.playtestPrivate) state.playtestPrivate = { ...state.playtestPrivate, hand };
-    render();
-    await ptPriv({ ...priv, hand });
-    await ptPub({ stack: newStack, priority: newPriority, passed: newPassed });
+    const priorityEnabled = state.playtestGame?.priorityEnabled !== false;
+    if (!priorityEnabled) {
+      // No stack — play directly to the drop position
+      const battlefield = [...(player.battlefield || []), { ...card, zone: 'battlefield', tapped: false, counters: 0, x, y }];
+      if (state.playtestPrivate) state.playtestPrivate = { ...state.playtestPrivate, hand };
+      if (state.playtestGame?.players?.[uid]) state.playtestGame.players[uid].battlefield = battlefield;
+      render();
+      await ptPriv({ ...priv, hand });
+      await ptPub({ [`players.${uid}.battlefield`]: battlefield });
+    } else {
+      // Non-lands go to the stack with drop position saved for resolution
+      const session = state.playtestGame;
+      const stackItem = { cardId: card.cardId, name: card.name, imageUrl: card.imageUrl || null,
+        casterId: uid, casterName: player.displayName || 'Player', fromZone: 'hand',
+        dropX: x, dropY: y,
+        addedAt: new Date().toISOString() };
+      const newStack = [stackItem, ...(session?.stack || [])];
+      const activePlayers = Object.keys(session?.players || {}).filter(p => !session?.players[p].conceded);
+      const myIdx = activePlayers.indexOf(uid);
+      const nextPriority = activePlayers.length > 1 ? activePlayers[(myIdx + 1) % activePlayers.length] : uid;
+      const newPriority = state.ptHoldPriority ? uid : nextPriority;
+      const newPassed  = state.ptHoldPriority ? [] : [uid];
+      if (state.playtestGame) state.playtestGame = { ...state.playtestGame, stack: newStack, priority: newPriority, passed: newPassed };
+      if (state.playtestPrivate) state.playtestPrivate = { ...state.playtestPrivate, hand };
+      render();
+      await ptPriv({ ...priv, hand });
+      await ptPub({ stack: newStack, priority: newPriority, passed: newPassed });
+    }
   }
 }
 
@@ -6663,6 +6865,7 @@ window.handleLogin = handleLogin;
 window.handleSignOut = handleSignOut;
 window.saveDisplayName = saveDisplayName;
 window.claimMyDecks = claimMyDecks;
+window.claimByOldName = claimByOldName;
 window.doChangePassword = doChangePassword;
 window.closeChangePassword = closeChangePassword;
 window.togglePwVis = togglePwVis;
@@ -6692,6 +6895,9 @@ window.ptShuffle = ptShuffle;
 window.ptNextPhase = ptNextPhase;
 window.ptPassPriority = ptPassPriority;
 window.ptToggleHoldPriority = ptToggleHoldPriority;
+window.ptTogglePrioritySystem = ptTogglePrioritySystem;
+window.ptPassTurn = ptPassTurn;
+window.ptStackTakeAction = ptStackTakeAction;
 window.ptAdjustLife = ptAdjustLife;
 window.ptConcede = ptConcede;
 window.ptPlayCard = ptPlayCard;
