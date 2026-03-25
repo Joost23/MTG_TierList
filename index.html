@@ -432,6 +432,24 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 .pt-stack-resolve-btn:hover { background:var(--accent);color:#fff;border-color:var(--accent); }
 .pt-stack-counter-btn { background:rgba(226,75,74,0.1);border:1px solid rgba(226,75,74,0.35);color:var(--tier-s-text); }
 .pt-stack-counter-btn:hover { background:var(--tier-s-text);color:#fff;border-color:var(--tier-s-text); }
+/* Priority bar (large Take Action / Decline above hand) */
+.pt-priority-bar { display:flex;align-items:center;gap:8px;padding:6px 12px;background:rgba(0,0,0,0.92);border-top:1px solid var(--accent-dim);flex-shrink:0;backdrop-filter:blur(8px); }
+.pt-priority-take-btn { flex:2;font-size:14px;font-weight:700;padding:10px;border-radius:var(--radius-sm);background:var(--accent);color:#fff;border:none;cursor:pointer;transition:opacity 0.12s;font-family:inherit; }
+.pt-priority-take-btn:hover { opacity:0.85; }
+.pt-priority-decline-btn { flex:1;font-size:13px;font-weight:600;padding:10px;border-radius:var(--radius-sm);background:rgba(255,255,255,0.06);color:var(--text-muted);border:1px solid var(--border);cursor:pointer;transition:background 0.12s;font-family:inherit; }
+.pt-priority-decline-btn:hover { background:rgba(255,255,255,0.14); }
+.pt-priority-waiting { font-size:12px;color:var(--text-muted);text-align:center;flex:1;font-style:italic;padding:8px 0; }
+/* Phase stop indicator */
+.pt-phase-step.stop { border-color:var(--accent-dim);color:var(--accent); }
+/* Cleanup discard overlay */
+.pt-discard-overlay { position:fixed;inset:0;background:rgba(8,6,20,0.96);z-index:600;display:flex;flex-direction:column;align-items:center;padding:20px 12px;gap:14px;backdrop-filter:blur(6px); }
+.pt-discard-title { font-size:18px;font-weight:700;color:var(--tier-s-text);margin-bottom:4px;text-align:center; }
+.pt-discard-sub { font-size:13px;color:var(--text-muted);text-align:center; }
+.pt-discard-hand { display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-width:900px; }
+.pt-discard-card { cursor:pointer;border-radius:8px;border:2px solid transparent;transition:border-color 0.12s,transform 0.12s; }
+.pt-discard-card:hover { border-color:var(--tier-s-text);transform:translateY(-4px); }
+.pt-discard-card img { width:88px;border-radius:6px;display:block; }
+.pt-discard-card-back { width:88px;height:123px;background:linear-gradient(135deg,#1a1535,#2d1f5e,#0d0b1a);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--text-muted);text-align:center;padding:6px; }
 .pt-phase-step { font-size:10px;padding:2px 5px;border-radius:99px;color:var(--text-muted);white-space:nowrap;border:1px solid transparent;transition:all 0.12s;flex-shrink:0; }
 .pt-phase-step.active { background:var(--accent-dim);color:var(--accent);border-color:var(--accent-dim);font-weight:700; }
 .pt-phase-step.past { opacity:0.35; }
@@ -881,6 +899,8 @@ let state = {
   ptLibTypeFilter: 'all',
   ptMullBottom: [],  // cardIds selected to go to bottom of library during mulligan
   ptHoldPriority: localStorage.getItem('pt_hold_prio') !== 'false', // default ON — rules-correct (caster keeps priority after casting)
+  ptAutoPass: localStorage.getItem('pt_auto_pass') !== 'false', // auto-decline when no instants in hand
+  ptPhaseStops: new Set(JSON.parse(localStorage.getItem('pt_phase_stops') || '[]')), // phases to stop at
   ptLibraryMenu: null,
   ptCmdrMenu: null,
   ptManaChoice: null,
@@ -3182,6 +3202,20 @@ function ptListen(sessionId) {
           }
         }, 700);
       }
+      // Auto-pass priority when no instants in hand
+      const newPriority = state.playtestGame.priority;
+      if (newPriority === myUid && state.playtestGame.stack?.length && state.ptAutoPass) {
+        const hand = state.playtestPrivate?.hand || [];
+        const hasInstant = hand.some(c => {
+          const tl = (scryfallCache[scryfallKey(c.name)]?.typeLine || '').toLowerCase();
+          return tl.includes('instant');
+        });
+        if (!hasInstant) {
+          setTimeout(async () => {
+            if (state.playtestGame?.priority === myUid) await ptPassPriority();
+          }, 400);
+        }
+      }
     }
   });
   if (myUid) {
@@ -3615,6 +3649,69 @@ function renderPTStackPanel() {
   </div>`;
 }
 
+function renderPTPriorityBar() {
+  const session = state.playtestGame;
+  const myUid = state.currentUser?.uid;
+  if (!session?.stack?.length) return '';
+  const priorityEnabled = session.priorityEnabled !== false;
+  if (!priorityEnabled) return '';
+  if (state.playtestViewUid !== myUid) return '';
+  const hasPriority = myUid === (session.priority || session.activePlayer);
+  if (hasPriority) {
+    return `<div class="pt-priority-bar">
+      <button class="pt-priority-take-btn" onclick="ptStackTakeAction()">Take Action</button>
+      <button class="pt-priority-decline-btn" onclick="ptPassPriority()">Decline</button>
+    </div>`;
+  }
+  const waitingName = escHtml(session.players?.[session.priority||'']?.displayName || '…');
+  return `<div class="pt-priority-bar"><span class="pt-priority-waiting">Waiting for ${waitingName}…</span></div>`;
+}
+
+function renderPTDiscardOverlay(hand) {
+  const excess = hand.length - 7;
+  return `<div class="pt-discard-overlay">
+    <div>
+      <div class="pt-discard-title">Discard to Hand Size</div>
+      <div class="pt-discard-sub">Select ${excess} card${excess !== 1 ? 's' : ''} to discard (${hand.length} → 7)</div>
+    </div>
+    <div class="pt-discard-hand">
+      ${hand.map(c => `<div class="pt-discard-card" onclick="ptDiscardCard('${c.cardId}')">
+        ${c.imageUrl ? `<img src="${escHtml(c.imageUrl)}" loading="lazy">` : `<div class="pt-discard-card-back">${escHtml(c.name.slice(0,14))}</div>`}
+      </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+async function ptDiscardCard(cardId) {
+  const priv = state.playtestPrivate;
+  if (!priv) return;
+  const card = priv.hand.find(c => c.cardId === cardId);
+  if (!card) return;
+  const hand = priv.hand.filter(c => c.cardId !== cardId);
+  const myUid = state.currentUser?.uid;
+  const player = state.playtestGame?.players?.[myUid];
+  const gy = [...(player?.graveyard || []), { cardId: card.cardId, name: card.name, imageUrl: card.imageUrl || null, zone: 'graveyard' }];
+  state.playtestPrivate = { ...priv, hand };
+  render();
+  await Promise.all([ptPriv({ ...priv, hand }), ptPub({ [`players.${myUid}.graveyard`]: gy })]);
+}
+
+function ptToggleAutoPass(v) {
+  state.ptAutoPass = v;
+  localStorage.setItem('pt_auto_pass', v ? 'true' : 'false');
+  render();
+}
+
+function ptTogglePhaseStop(phaseId) {
+  if (state.ptPhaseStops.has(phaseId)) {
+    state.ptPhaseStops.delete(phaseId);
+  } else {
+    state.ptPhaseStops.add(phaseId);
+  }
+  try { localStorage.setItem('pt_phase_stops', JSON.stringify([...state.ptPhaseStops])); } catch {}
+  render();
+}
+
 function ptStackTakeAction() {
   // Open the hand expanded overlay so the player can cast a response
   state.ptHandExpanded = true;
@@ -3642,6 +3739,12 @@ async function ptNextPhase() {
     await ptPub(updates);
   } else {
     const nextPhase = PT_PHASES[curIdx + 1];
+    // Check for phase stop — clear the stop and pause here for priority
+    const nextGroup = PT_PHASE_DISPLAY.find(g => g.phases.includes(nextPhase));
+    if (nextGroup && state.ptPhaseStops.has(nextGroup.id)) {
+      state.ptPhaseStops.delete(nextGroup.id);
+      try { localStorage.setItem('pt_phase_stops', JSON.stringify([...state.ptPhaseStops])); } catch {}
+    }
     await ptPub({ phase: nextPhase, priority: session.activePlayer || uid, passed: [] });
     // Auto-draw when entering draw step (only for the active player)
     if (nextPhase === 'draw' && uid === session.activePlayer) {
@@ -4173,6 +4276,8 @@ function renderPTGame() {
       ${PT_PHASE_DISPLAY.map((group, gi) => {
         const groupActive = group.phases.includes(curPhase);
         const groupPast = PT_PHASES.indexOf(group.phases[group.phases.length-1]) < curPhaseIdx;
+        const groupFuture = !groupActive && !groupPast;
+        const hasStop = state.ptPhaseStops.has(group.id);
         if (group.id === 'combat' && inCombat) {
           return group.phases.map((sub, si) => {
             const isActive = curPhase === sub;
@@ -4183,9 +4288,11 @@ function renderPTGame() {
           }).join('');
         }
         const canAdv = groupActive && isMyBoard && isActiveTurn;
+        const stopClass = hasStop ? ' stop' : '';
+        const clickFn = canAdv ? 'ptNextPhase()' : (groupFuture && isActiveTurn ? `ptTogglePhaseStop('${group.id}')` : '');
         return `${gi>0?'<span class="pt-phase-sep">·</span>':''}
-          <div class="pt-phase-step${groupActive?' active':''}${groupPast?' past':''}${canAdv?' clickable':''}"
-            ${canAdv?'onclick="ptNextPhase()"':''}>${group.label}</div>`;
+          <div class="pt-phase-step${groupActive?' active':''}${groupPast?' past':''}${stopClass}${clickFn?' clickable':''}"
+            ${clickFn?`onclick="${clickFn}"`:''}>${group.label}${hasStop?'◆':''}</div>`;
       }).join('')}
     </div>
     <span class="pt-tabs-info">${escHtml(viewedPlayer?.commander||'')} · T${session.turn||1} · ${activePlayerName}${isActiveTurn?' (you)':''}</span>
@@ -4319,8 +4426,12 @@ function renderPTGame() {
   const millHtml = state.playtestMillToast ? renderPTMillToast() : '';
   const numberHtml = state.playtestNumberPopup ? renderPTNumberPopup() : '';
 
+  // Priority bar + discard overlay
+  const priorityBarHtml = renderPTPriorityBar();
   // Hand (own board only)
   const hand = state.playtestPrivate?.hand || [];
+  const showDiscardOverlay = isMyBoard && isActiveTurn && curPhase === 'cleanup' && hand.length > 7;
+  const discardOverlayHtml = showDiscardOverlay ? renderPTDiscardOverlay(hand) : '';
   const hw = ptHandW();
   // Fan mode when cards would overflow: threshold = how many fit at normal spacing
   const FAN_THRESHOLD = Math.max(3, Math.floor((window.innerWidth - 20) / (hw + 3)));
@@ -4384,7 +4495,7 @@ function renderPTGame() {
     <div class="pt-turn-banner-name">${state.ptTurnBanner.isYou ? 'Your Turn!' : escHtml(state.ptTurnBanner.name) + "'s Turn"}</div>
     <div class="pt-turn-banner-sub">${PT_PHASE_LABELS[session.phase||'upkeep'] || 'Upkeep'}</div>
   </div>` : '';
-  return `<div class="pt-playmat">${tabsHtml}${actionBar}${battlefieldHtml}${handHtml}${overlayHtml}${scryHtml}${millHtml}${numberHtml}${settingsBackdrop}${cmdrMenuBackdrop}${cmdrMenuHtml}${libMenuBackdrop}${libMenuHtml}${menuBackdrop}${cardMenuHtml}${waitingBanner}${mullOverlayHtml}${manaChoiceHtml}${turnBannerHtml}</div>`;
+  return `<div class="pt-playmat">${tabsHtml}${actionBar}${battlefieldHtml}${priorityBarHtml}${handHtml}${overlayHtml}${scryHtml}${millHtml}${numberHtml}${settingsBackdrop}${cmdrMenuBackdrop}${cmdrMenuHtml}${libMenuBackdrop}${libMenuHtml}${menuBackdrop}${cardMenuHtml}${waitingBanner}${mullOverlayHtml}${discardOverlayHtml}${manaChoiceHtml}${turnBannerHtml}</div>`;
 }
 
 function renderPTCardMenu() {
@@ -4445,6 +4556,7 @@ function renderPTSettings(mullCount) {
     <hr class="pt-settings-divider">
     <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" ${priorityEnabled?'checked':''} onchange="ptTogglePrioritySystem(this.checked)"> Priority / Stack system</label>
     <label style="display:flex;align-items:center;gap:6px;margin-top:6px;opacity:${priorityEnabled?1:0.4}"><input type="checkbox" ${state.ptHoldPriority?'checked':''} onchange="ptToggleHoldPriority()" ${priorityEnabled?'':'disabled'}> Hold priority (Arena-style)</label>
+    <label style="display:flex;align-items:center;gap:6px;margin-top:6px;opacity:${priorityEnabled?1:0.4}"><input type="checkbox" ${state.ptAutoPass?'checked':''} onchange="ptToggleAutoPass(this.checked)" ${priorityEnabled?'':'disabled'}> Auto-pass (no instants in hand)</label>
     <hr class="pt-settings-divider">
     <button class="pt-action-btn" onclick="ptMulligan();state.playtestSettings=false;render()" style="width:100%;margin-bottom:4px">Mulligan${mullCount>0?` (→${Math.max(7-mullCount,0)})`:''}</button>
     <button class="pt-action-btn" onclick="ptViewLibTop();state.playtestSettings=false" style="width:100%;margin-bottom:4px">View Library Top</button>
@@ -6888,6 +7000,9 @@ window.ptToggleHoldPriority = ptToggleHoldPriority;
 window.ptTogglePrioritySystem = ptTogglePrioritySystem;
 window.ptPassTurn = ptPassTurn;
 window.ptStackTakeAction = ptStackTakeAction;
+window.ptToggleAutoPass = ptToggleAutoPass;
+window.ptTogglePhaseStop = ptTogglePhaseStop;
+window.ptDiscardCard = ptDiscardCard;
 window.ptAdjustLife = ptAdjustLife;
 window.ptConcede = ptConcede;
 window.ptPlayCard = ptPlayCard;
