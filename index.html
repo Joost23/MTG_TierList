@@ -933,6 +933,18 @@ async function claimMyDecks() {
   alert(`Claimed ${unclaimed.length} deck${unclaimed.length !== 1 ? 's' : ''} for ${myName} ✅`);
 }
 
+// Claim decks from a previous display name (after name change)
+async function claimByOldName(oldName) {
+  const myUid = state.currentUser?.uid;
+  if (!myUid || !oldName) return;
+  const unclaimed = state.decks.filter(d => !d.ownerUid && d.player === oldName);
+  if (!unclaimed.length) { alert(`No unclaimed decks found for "${oldName}".`); return; }
+  const batch = writeBatch(db);
+  unclaimed.forEach(d => batch.update(doc(db, 'decks', d.id), { ownerUid: myUid }));
+  await batch.commit();
+  alert(`Claimed ${unclaimed.length} deck${unclaimed.length !== 1 ? 's' : ''} from "${oldName}" ✅`);
+}
+
 // ===== LOGIN SCREEN =====
 function renderLogin() {
   document.getElementById('app').innerHTML = `
@@ -1208,16 +1220,28 @@ function setTab(tab) {
 }
 
 function getLeaderboardData() {
-  const players = [...new Set(state.decks.map(d => d.player))].filter(Boolean);
-  return players.map(p => {
-    const pd = state.decks.filter(d => d.player === p);
+  const myUid = state.currentUser?.uid;
+  // Group by ownerUid when available, fall back to player name for legacy decks
+  const groups = new Map();
+  state.decks.filter(d => d.player).forEach(d => {
+    const key = d.ownerUid || `name:${d.player}`;
+    if (!groups.has(key)) groups.set(key, { player: d.player, decks: [] });
+    const g = groups.get(key);
+    g.decks.push(d);
+    g.player = d.player; // last-seen name wins
+  });
+  // Always show current display name for logged-in user's entry
+  if (myUid && groups.has(myUid)) {
+    groups.get(myUid).player = currentUserName() || groups.get(myUid).player;
+  }
+  return [...groups.values()].map(({ player, decks: pd }) => {
     const allGames = pd.flatMap(d => d.games || []).filter(g => !g.loaned);
     const wins = allGames.filter(g => g.result === 'win').length;
     const losses = allGames.filter(g => g.result === 'loss').length;
     const total = wins + losses;
     const winRate = total > 0 ? Math.round((wins / total) * 100) : null;
     const bestDeck = [...pd].sort((a, b) => getOverall(b) - getOverall(a))[0] || null;
-    return { player: p, wins, losses, total, winRate, bestDeck, deckCount: pd.length };
+    return { player, wins, losses, total, winRate, bestDeck, deckCount: pd.length };
   }).sort((a, b) => {
     if (a.winRate === null && b.winRate === null) return b.deckCount - a.deckCount;
     if (a.winRate === null) return 1;
@@ -1632,14 +1656,18 @@ function renderAccountTab() {
       </div>` : ''}
 
       <!-- Claim decks (migration) -->
-      ${hasUnclaimed ? `
       <div style="background:var(--bg-card);margin:16px 0 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
         ${sectionLabel('Ownership')}
         <div style="padding:4px 20px 16px">
-          <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px">Some of your decks aren't linked to your account yet. Claim them so they stay yours even if you change your display name.</p>
-          <button onclick="claimMyDecks()" class="btn-primary" style="width:100%;padding:10px;font-size:13px">🔗 Claim my decks</button>
+          ${hasUnclaimed ? `<p style="font-size:13px;color:var(--text-muted);margin-bottom:10px">Some of your decks aren't linked to your account yet.</p>
+          <button onclick="claimMyDecks()" class="btn-primary" style="width:100%;padding:10px;font-size:13px;margin-bottom:14px">🔗 Claim my decks (${escHtml(name)})</button>` : ''}
+          <p style="font-size:13px;color:var(--text-muted);margin-bottom:8px">Changed your display name? Claim decks from your old name:</p>
+          <div style="display:flex;gap:8px">
+            <input id="old-name-input" type="text" placeholder="Old display name" style="flex:1;padding:8px 12px;background:var(--bg-input,var(--bg-hover));border:1px solid var(--border);border-radius:8px;color:var(--text-primary);font-size:13px;outline:none">
+            <button onclick="claimByOldName(document.getElementById('old-name-input').value.trim())" class="btn-secondary" style="padding:8px 14px;font-size:13px;white-space:nowrap">Claim</button>
+          </div>
         </div>
-      </div>` : ''}
+      </div>
 
       <!-- Sign out -->
       <div style="background:var(--bg-card);margin:16px 0 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
@@ -6663,6 +6691,7 @@ window.handleLogin = handleLogin;
 window.handleSignOut = handleSignOut;
 window.saveDisplayName = saveDisplayName;
 window.claimMyDecks = claimMyDecks;
+window.claimByOldName = claimByOldName;
 window.doChangePassword = doChangePassword;
 window.closeChangePassword = closeChangePassword;
 window.togglePwVis = togglePwVis;
