@@ -416,8 +416,8 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 .pt-mull-type-btn { font-size:11px;padding:4px 12px;border-radius:99px;border:1px solid var(--border);background:transparent;color:var(--text-muted);cursor:pointer;transition:all 0.1s; }
 .pt-mull-type-btn.active { background:var(--accent);color:#fff;border-color:var(--accent); }
 .pt-mull-waiting { background:rgba(0,0,0,0.5);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 14px;font-size:12px;color:var(--text-muted);text-align:center;max-width:540px;width:100%;flex-shrink:0; }
-/* Stack panel */
-.pt-stack-panel { position:absolute;top:8px;left:50%;transform:translateX(-50%);min-width:220px;max-width:280px;z-index:20;display:flex;flex-direction:column;gap:4px;pointer-events:auto; }
+/* Stack panel — right side, above zone sidebar */
+.pt-stack-panel { position:absolute;top:8px;right:74px;min-width:190px;max-width:240px;z-index:20;display:flex;flex-direction:column;gap:4px;pointer-events:auto; }
 .pt-stack-header { font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:var(--accent);text-align:center;padding:3px 0 5px;font-weight:700; }
 .pt-stack-item { display:flex;align-items:center;gap:9px;background:rgba(0,0,0,0.88);border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 9px;backdrop-filter:blur(8px);transition:border-color 0.12s;cursor:pointer; }
 .pt-stack-item.pt-stack-top { border-color:var(--accent-dim); }
@@ -504,6 +504,10 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 /* Turn transition banner */
 .pt-turn-banner { position:absolute;top:44%;left:50%;transform:translate(-50%,-50%);background:rgba(10,8,20,0.92);border:1px solid var(--accent-dim);border-radius:var(--radius);padding:14px 28px;text-align:center;z-index:350;pointer-events:none;animation:turnFade 2s ease forwards;backdrop-filter:blur(8px); }
 @keyframes turnFade { 0%{opacity:0;transform:translate(-50%,-50%) scale(0.88)} 15%{opacity:1;transform:translate(-50%,-50%) scale(1)} 70%{opacity:1} 100%{opacity:0;transform:translate(-50%,-50%) scale(1)} }
+/* Cast → Stack toast */
+.pt-cast-toast { position:absolute;top:38%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.9);border:1px solid var(--accent-dim);border-radius:var(--radius-sm);padding:6px 14px;z-index:340;pointer-events:none;animation:turnFade 1.2s ease forwards;backdrop-filter:blur(6px);text-align:center;white-space:nowrap; }
+.pt-cast-toast-name { font-size:12px;font-weight:700;color:var(--accent);display:block; }
+.pt-cast-toast-label { font-size:10px;color:var(--text-muted); }
 .pt-turn-banner-name { font-size:17px;font-weight:700;color:var(--accent);margin-bottom:3px; }
 .pt-turn-banner-sub { font-size:11px;color:var(--text-muted); }
 .pt-action-danger { color:var(--tier-s-text) !important;border-color:rgba(226,75,74,0.5) !important; }
@@ -901,6 +905,8 @@ let state = {
   ptHoldPriority: localStorage.getItem('pt_hold_prio') !== 'false', // default ON — rules-correct (caster keeps priority after casting)
   ptAutoPass: localStorage.getItem('pt_auto_pass') !== 'false', // auto-decline when no instants in hand
   ptPhaseStops: new Set(JSON.parse(localStorage.getItem('pt_phase_stops') || '[]')), // phases to stop at
+  ptCompactMode: localStorage.getItem('pt_compact') === 'true', // hide phase strip
+  ptCastToast: null, // brief card name shown when a card routes to stack
   ptLibraryMenu: null,
   ptCmdrMenu: null,
   ptManaChoice: null,
@@ -3702,6 +3708,12 @@ function ptToggleAutoPass(v) {
   render();
 }
 
+function ptToggleCompactMode(v) {
+  state.ptCompactMode = v;
+  localStorage.setItem('pt_compact', v ? 'true' : 'false');
+  render();
+}
+
 function ptTogglePhaseStop(phaseId) {
   if (state.ptPhaseStops.has(phaseId)) {
     state.ptPhaseStops.delete(phaseId);
@@ -3866,6 +3878,8 @@ async function ptPlayCard(cardId) {
       const newPassed  = state.ptHoldPriority ? [] : [uid];
       if (state.playtestGame) state.playtestGame = { ...state.playtestGame, stack: newStack, priority: newPriority, passed: newPassed };
       if (state.playtestPrivate) state.playtestPrivate = { ...state.playtestPrivate, hand };
+      state.ptCastToast = card.name;
+      setTimeout(() => { if (state.ptCastToast === card.name) { state.ptCastToast = null; render(); } }, 1200);
       render();
       await ptPriv({ ...priv, hand });
       await ptPub({ stack: newStack, priority: newPriority, passed: newPassed });
@@ -4272,7 +4286,7 @@ function renderPTGame() {
         ${p.poison>0?`<span class="pt-tab-poison">☠${p.poison}</span>`:''}
       </button>`;
     }).join('')}
-    <div class="pt-inline-phases">
+    ${!state.ptCompactMode ? `<div class="pt-inline-phases">
       ${PT_PHASE_DISPLAY.map((group, gi) => {
         const groupActive = group.phases.includes(curPhase);
         const groupPast = PT_PHASES.indexOf(group.phases[group.phases.length-1]) < curPhaseIdx;
@@ -4294,7 +4308,7 @@ function renderPTGame() {
           <div class="pt-phase-step${groupActive?' active':''}${groupPast?' past':''}${stopClass}${clickFn?' clickable':''}"
             ${clickFn?`onclick="${clickFn}"`:''}>${group.label}${hasStop?'◆':''}</div>`;
       }).join('')}
-    </div>
+    </div>` : ''}
     <span class="pt-tabs-info">${escHtml(viewedPlayer?.commander||'')} · T${session.turn||1} · ${activePlayerName}${isActiveTurn?' (you)':''}</span>
     ${isActiveTurn&&isMyBoard?`<button class="pt-pass-turn-btn" onclick="ptPassTurn()">Pass Turn</button>`:''}
     <button class="pt-tab" style="min-width:36px;font-size:15px;padding:0 8px" onclick="ptLeave()">✕</button>
@@ -4349,9 +4363,11 @@ function renderPTGame() {
     <button class="pt-zone-life-btn" onclick="event.stopPropagation();ptAdjustLife(-1)" style="color:var(--tier-s-text)">♥ −1</button>` : ''}
   </div>`;
   const stackPanelHtml = renderPTStackPanel();
+  const castToastHtml = state.ptCastToast ? `<div class="pt-cast-toast"><span class="pt-cast-toast-name">${escHtml(state.ptCastToast)}</span><span class="pt-cast-toast-label">→ Stack</span></div>` : '';
   const battlefieldHtml = `<div class="pt-battlefield" id="pt-battlefield" onclick="ptCloseMenu()" onpointerdown="ptBfPanStart(event)">
     ${zoneSidebar}
     ${stackPanelHtml}
+    ${castToastHtml}
     <div class="pt-battlefield-canvas" id="pt-bf-canvas" style="transform:translate(${ptPanX}px,${ptPanY}px) scale(${ptScale})">
       ${bf.length===0 ? `<div class="pt-bf-empty">Drag cards here from hand</div>` : ''}
       ${bf.map(card => {
@@ -4557,6 +4573,8 @@ function renderPTSettings(mullCount) {
     <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" ${priorityEnabled?'checked':''} onchange="ptTogglePrioritySystem(this.checked)"> Priority / Stack system</label>
     <label style="display:flex;align-items:center;gap:6px;margin-top:6px;opacity:${priorityEnabled?1:0.4}"><input type="checkbox" ${state.ptHoldPriority?'checked':''} onchange="ptToggleHoldPriority()" ${priorityEnabled?'':'disabled'}> Hold priority (Arena-style)</label>
     <label style="display:flex;align-items:center;gap:6px;margin-top:6px;opacity:${priorityEnabled?1:0.4}"><input type="checkbox" ${state.ptAutoPass?'checked':''} onchange="ptToggleAutoPass(this.checked)" ${priorityEnabled?'':'disabled'}> Auto-pass (no instants in hand)</label>
+    <hr class="pt-settings-divider">
+    <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" ${state.ptCompactMode?'checked':''} onchange="ptToggleCompactMode(this.checked)"> Compact mode (hide phase strip)</label>
     <hr class="pt-settings-divider">
     <button class="pt-action-btn" onclick="ptMulligan();state.playtestSettings=false;render()" style="width:100%;margin-bottom:4px">Mulligan${mullCount>0?` (→${Math.max(7-mullCount,0)})`:''}</button>
     <button class="pt-action-btn" onclick="ptViewLibTop();state.playtestSettings=false" style="width:100%;margin-bottom:4px">View Library Top</button>
@@ -5564,6 +5582,8 @@ async function ptPlayCardAt(cardId, x, y) {
       const newPassed  = state.ptHoldPriority ? [] : [uid];
       if (state.playtestGame) state.playtestGame = { ...state.playtestGame, stack: newStack, priority: newPriority, passed: newPassed };
       if (state.playtestPrivate) state.playtestPrivate = { ...state.playtestPrivate, hand };
+      state.ptCastToast = card.name;
+      setTimeout(() => { if (state.ptCastToast === card.name) { state.ptCastToast = null; render(); } }, 1200);
       render();
       await ptPriv({ ...priv, hand });
       await ptPub({ stack: newStack, priority: newPriority, passed: newPassed });
@@ -7002,6 +7022,7 @@ window.ptPassTurn = ptPassTurn;
 window.ptStackTakeAction = ptStackTakeAction;
 window.ptToggleAutoPass = ptToggleAutoPass;
 window.ptTogglePhaseStop = ptTogglePhaseStop;
+window.ptToggleCompactMode = ptToggleCompactMode;
 window.ptDiscardCard = ptDiscardCard;
 window.ptAdjustLife = ptAdjustLife;
 window.ptConcede = ptConcede;
