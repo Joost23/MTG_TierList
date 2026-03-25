@@ -866,6 +866,7 @@ let state = {
   ptHoldPriority: localStorage.getItem('pt_hold_prio') !== 'false', // default ON — rules-correct (caster keeps priority after casting)
   ptLibraryMenu: null,
   ptCmdrMenu: null,
+  ptManaChoice: null,
   ptManaPool: { W: 0, U: 0, B: 0, R: 0, G: 0, C: 0 },
   playtestLoading: '',
   playtestMoreMenu: false,
@@ -3381,10 +3382,6 @@ function renderPTLibMenu() {
 }
 
 // ── Commander zone quick-menu ─────────────────────────
-function ptCmdrClick(e) {
-  state.ptCmdrMenu = { x: e.clientX, y: e.clientY };
-  render();
-}
 function ptCloseCmdrMenu() { state.ptCmdrMenu = null; render(); }
 function renderPTCmdrMenu() {
   if (!state.ptCmdrMenu) return '';
@@ -3406,6 +3403,29 @@ function renderPTCmdrMenu() {
     `).join('')}
     <button class="pt-menu-btn" onclick="ptOpenZone('${uid}','commandZone');ptCloseCmdrMenu()" style="margin-top:4px;border-top:1px solid var(--border);padding-top:8px">📋 View Zone</button>
     <button class="pt-menu-btn pt-menu-cancel" onclick="ptCloseCmdrMenu()">Cancel</button>
+  </div>`;
+}
+
+// ── Mana choice picker (dual/triome lands) ────────────
+const MANA_COLOR_LABELS = { W:'White', U:'Blue', B:'Black', R:'Red', G:'Green', C:'Colorless' };
+function ptManaChoicePick(color) {
+  if (state.ptManaPool[color] !== undefined) state.ptManaPool[color]++;
+  state.ptManaChoice = null;
+  render();
+}
+function renderPTManaChoice() {
+  if (!state.ptManaChoice) return '';
+  const { options } = state.ptManaChoice;
+  return `<div style="position:fixed;inset:0;z-index:600;display:flex;align-items:center;justify-content:center" onclick="state.ptManaChoice=null;render()">
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:18px 22px;box-shadow:0 16px 48px rgba(0,0,0,0.7);min-width:220px;text-align:center" onclick="event.stopPropagation()">
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px">Choose mana to produce</div>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+        ${options.map(c => `<button onclick="ptManaChoicePick('${c}')" style="width:54px;height:54px;border-radius:50%;border:2px solid rgba(0,0,0,0.4);background:${MANA_COLORS_HEX[c]};color:${c==='W'?'#333':'#fff'};font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px" title="${MANA_COLOR_LABELS[c]}">
+          <span style="font-size:18px">${c==='W'?'☀':c==='U'?'💧':c==='B'?'💀':c==='R'?'🔥':c==='G'?'🌲':'◇'}</span>
+          <span style="font-size:9px;letter-spacing:0.3px">${MANA_COLOR_LABELS[c]}</span>
+        </button>`).join('')}
+      </div>
+    </div>
   </div>`;
 }
 
@@ -3668,12 +3688,14 @@ async function ptTapCard(cardId) {
   if (card && uid === (state.playtestGame?.activePlayer || uid)) {
     const cached = scryfallCache[scryfallKey(card.name)];
     const typeLine = (cached?.typeLine || '').toLowerCase();
-    if (typeLine.includes('land')) {
+    if (typeLine.includes('land') && !card.tapped) {
+      // Only track when TAPPING (not untapping) — pool clears on turn start
       const mana = ptInferMana(card.name, cached);
-      if (!card.tapped) {
-        mana.forEach(m => { if (m in state.ptManaPool) state.ptManaPool[m]++; });
-      } else {
-        mana.forEach(m => { if (m in state.ptManaPool) state.ptManaPool[m] = Math.max(0, state.ptManaPool[m] - 1); });
+      if (mana.length === 1) {
+        state.ptManaPool[mana[0]]++;
+      } else if (mana.length > 1) {
+        // Dual/triome land: player must choose which color
+        state.ptManaChoice = { options: mana };
       }
     }
   }
@@ -3714,7 +3736,8 @@ async function ptMoveCard(cardId, fromZone, toZone, opts = {}) {
   }
   if (toZone === 'battlefield') {
     const existingBf = pubUp[`players.${uid}.battlefield`] || [...(player.battlefield || [])];
-    card = { ...card, ...ptDefaultPos(existingBf) };
+    const pos = (opts.x != null && opts.y != null) ? { x: opts.x, y: opts.y } : ptDefaultPos(existingBf);
+    card = { ...card, ...pos };
   }
   if (PRIV.includes(toZone)) {
     if (toZone === 'library') {
@@ -4056,7 +4079,7 @@ function renderPTGame() {
       </div>
       <div class="pt-zone-panel-label">Exile</div>
     </div>
-    <div class="pt-zone-panel" onclick="event.stopPropagation();${isMyBoard ? 'ptCmdrClick(event)' : `ptOpenZone('${viewUid}','commandZone')`}">
+    <div class="pt-zone-panel" onclick="event.stopPropagation();${isMyBoard ? 'ptCmdrClick(event)' : `ptOpenZone('${viewUid}','commandZone')`}" ${isMyBoard ? 'onpointerdown="ptCmdrPointerDown(event)"' : ''}>
       <div class="pt-zone-panel-img">
         ${topCmdr?.imageUrl ? `<img src="${escHtml(topCmdr.imageUrl)}" loading="lazy">` : `<div class="pt-zone-panel-empty">⭐</div>`}
         ${czLen > 1 ? `<div class="pt-zone-panel-count">${czLen}</div>` : ''}
@@ -4184,7 +4207,8 @@ function renderPTGame() {
   const cmdrMenuHtml = state.ptCmdrMenu ? renderPTCmdrMenu() : '';
   const cmdrMenuBackdrop = state.ptCmdrMenu ? `<div style="position:fixed;inset:0;z-index:498" onclick="ptCloseCmdrMenu()"></div>` : '';
   const settingsBackdrop = state.playtestSettings ? `<div style="position:fixed;inset:0;z-index:498" onclick="event.stopPropagation();state.playtestSettings=false;render()"></div>` : '';
-  return `<div class="pt-playmat">${tabsHtml}${deckBar}${phaseBar}${actionBar}${battlefieldHtml}${handHtml}${overlayHtml}${scryHtml}${millHtml}${numberHtml}${settingsBackdrop}${cmdrMenuBackdrop}${cmdrMenuHtml}${libMenuBackdrop}${libMenuHtml}${menuBackdrop}${cardMenuHtml}${waitingBanner}${mullOverlayHtml}</div>`;
+  const manaChoiceHtml = state.ptManaChoice ? renderPTManaChoice() : '';
+  return `<div class="pt-playmat">${tabsHtml}${deckBar}${phaseBar}${actionBar}${battlefieldHtml}${handHtml}${overlayHtml}${scryHtml}${millHtml}${numberHtml}${settingsBackdrop}${cmdrMenuBackdrop}${cmdrMenuHtml}${libMenuBackdrop}${libMenuHtml}${menuBackdrop}${cardMenuHtml}${waitingBanner}${mullOverlayHtml}${manaChoiceHtml}</div>`;
 }
 
 function renderPTCardMenu() {
@@ -4716,6 +4740,23 @@ async function ptCreateCustomToken() {
 // ── Drag-and-drop: pointer events ─────────────────────
 let ptHandDrag = null;
 let ptHandDragGhost = null;
+let ptCmdrDrag = null;
+let ptCmdrDragGhost = null;
+
+function ptCmdrPointerDown(e) {
+  if (e.button !== 0 && e.pointerType !== 'touch') return;
+  const uid = state.currentUser?.uid;
+  const cmdrs = state.playtestGame?.players?.[uid]?.commandZone || [];
+  if (!cmdrs.length) return;
+  ptCmdrDrag = { startX: e.clientX, startY: e.clientY, moved: false, card: cmdrs[0] };
+}
+// Track whether last cmdr pointerdown became a drag, to suppress the click
+let ptCmdrWasDrag = false;
+function ptCmdrClick(e) {
+  if (ptCmdrWasDrag) { ptCmdrWasDrag = false; return; }
+  state.ptCmdrMenu = { x: e.clientX, y: e.clientY };
+  render();
+}
 
 function ptHandPointerDown(e, cardId) {
   if (e.button !== 0 && e.pointerType !== 'touch') return;
@@ -4835,6 +4876,38 @@ document.addEventListener('pointermove', function(e) {
     ptPanY = ptPan.origY + (e.clientY - ptPan.startY);
     const canvas = document.getElementById('pt-bf-canvas');
     if (canvas) canvas.style.transform = `translate(${ptPanX}px,${ptPanY}px) scale(${ptScale})`;
+    return;
+  }
+  // Commander zone → battlefield drag
+  if (ptCmdrDrag) {
+    const dx = e.clientX - ptCmdrDrag.startX;
+    const dy = e.clientY - ptCmdrDrag.startY;
+    if (!ptCmdrDrag.moved && Math.hypot(dx, dy) < 6) return;
+    if (!ptCmdrDrag.moved) {
+      ptCmdrDrag.moved = true;
+      state.ptCmdrMenu = null;
+      const card = ptCmdrDrag.card;
+      const ghost = document.createElement('div');
+      ghost.style.cssText = 'position:fixed;width:80px;border-radius:6px;pointer-events:none;z-index:1000;opacity:0.85;transform:translate(-50%,-60%) scale(1.1);box-shadow:0 8px 24px rgba(0,0,0,0.5);transition:none';
+      if (card?.imageUrl) {
+        ghost.innerHTML = `<img src="${card.imageUrl}" style="width:72px;border-radius:5px;display:block">`;
+      } else if (card) {
+        ghost.style.cssText += ';background:#1a1535;height:100px;border:1px solid #555;display:flex;align-items:center;justify-content:center;font-size:9px;color:#aaa;text-align:center;padding:4px;box-sizing:border-box';
+        ghost.textContent = card.name;
+      }
+      document.body.appendChild(ghost);
+      ptCmdrDragGhost = ghost;
+    }
+    if (ptCmdrDragGhost) {
+      ptCmdrDragGhost.style.left = e.clientX + 'px';
+      ptCmdrDragGhost.style.top = e.clientY + 'px';
+    }
+    // Highlight battlefield
+    const bfEl2 = document.getElementById('pt-battlefield');
+    if (bfEl2) {
+      const r2 = bfEl2.getBoundingClientRect();
+      bfEl2.classList.toggle('pt-drop-active', e.clientX >= r2.left && e.clientX <= r2.right && e.clientY >= r2.top && e.clientY <= r2.bottom);
+    }
     return;
   }
   // Hand → battlefield drag
@@ -5010,6 +5083,31 @@ document.addEventListener('pointerup', async function(e) {
   if (ptPan && e.pointerType !== 'touch') {
     ptPan = null;
     document.getElementById('pt-battlefield')?.classList.remove('pt-panning');
+    return;
+  }
+  // Commander zone → battlefield drop
+  if (ptCmdrDrag) {
+    const drag = ptCmdrDrag;
+    ptCmdrDrag = null;
+    if (ptCmdrDragGhost) { document.body.removeChild(ptCmdrDragGhost); ptCmdrDragGhost = null; }
+    document.getElementById('pt-battlefield')?.classList.remove('pt-drop-active');
+    if (!drag.moved) return; // let onclick handle it
+    ptCmdrWasDrag = true;
+    const bfEl = document.getElementById('pt-battlefield');
+    if (bfEl && drag.card) {
+      const bfRect = bfEl.getBoundingClientRect();
+      if (e.clientX >= bfRect.left && e.clientX <= bfRect.right &&
+          e.clientY >= bfRect.top && e.clientY <= bfRect.bottom) {
+        const canvasEl = document.getElementById('pt-bf-canvas');
+        const canvasRect = canvasEl ? canvasEl.getBoundingClientRect() : bfRect;
+        const CARD_W = ptCardW(), CARD_H = Math.round(CARD_W * 88 / 63);
+        let x = Math.max(0, (e.clientX - canvasRect.left) / ptScale - CARD_W / 2);
+        let y = Math.max(0, (e.clientY - canvasRect.top)  / ptScale - CARD_H / 2);
+        if (state.snapToGrid) { x = Math.round(x/ptCardW())*ptCardW(); y = Math.round(y/ptCardW())*ptCardW(); }
+        await ptMoveCard(drag.card.cardId, 'commandZone', 'battlefield', { x, y });
+        return;
+      }
+    }
     return;
   }
   // Hand → drop
@@ -6618,6 +6716,8 @@ window.ptMullCardHover = ptMullCardHover;
 window.ptMullCardHoverEnd = ptMullCardHoverEnd;
 window.ptCmdrClick = ptCmdrClick;
 window.ptCloseCmdrMenu = ptCloseCmdrMenu;
+window.ptCmdrPointerDown = ptCmdrPointerDown;
+window.ptManaChoicePick = ptManaChoicePick;
 window.ptSpendManaForCost = ptSpendManaForCost;
 
 // Scroll-to-zoom on battlefield (also handles trackpad pinch via ctrlKey+wheel)
