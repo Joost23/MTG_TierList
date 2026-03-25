@@ -445,6 +445,11 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-dim); }
 .pt-action-btn.pt-action-pass:hover { background:var(--accent-dim); }
 .pt-action-btn.pt-hold-active { background:rgba(251,191,36,0.15);color:rgb(251,191,36);border-color:rgba(251,191,36,0.5); }
 .pt-action-btn.pt-hold-active:hover { background:rgba(251,191,36,0.3); }
+.pt-mana-pool { display:flex;align-items:center;gap:3px;padding:3px 6px;background:rgba(0,0,0,0.35);border-radius:20px;flex-shrink:0; }
+.pt-mana-pip { display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;font-size:11px;font-weight:800;cursor:pointer;user-select:none;border:1.5px solid rgba(0,0,0,0.4);transition:transform 0.1s;flex-shrink:0; }
+.pt-mana-pip:hover { transform:scale(1.25); }
+.pt-mana-clear { font-size:10px;color:var(--text-muted);cursor:pointer;padding:0 2px;line-height:1;opacity:0.6; }
+.pt-mana-clear:hover { opacity:1;color:var(--tier-s-text); }
 .pt-prio-dot { display:inline-block;width:7px;height:7px;border-radius:50%;background:rgb(251,191,36);margin-right:4px;animation:prio-pulse 1s ease-in-out infinite; }
 @keyframes prio-pulse { 0%,100%{opacity:1}50%{opacity:0.4} }
 .pt-bf-empty { position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:13px;pointer-events:none; }
@@ -859,6 +864,10 @@ let state = {
   ptLibTypeFilter: 'all',
   ptMullBottom: [],  // cardIds selected to go to bottom of library during mulligan
   ptHoldPriority: localStorage.getItem('pt_hold_prio') !== 'false', // default ON — rules-correct (caster keeps priority after casting)
+  ptLibraryMenu: null,
+  ptCmdrMenu: null,
+  ptManaChoice: null,
+  ptManaPool: { W: 0, U: 0, B: 0, R: 0, G: 0, C: 0 },
   playtestLoading: '',
   playtestMoreMenu: false,
   playtestScryData: null,
@@ -2341,6 +2350,7 @@ async function fetchScryfallBatch(cards) {
           cmc: card.cmc ?? 0,
           colors: card.colors || card.card_faces?.[0]?.colors || [],
           tokenIds: (card.all_parts || []).filter(p => p.component === 'token').map(p => p.id),
+          producedMana: card.produced_mana || [],
         };
         scryfallCache[scryfallKey(card.name)] = cacheEntry;
         if (card.card_faces?.[0]?.name) {
@@ -3079,12 +3089,32 @@ function ptListen(sessionId) {
   unsubscribePlaytest = onSnapshot(doc(db, 'gameSessions', sessionId), async snap => {
     if (snap.exists()) {
       const prevStatus = state.playtestGame?.status;
+      const prevMullType = state.playtestGame?.mullType;
       state.playtestGame = { id: snap.id, ...snap.data() };
       render();
       // When game goes active, each player deals their own private zone
       if (prevStatus === 'waiting' && state.playtestGame.status === 'active' && myUid) {
         const myPlayer = state.playtestGame.players?.[myUid];
         if (myPlayer) await ptDealOwnHand(sessionId, myUid, myPlayer);
+      }
+      // When host switches to draw10, every player who hasn't kept yet tops up to 10 cards
+      if (prevMullType !== 'draw10' && state.playtestGame.mullType === 'draw10' && myUid) {
+        const myPlayer = state.playtestGame.players?.[myUid];
+        if (myPlayer && !myPlayer.handKept) {
+          const priv = state.playtestPrivate;
+          if (priv) {
+            const hand = [...(priv.hand || [])];
+            const library = [...(priv.library || [])];
+            const needed = 10 - hand.length;
+            if (needed > 0) {
+              const drawn = library.splice(0, Math.min(needed, library.length));
+              drawn.forEach(c => hand.push({ ...c, zone: 'hand' }));
+              state.playtestPrivate = { ...priv, hand, library };
+              render();
+              await ptPriv({ ...priv, hand, library });
+            }
+          }
+        }
       }
     }
   });
@@ -3204,7 +3234,7 @@ async function ptDraw(count = 1) {
   const drawn = library.splice(0, count);
   if (!drawn.length) return;
   drawn.forEach(c => hand.push({ ...c, zone: 'hand' }));
-  await ptPriv({ hand, library });
+  await ptPriv({ ...priv, hand, library });
 }
 
 async function ptUntapAll() {
@@ -3266,12 +3296,158 @@ async function ptMullRedraw() {
   if (mullType === 'london') await ptPub({ [`players.${uid}.mulliganCount`]: newMullCount });
 }
 async function ptMullSetType(type) {
-  // Update locally first so ptMullRedraw reads the right type immediately
   if (state.playtestGame) state.playtestGame.mullType = type;
   render();
   await ptPub({ mullType: type });
-  // Immediately redeal with the new type so the user sees the new hand count at once
-  await ptMullRedraw();
+  // Switching to draw10: top-up existing hand with extra cards from library (same 7 + 3 new)
+  if (type === 'draw10') {
+    const priv = state.playtestPrivate;
+    if (priv) {
+      const hand = [...(priv.hand || [])];
+      const library = [...(priv.library || [])];
+      const needed = 10 - hand.length;
+      if (needed > 0) {
+        const drawn = library.splice(0, Math.min(needed, library.length));
+        drawn.forEach(c => hand.push({ ...c, zone: 'hand' }));
+        if (state.playtestPrivate) state.playtestPrivate = { ...state.playtestPrivate, hand, library };
+        render();
+        await ptPriv({ ...priv, hand, library });
+      }
+    }
+  }
+}
+
+// ── Library zone panel interactions ───────────────────
+let ptLibLongPressed = false;
+let ptLibLongPressTimer = null;
+function ptLibPointerDown(e) {
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
+  ptLibLongPressed = false;
+  if (ptLibLongPressTimer) clearTimeout(ptLibLongPressTimer);
+  ptLibLongPressTimer = setTimeout(() => {
+    ptLibLongPressed = true;
+    ptLibLongPressTimer = null;
+    ptShowLibMenu(e);
+  }, 550);
+}
+function ptLibPointerUp(e) {
+  if (ptLibLongPressTimer) { clearTimeout(ptLibLongPressTimer); ptLibLongPressTimer = null; }
+}
+function ptLibClick(e) {
+  if (ptLibLongPressed) { ptLibLongPressed = false; return; }
+  ptDraw(1);
+}
+function ptShowLibMenu(e) {
+  state.ptLibraryMenu = { x: e.clientX, y: e.clientY };
+  render();
+}
+function ptCloseLibMenu() { state.ptLibraryMenu = null; render(); }
+function ptLibraryTutor() {
+  state.ptLibraryMenu = null;
+  state.playtestZoneOverlay = { uid: state.currentUser?.uid, zone: 'library' };
+  state.ptLibSearch = '';
+  state.ptLibTypeFilter = 'all';
+  render();
+}
+function ptLookAtTop(n) {
+  const uid = state.currentUser?.uid;
+  state.ptLibraryMenu = null;
+  const priv = state.playtestPrivate;
+  const topCards = (priv?.library || []).slice(0, n);
+  state.playtestZoneOverlay = { uid, zone: 'library', topN: n, cards: topCards };
+  render();
+}
+function renderPTLibMenu() {
+  const { x, y } = state.ptLibraryMenu;
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const menuW = 200, menuH = 280;
+  let left = x - menuW / 2;
+  let top = y - menuH - 8;
+  if (left + menuW > vw - 8) left = vw - menuW - 8;
+  if (left < 8) left = 8;
+  if (top < 8) top = y + 16;
+  if (top + menuH > vh - 8) top = vh - menuH - 8;
+  const libCount = state.playtestPrivate?.library?.length ?? 0;
+  return `<div class="pt-card-menu" style="left:${left}px;top:${top}px;z-index:500" onclick="event.stopPropagation()">
+    <div class="pt-card-menu-name">Library (${libCount})</div>
+    <button class="pt-menu-btn" onclick="ptDraw(1);ptCloseLibMenu()">Draw 1</button>
+    <button class="pt-menu-btn" onclick="ptDraw(3);ptCloseLibMenu()">Draw 3</button>
+    <button class="pt-menu-btn" onclick="ptLibraryTutor()">🔍 Tutor (search)</button>
+    <button class="pt-menu-btn" onclick="ptLookAtTop(1)">👁 Look at top 1</button>
+    <button class="pt-menu-btn" onclick="ptLookAtTop(3)">👁 Look at top 3</button>
+    <button class="pt-menu-btn" onclick="ptLookAtTop(7)">👁 Look at top 7</button>
+    <button class="pt-menu-btn" onclick="ptShuffle();ptCloseLibMenu()">🔀 Shuffle</button>
+    <button class="pt-menu-btn pt-menu-cancel" onclick="ptCloseLibMenu()">Cancel</button>
+  </div>`;
+}
+
+// ── Commander zone quick-menu ─────────────────────────
+function ptCloseCmdrMenu() { state.ptCmdrMenu = null; render(); }
+function renderPTCmdrMenu() {
+  if (!state.ptCmdrMenu) return '';
+  const { x, y } = state.ptCmdrMenu;
+  const uid = state.currentUser?.uid;
+  const cmdrs = state.playtestGame?.players?.[uid]?.commandZone || [];
+  if (!cmdrs.length) { state.ptCmdrMenu = null; return ''; }
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const menuW = 220, menuH = Math.min(cmdrs.length * 90 + 80, 400);
+  let left = x - menuW - 8;
+  let top = Math.max(8, Math.min(y - menuH / 2, vh - menuH - 8));
+  if (left < 8) left = x + 8;
+  return `<div class="pt-card-menu" style="left:${left}px;top:${top}px;z-index:500" onclick="event.stopPropagation()">
+    <div class="pt-card-menu-name">Command Zone</div>
+    ${cmdrs.map(card => `
+      <div style="font-size:10px;color:var(--text-muted);padding:4px 14px 2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(card.name)}</div>
+      <button class="pt-menu-btn" onclick="ptMoveCard('${card.cardId}','commandZone','battlefield');ptCloseCmdrMenu()">▶ Play to Battlefield</button>
+      <button class="pt-menu-btn" onclick="ptMoveCard('${card.cardId}','commandZone','hand');ptCloseCmdrMenu()">→ Return to Hand</button>
+    `).join('')}
+    <button class="pt-menu-btn" onclick="ptOpenZone('${uid}','commandZone');ptCloseCmdrMenu()" style="margin-top:4px;border-top:1px solid var(--border);padding-top:8px">📋 View Zone</button>
+    <button class="pt-menu-btn pt-menu-cancel" onclick="ptCloseCmdrMenu()">Cancel</button>
+  </div>`;
+}
+
+// ── Mana choice picker (dual/triome lands) ────────────
+const MANA_COLOR_LABELS = { W:'White', U:'Blue', B:'Black', R:'Red', G:'Green', C:'Colorless' };
+function ptManaChoicePick(color) {
+  if (state.ptManaPool[color] !== undefined) state.ptManaPool[color]++;
+  state.ptManaChoice = null;
+  render();
+}
+function renderPTManaChoice() {
+  if (!state.ptManaChoice) return '';
+  const { options } = state.ptManaChoice;
+  return `<div style="position:fixed;inset:0;z-index:600;display:flex;align-items:center;justify-content:center" onclick="state.ptManaChoice=null;render()">
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:18px 22px;box-shadow:0 16px 48px rgba(0,0,0,0.7);min-width:220px;text-align:center" onclick="event.stopPropagation()">
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px">Choose mana to produce</div>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+        ${options.map(c => `<button onclick="ptManaChoicePick('${c}')" style="width:54px;height:54px;border-radius:50%;border:2px solid rgba(0,0,0,0.4);background:${MANA_COLORS_HEX[c]};color:${c==='W'?'#333':'#fff'};font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px" title="${MANA_COLOR_LABELS[c]}">
+          <span style="font-size:18px">${c==='W'?'☀':c==='U'?'💧':c==='B'?'💀':c==='R'?'🔥':c==='G'?'🌲':'◇'}</span>
+          <span style="font-size:9px;letter-spacing:0.3px">${MANA_COLOR_LABELS[c]}</span>
+        </button>`).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── Mulligan hover preview ────────────────────────────
+function ptMullCardHover(e, imageUrl) {
+  if (e.pointerType !== 'mouse') return;
+  const el = document.getElementById('pt-mull-hover');
+  if (!el || !imageUrl) return;
+  el.querySelector('img').src = imageUrl;
+  const vw = window.innerWidth, vh = window.innerHeight;
+  let left = e.clientX + 20;
+  let top = e.clientY - 100;
+  if (left + 186 > vw - 8) left = e.clientX - 206;
+  if (top < 8) top = 8;
+  if (top + 260 > vh - 8) top = vh - 268;
+  el.style.left = left + 'px';
+  el.style.top = top + 'px';
+  el.style.display = 'block';
+}
+function ptMullCardHoverEnd() {
+  const el = document.getElementById('pt-mull-hover');
+  if (el) el.style.display = 'none';
 }
 
 // ── Stack (casual mode) ───────────────────────────────
@@ -3315,7 +3491,7 @@ async function ptResolveTop() {
   if (isSpell) {
     updates[`players.${top.casterId}.graveyard`] = [...(player.graveyard || []), { ...card, zone: 'graveyard' }];
   } else {
-    const pos = ptDefaultPos(player.battlefield || []);
+    const pos = (top.dropX != null && top.dropY != null) ? { x: top.dropX, y: top.dropY } : ptDefaultPos(player.battlefield || []);
     updates[`players.${top.casterId}.battlefield`] = [...(player.battlefield || []), { ...card, ...pos, zone: 'battlefield' }];
   }
   await ptPub(updates);
@@ -3371,10 +3547,16 @@ async function ptNextPhase() {
     if (nextPlayer?.battlefield?.length) {
       updates[`players.${nextActive}.battlefield`] = nextPlayer.battlefield.map(c => ({ ...c, tapped: false }));
     }
+    // Clear mana pool on new turn
+    state.ptManaPool = { W: 0, U: 0, B: 0, R: 0, G: 0, C: 0 };
     await ptPub(updates);
   } else {
     const nextPhase = PT_PHASES[curIdx + 1];
     await ptPub({ phase: nextPhase, priority: session.activePlayer || uid, passed: [] });
+    // Auto-draw when entering draw step on the active player's turn
+    if (nextPhase === 'draw' && uid === (session.activePlayer || uid)) {
+      await ptDraw(1);
+    }
   }
 }
 async function ptPassPriority() {
@@ -3442,6 +3624,7 @@ async function ptPlayCard(cardId) {
     await ptPub({ [`players.${uid}.battlefield`]: battlefield });
   } else {
     // Non-lands go to the stack; priority determined by hold-priority toggle
+    ptSpendManaForCost(scryfallCache[scryfallKey(card.name)]?.manaCost || '');
     const session = state.playtestGame;
     const stackItem = { cardId: card.cardId, name: card.name, imageUrl: card.imageUrl || null,
       casterId: uid, casterName: player.displayName || 'Player', fromZone: 'hand',
@@ -3462,10 +3645,60 @@ async function ptPlayCard(cardId) {
   ptCloseMenu();
 }
 
+// ── Mana tracking ─────────────────────────────────────
+const MANA_COLORS_HEX = { W:'#f5f0d8', U:'#4a90d9', B:'#8b6fa0', R:'#d9534a', G:'#3a8a4a', C:'#aaaaaa' };
+const BASIC_LAND_MANA = { plains:'W', island:'U', swamp:'B', mountain:'R', forest:'G', wastes:'C' };
+
+function ptInferMana(name, cached) {
+  if (cached?.producedMana?.length) return cached.producedMana;
+  // Try basic land name match
+  const lower = name.toLowerCase();
+  for (const [k, v] of Object.entries(BASIC_LAND_MANA)) {
+    if (lower.includes(k)) return [v];
+  }
+  // Fall back to card's color identity
+  if (cached?.colors?.length) return cached.colors;
+  return ['C'];
+}
+
+function ptSpendManaForCost(manaCost) {
+  if (!manaCost) return;
+  const pool = state.ptManaPool;
+  const symbols = (manaCost.match(/\{([^}]+)\}/g) || []).map(s => s.slice(1,-1));
+  let generic = 0;
+  for (const sym of symbols) {
+    if (/^\d+$/.test(sym)) { generic += parseInt(sym); continue; }
+    if (sym === 'X' || sym === 'S') continue;
+    // Hybrid: try first color of pair
+    const color = sym.includes('/') ? sym.split('/')[0] : sym;
+    if (color in pool && pool[color] > 0) pool[color]--;
+    else generic++;
+  }
+  // Pay generic: colorless first, then G R B U W
+  for (const color of ['C','G','R','B','U','W']) {
+    while (generic > 0 && pool[color] > 0) { pool[color]--; generic--; }
+  }
+}
+
 async function ptTapCard(cardId) {
   const uid = state.currentUser?.uid;
   const player = state.playtestGame?.players?.[uid];
   if (!player) return;
+  const card = (player.battlefield || []).find(c => c.cardId === cardId);
+  if (card && uid === (state.playtestGame?.activePlayer || uid)) {
+    const cached = scryfallCache[scryfallKey(card.name)];
+    const typeLine = (cached?.typeLine || '').toLowerCase();
+    if (typeLine.includes('land') && !card.tapped) {
+      // Only track when TAPPING (not untapping) — pool clears on turn start
+      const mana = ptInferMana(card.name, cached);
+      if (mana.length === 1) {
+        state.ptManaPool[mana[0]]++;
+      } else if (mana.length > 1) {
+        // Dual/triome land: player must choose which color
+        state.ptManaChoice = { options: mana };
+      }
+    }
+  }
   await ptPub({ [`players.${uid}.battlefield`]: (player.battlefield || []).map(c => c.cardId === cardId ? { ...c, tapped: !c.tapped } : c) });
   ptCloseMenu();
 }
@@ -3503,7 +3736,8 @@ async function ptMoveCard(cardId, fromZone, toZone, opts = {}) {
   }
   if (toZone === 'battlefield') {
     const existingBf = pubUp[`players.${uid}.battlefield`] || [...(player.battlefield || [])];
-    card = { ...card, ...ptDefaultPos(existingBf) };
+    const pos = (opts.x != null && opts.y != null) ? { x: opts.x, y: opts.y } : ptDefaultPos(existingBf);
+    card = { ...card, ...pos };
   }
   if (PRIV.includes(toZone)) {
     if (toZone === 'library') {
@@ -3736,7 +3970,7 @@ function renderPTMullOverlay() {
         const img = card.imageUrl
           ? `<img src="${escHtml(card.imageUrl)}" loading="lazy">`
           : `<div class="pt-mull-card-back">${escHtml(card.name.slice(0,16))}</div>`;
-        return `<div class="pt-mull-card${bottomIds.includes(card.cardId)?' selected':''}" onclick="ptMullToggleBottom('${card.cardId}')" title="${escHtml(card.name)}">${img}</div>`;
+        return `<div class="pt-mull-card${bottomIds.includes(card.cardId)?' selected':''}" onclick="ptMullToggleBottom('${card.cardId}')" title="${escHtml(card.name)}" onpointerenter="ptMullCardHover(event,${JSON.stringify(card.imageUrl||'')})" onpointerleave="ptMullCardHoverEnd()">${img}</div>`;
       }).join('')}
       ${handCards.length === 0 && bottomNeeded === 0 ? `<div style="color:var(--text-muted);font-size:13px;padding:20px">No cards in hand</div>` : ''}
     </div>
@@ -3746,7 +3980,7 @@ function renderPTMullOverlay() {
         const img = card.imageUrl
           ? `<img src="${escHtml(card.imageUrl)}" loading="lazy">`
           : `<div class="pt-mull-bottom-card-back"></div>`;
-        return `<div class="pt-mull-bottom-card" onclick="ptMullToggleBottom('${card.cardId}')" title="${escHtml(card.name)} — click to return">${img}</div>`;
+        return `<div class="pt-mull-bottom-card" onclick="ptMullToggleBottom('${card.cardId}')" title="${escHtml(card.name)} — click to return" onpointerenter="ptMullCardHover(event,${JSON.stringify(card.imageUrl||'')})" onpointerleave="ptMullCardHoverEnd()">${img}</div>`;
       }).join('')}
       ${bottomCards.length === 0 ? `<div style="font-size:11px;color:var(--text-muted)">Click cards above to put them on bottom</div>` : ''}
     </div>` : ''}
@@ -3759,7 +3993,8 @@ function renderPTMullOverlay() {
       </button>
     </div>
     ${waitingFor.length > 0 ? `<div class="pt-mull-waiting">Waiting for ${escHtml(waitingFor.join(', '))} to keep their hand…</div>` : ''}
-  </div>`;
+  </div>
+  <div id="pt-mull-hover" style="display:none;position:fixed;z-index:700;pointer-events:none;width:186px;border-radius:10px;box-shadow:0 16px 48px rgba(0,0,0,0.85);transition:opacity 0.1s"><img style="width:100%;border-radius:10px;display:block" src=""></div>`;
 }
 
 function renderPTGame() {
@@ -3821,7 +4056,12 @@ function renderPTGame() {
   const topExile = exileArr[exileArr.length - 1];
   const topCmdr  = commandArr[0];
   const zoneSidebar = `<div class="pt-zone-sidebar">
-    <div class="pt-zone-panel" data-pt-drop-zone="library" onclick="event.stopPropagation();ptOpenZone('${viewUid}','library')">
+    <div class="pt-zone-panel" data-pt-drop-zone="library"
+      onclick="event.stopPropagation();${isMyBoard ? 'ptLibClick(event)' : `ptOpenZone('${viewUid}','library')`}"
+      oncontextmenu="event.preventDefault();event.stopPropagation();${isMyBoard ? 'ptShowLibMenu(event)' : ''}"
+      onpointerdown="${isMyBoard ? 'ptLibPointerDown(event)' : ''}"
+      onpointerup="${isMyBoard ? 'ptLibPointerUp(event)' : ''}"
+      onpointercancel="${isMyBoard ? 'ptLibPointerUp(event)' : ''}">
       <div class="pt-zone-panel-img"><div class="pt-zone-card-back"></div><div class="pt-zone-panel-count">${libCount}</div></div>
       <div class="pt-zone-panel-label">Library</div>
     </div>
@@ -3839,7 +4079,7 @@ function renderPTGame() {
       </div>
       <div class="pt-zone-panel-label">Exile</div>
     </div>
-    <div class="pt-zone-panel" onclick="event.stopPropagation();ptOpenZone('${viewUid}','commandZone')">
+    <div class="pt-zone-panel" onclick="event.stopPropagation();${isMyBoard ? 'ptCmdrClick(event)' : `ptOpenZone('${viewUid}','commandZone')`}" ${isMyBoard ? 'onpointerdown="ptCmdrPointerDown(event)"' : ''}>
       <div class="pt-zone-panel-img">
         ${topCmdr?.imageUrl ? `<img src="${escHtml(topCmdr.imageUrl)}" loading="lazy">` : `<div class="pt-zone-panel-empty">⭐</div>`}
         ${czLen > 1 ? `<div class="pt-zone-panel-count">${czLen}</div>` : ''}
@@ -3881,6 +4121,13 @@ function renderPTGame() {
   // Action bar (own board only)
   const mullCount = myPlayer?.mulliganCount || 0;
   const settingsHtml = state.playtestSettings ? renderPTSettings(mullCount) : '';
+  const manaPool = state.ptManaPool;
+  const manaEntries = Object.entries(manaPool).filter(([,v]) => v > 0);
+  const manaPoolHtml = manaEntries.length > 0
+    ? `<div class="pt-mana-pool" title="Floating mana — click a pip to spend 1">${manaEntries.map(([k,v]) =>
+        `<span class="pt-mana-pip" style="background:${MANA_COLORS_HEX[k]};color:${k==='W'?'#333':'#fff'}" onclick="state.ptManaPool['${k}']=Math.max(0,state.ptManaPool['${k}']-1);render()" title="Spend 1 ${k}">${v}</span>`
+      ).join('')}<span class="pt-mana-clear" onclick="state.ptManaPool={W:0,U:0,B:0,R:0,G:0,C:0};render()" title="Clear all mana">✕</span></div>`
+    : '';
   const actionBar = isMyBoard ? `<div class="pt-action-bar">
     <button class="pt-action-btn" onclick="ptDraw()">Draw</button>
     <button class="pt-action-btn" onclick="ptUntapAll()">Untap All</button>
@@ -3888,6 +4135,7 @@ function renderPTGame() {
     <button class="pt-action-btn" onclick="ptPromptMill()">Mill</button>
     <button class="pt-action-btn" onclick="ptShuffle()">Shuffle</button>
     ${isActiveTurn?`<button class="pt-action-btn" onclick="ptNextPhase()">Next Phase</button>`:''}
+    ${manaPoolHtml}
     <button class="pt-action-btn${myUid===(session.priority||session.activePlayer)?' pt-action-pass':''}" onclick="ptPassPriority()">${state.ptHoldPriority&&myUid===(session.priority||session.activePlayer)?'<span class="pt-prio-dot"></span>':''} Pass ⏩</button>
     <button class="pt-action-btn${state.ptHoldPriority?' pt-hold-active':''}" onclick="ptToggleHoldPriority()" title="Toggle hold priority (like Arena)">${state.ptHoldPriority?'🔒 Hold Prio':'⚡ Auto Pass'}</button>
     <button class="pt-action-btn${state.playtestTokenPanel?' active':''}" onclick="event.stopPropagation();state.playtestTokenPanel=!state.playtestTokenPanel;state.playtestSettings=false;render()">Token</button>
@@ -3954,8 +4202,13 @@ function renderPTGame() {
 
   const cardMenuHtml = state.playtestCardMenu ? renderPTCardMenu() : '';
   const menuBackdrop = state.playtestCardMenu ? `<div style="position:fixed;inset:0;z-index:499" onclick="ptCloseMenu()"></div>` : '';
+  const libMenuHtml = state.ptLibraryMenu ? renderPTLibMenu() : '';
+  const libMenuBackdrop = state.ptLibraryMenu ? `<div style="position:fixed;inset:0;z-index:498" onclick="ptCloseLibMenu()"></div>` : '';
+  const cmdrMenuHtml = state.ptCmdrMenu ? renderPTCmdrMenu() : '';
+  const cmdrMenuBackdrop = state.ptCmdrMenu ? `<div style="position:fixed;inset:0;z-index:498" onclick="ptCloseCmdrMenu()"></div>` : '';
   const settingsBackdrop = state.playtestSettings ? `<div style="position:fixed;inset:0;z-index:498" onclick="event.stopPropagation();state.playtestSettings=false;render()"></div>` : '';
-  return `<div class="pt-playmat">${tabsHtml}${deckBar}${phaseBar}${actionBar}${battlefieldHtml}${handHtml}${overlayHtml}${scryHtml}${millHtml}${numberHtml}${settingsBackdrop}${menuBackdrop}${cardMenuHtml}${waitingBanner}${mullOverlayHtml}</div>`;
+  const manaChoiceHtml = state.ptManaChoice ? renderPTManaChoice() : '';
+  return `<div class="pt-playmat">${tabsHtml}${deckBar}${phaseBar}${actionBar}${battlefieldHtml}${handHtml}${overlayHtml}${scryHtml}${millHtml}${numberHtml}${settingsBackdrop}${cmdrMenuBackdrop}${cmdrMenuHtml}${libMenuBackdrop}${libMenuHtml}${menuBackdrop}${cardMenuHtml}${waitingBanner}${mullOverlayHtml}${manaChoiceHtml}</div>`;
 }
 
 function renderPTCardMenu() {
@@ -4278,7 +4531,8 @@ function ptZoomHide() {
 }
 function ptZoomHover(e, imageUrl, name) {
   clearTimeout(ptZoomTimer);
-  ptZoomTimer = setTimeout(() => ptZoomShow(imageUrl, name, e.currentTarget), 300);
+  const anchor = e.currentTarget; // capture before event finishes dispatching (currentTarget becomes null async)
+  ptZoomTimer = setTimeout(() => ptZoomShow(imageUrl, name, anchor), 300);
 }
 
 // ── Hand hover preview (fixed-position overlay, X-position detection) ─────
@@ -4316,9 +4570,9 @@ function ptInitHandHover() {
     // Apply Arena-style wave: scale falls off with distance from hovered card
     cards.forEach((c, i) => {
       const dist = Math.abs(i - idx);
-      if (dist === 0)      { c.style.transform = 'translateY(-24px) scale(1.55)'; c.style.zIndex = '60'; }
-      else if (dist === 1) { c.style.transform = 'translateY(-10px) scale(1.14)'; c.style.zIndex = '50'; }
-      else if (dist === 2) { c.style.transform = 'translateY(-3px) scale(1.04)';  c.style.zIndex = '40'; }
+      if (dist === 0)      { c.style.transform = 'translateY(-36px) scale(1.9)';  c.style.zIndex = '60'; }
+      else if (dist === 1) { c.style.transform = 'translateY(-14px) scale(1.2)';  c.style.zIndex = '50'; }
+      else if (dist === 2) { c.style.transform = 'translateY(-4px) scale(1.06)';  c.style.zIndex = '40'; }
       else                 { c.style.transform = '';                               c.style.zIndex = ''; }
     });
   });
@@ -4486,6 +4740,23 @@ async function ptCreateCustomToken() {
 // ── Drag-and-drop: pointer events ─────────────────────
 let ptHandDrag = null;
 let ptHandDragGhost = null;
+let ptCmdrDrag = null;
+let ptCmdrDragGhost = null;
+
+function ptCmdrPointerDown(e) {
+  if (e.button !== 0 && e.pointerType !== 'touch') return;
+  const uid = state.currentUser?.uid;
+  const cmdrs = state.playtestGame?.players?.[uid]?.commandZone || [];
+  if (!cmdrs.length) return;
+  ptCmdrDrag = { startX: e.clientX, startY: e.clientY, moved: false, card: cmdrs[0] };
+}
+// Track whether last cmdr pointerdown became a drag, to suppress the click
+let ptCmdrWasDrag = false;
+function ptCmdrClick(e) {
+  if (ptCmdrWasDrag) { ptCmdrWasDrag = false; return; }
+  state.ptCmdrMenu = { x: e.clientX, y: e.clientY };
+  render();
+}
 
 function ptHandPointerDown(e, cardId) {
   if (e.button !== 0 && e.pointerType !== 'touch') return;
@@ -4605,6 +4876,38 @@ document.addEventListener('pointermove', function(e) {
     ptPanY = ptPan.origY + (e.clientY - ptPan.startY);
     const canvas = document.getElementById('pt-bf-canvas');
     if (canvas) canvas.style.transform = `translate(${ptPanX}px,${ptPanY}px) scale(${ptScale})`;
+    return;
+  }
+  // Commander zone → battlefield drag
+  if (ptCmdrDrag) {
+    const dx = e.clientX - ptCmdrDrag.startX;
+    const dy = e.clientY - ptCmdrDrag.startY;
+    if (!ptCmdrDrag.moved && Math.hypot(dx, dy) < 6) return;
+    if (!ptCmdrDrag.moved) {
+      ptCmdrDrag.moved = true;
+      state.ptCmdrMenu = null;
+      const card = ptCmdrDrag.card;
+      const ghost = document.createElement('div');
+      ghost.style.cssText = 'position:fixed;width:80px;border-radius:6px;pointer-events:none;z-index:1000;opacity:0.85;transform:translate(-50%,-60%) scale(1.1);box-shadow:0 8px 24px rgba(0,0,0,0.5);transition:none';
+      if (card?.imageUrl) {
+        ghost.innerHTML = `<img src="${card.imageUrl}" style="width:72px;border-radius:5px;display:block">`;
+      } else if (card) {
+        ghost.style.cssText += ';background:#1a1535;height:100px;border:1px solid #555;display:flex;align-items:center;justify-content:center;font-size:9px;color:#aaa;text-align:center;padding:4px;box-sizing:border-box';
+        ghost.textContent = card.name;
+      }
+      document.body.appendChild(ghost);
+      ptCmdrDragGhost = ghost;
+    }
+    if (ptCmdrDragGhost) {
+      ptCmdrDragGhost.style.left = e.clientX + 'px';
+      ptCmdrDragGhost.style.top = e.clientY + 'px';
+    }
+    // Highlight battlefield
+    const bfEl2 = document.getElementById('pt-battlefield');
+    if (bfEl2) {
+      const r2 = bfEl2.getBoundingClientRect();
+      bfEl2.classList.toggle('pt-drop-active', e.clientX >= r2.left && e.clientX <= r2.right && e.clientY >= r2.top && e.clientY <= r2.bottom);
+    }
     return;
   }
   // Hand → battlefield drag
@@ -4782,6 +5085,31 @@ document.addEventListener('pointerup', async function(e) {
     document.getElementById('pt-battlefield')?.classList.remove('pt-panning');
     return;
   }
+  // Commander zone → battlefield drop
+  if (ptCmdrDrag) {
+    const drag = ptCmdrDrag;
+    ptCmdrDrag = null;
+    if (ptCmdrDragGhost) { document.body.removeChild(ptCmdrDragGhost); ptCmdrDragGhost = null; }
+    document.getElementById('pt-battlefield')?.classList.remove('pt-drop-active');
+    if (!drag.moved) return; // let onclick handle it
+    ptCmdrWasDrag = true;
+    const bfEl = document.getElementById('pt-battlefield');
+    if (bfEl && drag.card) {
+      const bfRect = bfEl.getBoundingClientRect();
+      if (e.clientX >= bfRect.left && e.clientX <= bfRect.right &&
+          e.clientY >= bfRect.top && e.clientY <= bfRect.bottom) {
+        const canvasEl = document.getElementById('pt-bf-canvas');
+        const canvasRect = canvasEl ? canvasEl.getBoundingClientRect() : bfRect;
+        const CARD_W = ptCardW(), CARD_H = Math.round(CARD_W * 88 / 63);
+        let x = Math.max(0, (e.clientX - canvasRect.left) / ptScale - CARD_W / 2);
+        let y = Math.max(0, (e.clientY - canvasRect.top)  / ptScale - CARD_H / 2);
+        if (state.snapToGrid) { x = Math.round(x/ptCardW())*ptCardW(); y = Math.round(y/ptCardW())*ptCardW(); }
+        await ptMoveCard(drag.card.cardId, 'commandZone', 'battlefield', { x, y });
+        return;
+      }
+    }
+    return;
+  }
   // Hand → drop
   if (ptHandDrag) {
     const drag = ptHandDrag;
@@ -4919,9 +5247,11 @@ async function ptPlayCardAt(cardId, x, y) {
     await ptPub({ [`players.${uid}.battlefield`]: battlefield });
   } else {
     // Non-lands go to the stack with priority logic (same as menu "Play" button)
+    ptSpendManaForCost(scryfallCache[scryfallKey(card.name)]?.manaCost || '');
     const session = state.playtestGame;
     const stackItem = { cardId: card.cardId, name: card.name, imageUrl: card.imageUrl || null,
       casterId: uid, casterName: player.displayName || 'Player', fromZone: 'hand',
+      dropX: x, dropY: y,
       addedAt: new Date().toISOString() };
     const newStack = [stackItem, ...(session?.stack || [])];
     const activePlayers = Object.keys(session?.players || {}).filter(p => !session?.players[p].conceded);
@@ -6375,6 +6705,20 @@ window.ptCloseZone = ptCloseZone;
 window.ptPointerDown = ptPointerDown;
 window.ptHandPointerDown = ptHandPointerDown;
 window.ptBfPanStart = ptBfPanStart;
+window.ptLibClick = ptLibClick;
+window.ptShowLibMenu = ptShowLibMenu;
+window.ptCloseLibMenu = ptCloseLibMenu;
+window.ptLibPointerDown = ptLibPointerDown;
+window.ptLibPointerUp = ptLibPointerUp;
+window.ptLibraryTutor = ptLibraryTutor;
+window.ptLookAtTop = ptLookAtTop;
+window.ptMullCardHover = ptMullCardHover;
+window.ptMullCardHoverEnd = ptMullCardHoverEnd;
+window.ptCmdrClick = ptCmdrClick;
+window.ptCloseCmdrMenu = ptCloseCmdrMenu;
+window.ptCmdrPointerDown = ptCmdrPointerDown;
+window.ptManaChoicePick = ptManaChoicePick;
+window.ptSpendManaForCost = ptSpendManaForCost;
 
 // Scroll-to-zoom on battlefield (also handles trackpad pinch via ctrlKey+wheel)
 document.addEventListener('wheel', function(e) {
